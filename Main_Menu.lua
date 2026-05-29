@@ -180,7 +180,7 @@ end,})
 
 Tab3:CreateButton({
 Name = "Nameless Admin FE",
-Description = "Loads Nameless Admin FE",
+Description = "Loads Nameless Admin FE.",
 Callback = function()
     local get_loaded = get_nameless_admin_loaded()
     if get_loaded then return end
