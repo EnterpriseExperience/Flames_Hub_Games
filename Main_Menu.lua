@@ -122,14 +122,27 @@ local Window = flames_ui:CreateWindow({
 
 wait(0.1)
 g.Buttons = g.Buttons or {}
-
 local Tab1 = Window:CreateTab({Name = "🏡 Home 🏡", Icon = "view_in_ar", ImageSource = "Material", ShowTitle = true})
 local Section1 = Tab1:CreateSection("Section | Home Page")
 local Tab2 = Window:CreateTab({Name = "🎮 Game TPs 🎮", Icon = "view_in_ar", ImageSource = "Material", ShowTitle = true})
-local Section2 = Tab2:CreateSection("Section | Scripts Page")
+local Section2 = Tab2:CreateSection("Section | Game TPs Page")
+local Tab3 = Window:CreateTab({Name = "⭐ Extras ⭐", Icon = "view_in_ar", ImageSource = "Material", ShowTitle = true})
+local Section3 = Tab3:CreateSection("Section | Extras Page")
 local function destroy_current_ui() if not flames_ui then return end flames_ui:Destroy() end
+local function get_nameless_admin_loaded()
+    local registry = getreg and getreg() or getgenv()
+    local na_env = registry
+        and registry["__nameless_admin_private"]
+        and registry["__nameless_admin_private"]["testing"]
+
+    if na_env and (na_env.ltseverydayyou_NA or na_env.NA_LOADED) then
+        return true
+    end
+
+    return false
+end
 wait(0.2)
-Tab1:CreateButton({
+Tab3:CreateButton({
 Name = "Flames Hub (Universal)",
 Description = "Loads the universal version of Flames Hub.",
 Callback = function()
@@ -138,7 +151,7 @@ Callback = function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/EnterpriseExperience/MicUpSource/refs/heads/main/retrieve_branch_version.lua"))()
 end,})
 
-Tab1:CreateButton({
+Tab3:CreateButton({
 Name = "Condo Games Destroyer",
 Description = "Loads the Condo Games Destroyer script.",
 Callback = function()
@@ -146,6 +159,33 @@ Callback = function()
     task.wait(0.5)
     loadstring(game:HttpGet("https://raw.githubusercontent.com/EnterpriseExperience/MicUpSource/refs/heads/main/CondoGamesRuiner.lua"))()
 end,})
+
+Tab3:CreateButton({
+Name = "Infinite Yield FE",
+Description = "Loads Infinite Yield FE (normal version).",
+Callback = function()
+    if getgenv().IY_LOADED then return end
+    if getgenv().GET_LOADED_IY then return end
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+end,})
+
+Tab3:CreateButton({
+Name = "Infinite Premium FE",
+Description = "Loads Infinite Premium FE (my version).",
+Callback = function()
+    if getgenv().IY_LOADED then return end
+    if getgenv().GET_LOADED_IY then return end
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/EnterpriseExperience/crazyDawg/main/InfYieldOther.lua"))()
+end,})
+
+Tab3:CreateButton({
+Name = "Nameless Admin FE",
+Description = "Loads Nameless Admin FE",
+Callback = function()
+    local get_loaded = get_nameless_admin_loaded()
+    if get_loaded then return end
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/Source.lua"))()
+end})
 
 for name, dude in pairs(scriptstoload) do
     local strname = name:gsub("%W", "_")
