@@ -152,6 +152,23 @@ Callback = function()
 end,})
 
 Tab3:CreateButton({
+Name = "Free Emotes GUI",
+Description = "Loads the Flames Hub | Free Emotes GUI script.",
+Callback = function()
+    if getgenv().FreeEmotes_Enabled then
+		return 
+	end
+
+	getgenv().FreeEmotes_Enabled = true
+	if not UserInputService.TouchEnabled then
+		Notify_InfP("Emotes", "Press F to toggle.")
+	else
+		Notify_InfP("Emotes", "Toggle with the 'F' button on the left side of your screen.")
+	end
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/dudeididntliterally/Backup_Repo/refs/heads/main/Emotes_Backup.lua"))()
+end})
+
+Tab3:CreateButton({
 Name = "Condo Games Destroyer",
 Description = "Loads the Condo Games Destroyer script.",
 Callback = function()
