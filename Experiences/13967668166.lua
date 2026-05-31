@@ -5211,27 +5211,76 @@ end
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
 local Local_Player = g.LocalPlayer or Players.LocalPlayer
 local Lib = g.FlamesLibrary
+local Players = cloneref(game:GetService("Players"))
+local RunService = cloneref(game:GetService("RunService"))
+local Local_Player = Players.LocalPlayer
+local Lib = g.FlamesLibrary
+g.Collision_Loops = g.Collision_Loops or {}
+local Collision_Loops = g.Collision_Loops
 g.Delete_Bad_Accessories = function(target_char)
-   for _, v in ipairs(target_char:GetDescendants()) do
-      if v:IsA("Accessory") and v.AccessoryType == Enum.AccessoryType.Jacket and v.Name:lower():find("aura") then
-         v:Destroy()
-      end
-   end
+	for _, v in ipairs(target_char:GetDescendants()) do
+		if v:IsA("Accessory") and v.AccessoryType == Enum.AccessoryType.Jacket and v.Name:lower():find("aura") then
+			v:Destroy()
+		end
+	end
+end
+
+g.Turn_Off_Bad_Players_Collision = function(target_char)
+	for _, v in ipairs(target_char:GetDescendants()) do
+		if v:IsA("BasePart") then
+			v.CanCollide = false
+		end
+	end
+end
+
+local function Start_Collision_Loop(player, char)
+	local user_id = player.UserId
+	if Collision_Loops[user_id] then
+		Collision_Loops[user_id]:Disconnect()
+		Collision_Loops[user_id] = nil
+	end
+   if not g.Noclip_Enabled then g.Toggleable_Noclip(true) end
+   wait(0.15)
+	Collision_Loops[user_id] = RunService.Heartbeat:Connect(function()
+		if not char or not char.Parent then
+			Collision_Loops[user_id]:Disconnect()
+			Collision_Loops[user_id] = nil
+			return
+		end
+		for _, v in ipairs(char:GetDescendants()) do
+			if v:IsA("BasePart") and v.CanCollide then
+				v.CanCollide = false
+			end
+		end
+	end)
+	Lib.connect("collision_loop_" .. user_id, Collision_Loops[user_id])
 end
 
 local function Setup_Player(player)
-   if player == Local_Player then return end
-   if player.Character then g.Delete_Bad_Accessories(player.Character) end
-   Lib.connect("bad_accessories_" .. player.UserId, player.CharacterAdded:Connect(function(new_char)
-      if not new_char or not new_char.Parent then repeat task.wait() until new_char and new_char:FindFirstChild("Humanoid") end
-      g.Delete_Bad_Accessories(new_char)
-   end))
+	if player == Local_Player then return end
+	if player.Character then
+		g.Delete_Bad_Accessories(player.Character)
+		Start_Collision_Loop(player, player.Character)
+	end
+	Lib.connect("bad_accessories_" .. player.UserId, player.CharacterAdded:Connect(function(new_char)
+		if not new_char or not new_char.Parent then
+			repeat task.wait() until new_char and new_char:FindFirstChild("Humanoid")
+		end
+		g.Delete_Bad_Accessories(new_char)
+		Start_Collision_Loop(player, new_char)
+	end))
 end
 
 for _, player in ipairs(Players:GetPlayers()) do Setup_Player(player) end
 Lib.connect("bad_accessories_player_added", Players.PlayerAdded:Connect(Setup_Player))
 Lib.connect("bad_accessories_player_removing", Players.PlayerRemoving:Connect(function(player)
-   Lib.disconnect("bad_accessories_" .. player.UserId)
+	local user_id = player.UserId
+	if Collision_Loops[user_id] then
+		Collision_Loops[user_id]:Disconnect()
+		Collision_Loops[user_id] = nil
+	end
+	Lib.disconnect("bad_accessories_" .. user_id)
+	Lib.disconnect("collision_loop_" .. user_id)
 end))
 
 if not g.Loaded_Actual_Chat_Actors_Global_Setter then
