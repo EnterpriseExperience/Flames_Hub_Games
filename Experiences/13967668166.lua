@@ -11,8 +11,8 @@ if not game:IsLoaded() then
 
    game.Loaded:Wait()
    task.wait(0.1)
-   msg_instance:Destroy()
-   hint_instance:Destroy()
+   if msg_instance then msg_instance:Destroy() end
+   if hint_instance then hint_instance:Destroy() end
 end
 
 local g = getgenv()
