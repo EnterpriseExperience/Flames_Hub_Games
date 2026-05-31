@@ -15749,20 +15749,12 @@ g.anti_sit_func = function(toggle)
       end
 
       g.Not_Ever_Sitting = true
+      g.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
       g.notify("Success", "Anti-Sit is now enabled!", 5)
       show_notification("Success:", "Anti-Sit is now enabled!", "Normal")
       lib.spawn(key, "spawn", function()
          while g.Not_Ever_Sitting == true do
             g.Seat.enabled.set(false)
-            g.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
-            if g.Humanoid and g.Humanoid.Sit then
-               g.Humanoid:ChangeState(3)
-               local seat_part = g.Humanoid.SeatPart
-               if seat_part then
-                  local weld = seat_part:FindFirstChildOfClass("Weld")
-                  if weld then weld:Destroy() end
-               end
-            end
             fw(0)
          end
          lib.disconnect(key)
@@ -15774,6 +15766,7 @@ g.anti_sit_func = function(toggle)
 
       g.Not_Ever_Sitting = false
       lib.disconnect(key)
+      g.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
       fw(0.2)
       g.Seat.enabled.set(true)
       notify("Success", "Sitting is now enabled!", 5)
