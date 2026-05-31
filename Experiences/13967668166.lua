@@ -3,16 +3,12 @@ if not game:IsLoaded() then
    local hint_instance = Instance.new("Hint")
    msg_instance.Text = "Flames Hub is waiting for the current experience to load fully."
    hint_instance.Text = "Flames Hub is currently waiting for the game to load."
-
-   if typeof(workspace) == "Instance" and workspace.Parent == game then
-      msg_instance.Parent = workspace
-      hint_instance.Parent = workspace
-   end
-
+   msg_instance.Parent = workspace
+   hint_instance.Parent = workspace
    game.Loaded:Wait()
    task.wait(0.1)
-   if msg_instance then msg_instance:Destroy() end
-   if hint_instance then hint_instance:Destroy() end
+   msg_instance:Destroy()
+   hint_instance:Destroy()
 end
 
 local g = getgenv()
