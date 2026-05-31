@@ -15706,6 +15706,14 @@ g.anti_sit_func = function(toggle)
          while g.Not_Ever_Sitting == true do
             g.Seat.enabled.set(false)
             g.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+            if g.Humanoid and g.Humanoid.Sit then
+               g.Humanoid:ChangeState(3)
+               local seat_part = g.Humanoid.SeatPart
+               if seat_part then
+                  local weld = seat_part:FindFirstChildOfClass("Weld")
+                  if weld then weld:Destroy() end
+               end
+            end
             fw(0)
          end
          lib.disconnect(key)
@@ -15722,7 +15730,7 @@ g.anti_sit_func = function(toggle)
       notify("Success", "Sitting is now enabled!", 5)
       Phone.show_notification("Success:", "Sitting is now enabled!", "Normal")
    else
-      return 
+      return
    end
 end
 
