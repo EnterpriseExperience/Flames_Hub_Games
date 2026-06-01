@@ -3631,8 +3631,8 @@ local function format_title(str)
    return valid_titles[key] or "Info"
 end
 
-g.notify = function(title, msg, dur)
-   if g.dont_receive_any_notifications_flames_hub then
+g.notify = g.notify or function(title, msg, dur)
+   if getgenv().dont_receive_any_notifications_flames_hub then
       warn(tostring(game.Players.LocalPlayer).." has disabled notifications.")
    else
       local fixed_title = format_title(title)
@@ -12393,6 +12393,7 @@ local excluded_functions = {
    delfolder = true,
    dofile = true,
    dumpstring = true,
+   disable_emote_func = true,
    filtergc = true,
    fireclickdetector = true,
    fireproximityprompt = true,
@@ -12460,6 +12461,7 @@ local excluded_functions = {
    getscriptfunction = true,
    getscripthash = true,
    getscripts = true,
+   getscriptthread = true,
    getsenv = true,
    getsimulationradius = true,
    getstack = true,
@@ -12507,7 +12509,7 @@ local excluded_functions = {
    lz4decompress = true,
    makefolder = true,
    makereadonly = true,
-   makewriteable = true,
+   makewritable = true,
    messagebox = true,
    messageboxasync = true,
    mouse1click = true,
@@ -12589,7 +12591,8 @@ local excluded_functions = {
    Flames_Debugger_Function_Tester_GUI = true,
    notify = true,
    start_scan = true,
-   SetFPSCap = true
+   SetFPSCap = true,
+   low_level_executor = true
 }
 
 g.Flames_Debugger_Function_Tester_GUI = function()
@@ -12610,7 +12613,7 @@ g.Flames_Debugger_Function_Tester_GUI = function()
    if CoreGui:FindFirstChild("FlamesDebugger") then
       CoreGui.FlamesDebugger.Enabled = true
       genv.__flames_debugger_running = false
-      g.dont_receive_any_notifications_flames_hub = false
+      getgenv().dont_receive_any_notifications_flames_hub = false
       return
    end
 
@@ -12663,7 +12666,7 @@ g.Flames_Debugger_Function_Tester_GUI = function()
    rescan.MouseButton1Click:Connect(function()
       if not genv.__flames_debugger_running then
          genv.__flames_debugger_running = true
-         g.dont_receive_any_notifications_flames_hub = true
+         getgenv().dont_receive_any_notifications_flames_hub = true
          start_scan()
       end
    end)
@@ -12752,10 +12755,8 @@ g.Flames_Debugger_Function_Tester_GUI = function()
    start_scan = function()
       task.spawn(function()
          g.button_text_changing_for_debug_scanner = true
-
          local function run_scan()
             clear_list()
-
             local tested = 0
 
             for name,value in next,genv do
@@ -12789,18 +12790,26 @@ g.Flames_Debugger_Function_Tester_GUI = function()
 
             if tested == 0 then
                add_row("No functions found to test", false)
-               g.dont_receive_any_notifications_flames_hub = false
+               getgenv().dont_receive_any_notifications_flames_hub = false
             else
                add_row("Completed testing "..tested.." functions", true)
-               g.dont_receive_any_notifications_flames_hub = false
+               getgenv().dont_receive_any_notifications_flames_hub = false
             end
          end
 
-         pcall(run_scan)
+         local ok, response = pcall(function()
+            run_scan()
+         end)
 
+         if ok then
+            print("It seemed like it worked, got: "..tostring(response))
+         else
+            warn("Something unexpected cancelled or destroyed the current run_scan() call, got response: "..tostring(response))
+         end
+         task.wait(0.15)
          g.button_text_changing_for_debug_scanner = false
          genv.__flames_debugger_running = false
-         g.dont_receive_any_notifications_flames_hub = false
+         getgenv().dont_receive_any_notifications_flames_hub = false
 
          if rescan and rescan:IsA("TextButton") then
             rescan.Text = "Start Scan"
