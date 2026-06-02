@@ -17,7 +17,6 @@ if not g.Tower_Of_Hell_WorkAround_Loaded then
     if hookfunction and hookmetamethod then
         hookfunction(player.Kick, function() end)
         hookfunction(player.kick, function() end)
-
         local oldnc
         oldnc = hookmetamethod(game, "__namecall", function(self, ...)
             local method = getnamecallmethod()
@@ -31,17 +30,30 @@ if not g.Tower_Of_Hell_WorkAround_Loaded then
         end)
 
         local function destroy_anti(s)
-            if s.Name == "LocalScript" or s.Name == "LocalScript2" then
+            if not s:IsA("LocalScript") then return end
+            local success, env = pcall(getsenv, s)
+            
+            if success and env then
+                if type(env.kick) == "function" then
+                    hookfunction(env.kick, function()
+                        getgenv().notify("Success", "Hooked internal 'Kick()' functionality.", 1)
+                    end)
+                end
+                if type(env.isAllowedToSit) == "function" then
+                    hookfunction(env.isAllowedToSit, function()
+                        return true
+                    end)
+                end
+            else
                 s.Disabled = true
-                s:Destroy()
             end
         end
 
-        for _, s in pairs(ps:GetChildren()) do destroy_anti(s) end
-        for _, s in pairs(sps:GetChildren()) do destroy_anti(s) end
+        for _, s in pairs(ps:GetChildren()) do if s:IsA("LocalScript") then destroy_anti(s) end end
+        for _, s in pairs(sps:GetChildren()) do if s:IsA("LocalScript") then destroy_anti(s) end end
         FlamesLibrary.connect("anti_recreate_ps", ps.ChildAdded:Connect(destroy_anti))
         FlamesLibrary.connect("anti_recreate_sps", sps.ChildAdded:Connect(destroy_anti))
-        local remote = game.ReplicatedStorage.Remotes.Moderation.kickUser
+        local remote = game.ReplicatedStorage:FindFirstChild("kickUser", true)
         hookfunction(remote.FireServer, function() end)
         g.Tower_Of_Hell_WorkAround_Loaded = true
         if g.notify then g.notify("Success", "Flames Hub has bypassed Tower Of Hell's anti-cheat for you!", 15) end
@@ -218,7 +230,6 @@ end))
 
 -- [[ Anti Invisible ]] --
 getgenv().anti_invisible_mutator = getgenv().anti_invisible_mutator ~= nil and getgenv().anti_invisible_mutator or false
-
 local function setup_anti_invisible()
     local self_char = getgenv().Character or getgenv().LocalPlayer.Character
     if not self_char then return end
