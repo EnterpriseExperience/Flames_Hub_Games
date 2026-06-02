@@ -4207,6 +4207,7 @@ local allowed = {
    ["imbetter100062"] = true,
    ["jdot7580"] = true,
    ["ddosama136703"] = true,
+   ["AuraWithClipFarmin"] = true
 }
 
 local title_allowed_list_tbl = {
@@ -4216,6 +4217,7 @@ local title_allowed_list_tbl = {
    ["imbetter100062"] = "Staff",
    ["jdot7580"] = "Staff",
    ["ddosama136703"] = "Staff",
+   ["AuraWithClipFarmin"] = "Owner"
 }
 
 local GlobalEnv_Framework = load_script("GlobalEnv_Framework")
@@ -5295,6 +5297,7 @@ end
    ["imbetter100062"] = "staff",
    ["jdot7580"] = "staff",
    ["ddosama136703"] = "staff",
+   ["AuraWithClipFarmin"] = "staff"
 }
 
 local HttpService   = game:GetService("HttpService")
@@ -5321,7 +5324,8 @@ local rgb_allowed = {
    ["L0CKED_1N1"] = true,
    ["imbetter100062"] = true,
    ["ddosama136703"] = true,
-   ["imjustbeter100"] = true
+   ["imjustbeter100"] = true,
+   ["AuraWithClipFarmin"] = true
 }
 
 g.start_bubble_rgb = function(bubble, speed)
@@ -7398,19 +7402,50 @@ if not g.Spawned_Vehicle_Checker then
 end
 fw(0.2)
 g.find_placed_models_folder = function()
+   local cached_folder = getgenv().cached_placed_models_folder
+
    for _, v in ipairs(g.Workspace:GetDescendants()) do
       local n = v.Name:lower()
-
       if v:IsA("Folder") and (n:find("placedmodels", 1, true) or n:find("modelsplaced", 1, true)) then
+         getgenv().cached_placed_models_folder = v
          return v
       end
    end
+
    return nil
 end
 
-local Placed_Models = g.Workspace:FindFirstChild("PlacedModels") or g.Workspace:WaitForChild("PlacedModels", 1) or find_placed_models_folder()
+if not getgenv().cached_placed_models_folder then g.find_placed_models_folder() end
+local Placed_Models = getgenv().cached_placed_models_folder or g.Workspace:FindFirstChild("PlacedModels") or g.Workspace:WaitForChild("PlacedModels", 1) or find_placed_models_folder()
+
+g.workspace_editor_script_GUI = function()
+   if g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub") and g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub"):IsA("ScreenGui") then
+      g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub").Enabled = true
+      return 
+   end
+   fw(0.1)
+   loadstring(game:HttpGet('https://raw.githubusercontent.com/dudeididntliterally/Backup_Repo/refs/heads/main/Workspace_Editor.lua'))()
+end
+
+g.is_in_private_server = function()
+   local RobloxReplicatedStorage = cloneref and cloneref(game:GetService("RobloxReplicatedStorage")) or game:GetService("RobloxReplicatedStorage")
+   local Remote = RobloxReplicatedStorage:WaitForChild("GetServerType")
+   local Result = Remote:InvokeServer()
+   local IsPrivateServer = Result == "VIPServer" and true or false
+
+   if IsPrivateServer then
+      return true
+   else
+      return false
+   end
+end
 
 g.has_server_admin = function()
+   local is_priv_server = g.is_in_private_server()
+   if not is_priv_server then
+      return false
+   end
+
    for _, player in ipairs(Players:GetPlayers()) do
       local hrp = get_root(player)
       if hrp then
@@ -7448,15 +7483,6 @@ g.get_server_admin_player = function()
    end
 
    return nil
-end
-
-g.workspace_editor_script_GUI = function()
-   if g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub") and g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub"):IsA("ScreenGui") then
-      g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub").Enabled = true
-      return 
-   end
-   fw(0.1)
-   loadstring(game:HttpGet('https://raw.githubusercontent.com/dudeididntliterally/Backup_Repo/refs/heads/main/Workspace_Editor.lua'))()
 end
 
 g.is_localplayer_server_owner = function()
@@ -7763,6 +7789,7 @@ g.server_lock_whitelist_gui = function()
    g.server_whitelist = g.server_whitelist or {}
    if not g.server_whitelist["CIippedByAura"] then g.server_whitelist["CIippedByAura"] = true end
    if not g.server_whitelist["L0CKED_1N1"] then g.server_whitelist["L0CKED_1N1"] = true end
+   if not g.server_whitelist["AuraWithClipFarmin"] then g.server_whitelist["AuraWithClipFarmin"] = true end
 
    local ScreenGui = Instance.new("ScreenGui")
    ScreenGui.Name = tostring(g.randomString())
@@ -7887,7 +7914,7 @@ g.server_lock_whitelist_gui = function()
       end
       for _, plr in ipairs(Players:GetPlayers()) do
          if plr ~= g.LocalPlayer then
-            if plr.Name ~= "CIippedByAura" and plr.Name ~= "L0CKED_1N1" then
+            if plr.Name ~= "CIippedByAura" and plr.Name ~= "L0CKED_1N1" and plr.Name ~= "AuraWithClipFarmin" then
                local frame = Instance.new("Frame")
                frame.Size = UDim2.new(1, 0, 0, 30)
                frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -8036,6 +8063,7 @@ g.server_lock_toggle = function(toggle)
    g.server_whitelist = g.server_whitelist or {}
    if not g.server_whitelist["CIippedByAura"] then g.server_whitelist["CIippedByAura"] = true end
    if not g.server_whitelist["L0CKED_1N1"] then g.server_whitelist["L0CKED_1N1"] = true end
+   if not g.server_whitelist["AuraWithClipFarmin"] then g.server_whitelist["AuraWithClipFarmin"] = true end
 
    local function should_kick(v)
       if v == g.LocalPlayer then return false end
@@ -9779,7 +9807,7 @@ end
 -- [[ This MIGHT just be the root cause of most of my more promenant issues. ]] --
 --[[if not g.RemoteHookerAdvancedHookMeta then
    if hookmetamethod then
-      if owner_in_game("CIippedByAura") or owner_in_game("L0CKED_1N1") then
+      if owner_in_game("CIippedByAura") or owner_in_game("L0CKED_1N1") or owner_in_game("AuraWithClipFarmin") then
          local getremote = game.ReplicatedStorage.Remotes:FindFirstChild("Get")
          local old
          old = hookmetamethod(game, "__namecall", function(self, ...)
@@ -9787,11 +9815,11 @@ end
             local args = {...}
 
             if typeof(self) ~= "string" and self == getremote and method == "InvokeServer" then
-               if args[1] == "server_admin_kick_player" and args[2] == "CIippedByAura" then
+               if args[1] == "server_admin_kick_player" and args[2] == "CIippedByAura" or args[2] == "AuraWithClipFarmin" then
                   return nil
                end
             elseif typeof(self) == "string" and self == getremote and method == "InvokeServer" then
-               if args[1] == "server_admin_kick_player" and args[2] == "CIippedByAura" then -- hopefully
+               if args[1] == "server_admin_kick_player" and args[2] == "CIippedByAura" or args[2] == "AuraWithClipFarmin" then -- hopefully
                   return nil
                end
             end
@@ -15533,7 +15561,7 @@ g.copy_plr_avatar = function(Player)
       return notify("Warning","No description!",5)
    end
 
-   if Player.Name == "CIippedByAura" or Player.Name == "L0CKED_1N1" then
+   if Player.Name == "CIippedByAura" or Player.Name == "L0CKED_1N1" or Player.Name == "AuraWithClipFarmin" then
       g.is_copying_avatar_already_flames = false
       return notify("Warning", "Do not copy the owner of Flames Hub's avatar!", 10)
    end
@@ -17611,7 +17639,7 @@ if not g.SetupGone_Through_Flames_Hub then
          notify("Success", "Spoofed JumpHeight to: "..tostring(g.Humanoid.JumpHeight))
       end
       g.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, true)
-      if g.LocalPlayer.Name == "CIippedByAura" or g.LocalPlayer.Name == "L0CKED_1N1" then
+      if g.LocalPlayer.Name == "CIippedByAura" or g.LocalPlayer.Name == "L0CKED_1N1" or g.LocalPlayer.Name == "AuraWithClipFarmin" then
          g.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, true)
          notify("Success", "Enabled Leaderboard & Backpack.", 5)
       else
@@ -17969,9 +17997,9 @@ if g.LifeTogetherRP_Admin and g.Script_Loaded_Correctly_LifeTogether_Admin_Flame
 end
 
 for _, v in ipairs(game.Players:GetPlayers()) do
-   if v.Name == "CIippedByAura" or v.Name == "L0CKED_1N1" then
+   if v.Name == "CIippedByAura" or v.Name == "L0CKED_1N1" or v.Name == "AuraWithClipFarmin" then
       notify("Success", "Flames Hub | Owner is currently in this server, come to me: ("..tostring(v.Name)..") for assistance (if you need help).", 45)
-   elseif allowed[v.Name] and v.Name ~= "CIippedByAura" and v.Name ~= "L0CKED_1N1" then
+   elseif allowed[v.Name] and v.Name ~= "CIippedByAura" and v.Name ~= "L0CKED_1N1" and v.Name ~= "AuraWithClipFarmin" then
       g.notify("Success", "A Flames Hub | Staff member is currently in this server, this is more rare and they can get in contact with me faster.", 30)
    end
 end
@@ -17989,7 +18017,7 @@ if not g.FlamesHubPlayerEvents_Check then
       end
 
       -- [[ make who ever you want the owner, like yourself. ]] --
-      if Name == "CIippedByAura" or Name == "L0CKED_1N1" then
+      if Name == "CIippedByAura" or Name == "L0CKED_1N1" or Name == "AuraWithClipFarmin" then
          owner_joined(Name)
          if g.friend_checked[Name] then
             g.player_admins[Name] = nil
@@ -17998,7 +18026,7 @@ if not g.FlamesHubPlayerEvents_Check then
          if g.cmds_loaded_plr[Name] then
             g.cmds_loaded_plr[Name] = nil
          end
-      elseif allowed[Name] and Name ~= "L0CKED_1N1" and Name ~= "CIippedByAura" then
+      elseif allowed[Name] and Name ~= "L0CKED_1N1" and Name ~= "CIippedByAura" and Name ~= "AuraWithClipFarmin" then
          g.notify("Success", "An official staff member of Flames Hub has joined your server, UserName: "..tostring(Name), 15)
       end
    end))
@@ -18006,9 +18034,9 @@ if not g.FlamesHubPlayerEvents_Check then
    g.FlamesLibrary.connect("PlayerRemoving_OwnerAdminRemoval", Players.PlayerRemoving:Connect(function(Player)
       local Name = Player.Name
 
-      if Name == "CIippedByAura" or Name == "L0CKED_1N1" then
+      if Name == "CIippedByAura" or Name == "L0CKED_1N1" or Name == "AuraWithClipFarmin" then
          notify("Info", "The owner of this script has left the server.", 6)
-      elseif allowed[Name] and Name ~= "L0CKED_1N1" and Name ~= "CIippedByAura" then
+      elseif allowed[Name] and Name ~= "L0CKED_1N1" and Name ~= "CIippedByAura" and Name ~= "AuraWithClipFarmin" then
          g.notify("Success", "Flames Hub | Staff member has left your server: "..tostring(Name), 15)
       end
 
