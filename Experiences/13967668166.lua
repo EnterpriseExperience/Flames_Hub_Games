@@ -8399,7 +8399,7 @@ end
 
 g.isTrackPlaying = function(humanoid)
    if not humanoid then
-      notify("Error", "Humanoid does not exist / was not found.", 6)
+      notify("Error", "Humanoid does not exist / was not found.", 1)
       return false
    end
 
@@ -8414,11 +8414,11 @@ end
 fw(0.2)
 g.main_emote_ID = 72074295131591
 g.play_anim_on_local_plr = function(anim_selector)
+   if g.isTrackPlaying(Humanoid) then
+      g.stop_all_anims()
+   end
+   wait(0.25)
    if anim_selector == "1" then
-      if g.isTrackPlaying(Humanoid) then
-         g.stop_all_anims()
-      end
-      fw(0.2)
       local Humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("AnimationController")
       local anim = Instance.new("Animation")
       anim.AnimationId = "rbxassetid://134313829527772"
@@ -8432,75 +8432,66 @@ g.play_anim_on_local_plr = function(anim_selector)
          v:AdjustSpeed(0)
       end
    elseif anim_selector == "2" then
-      if g.isTrackPlaying(Humanoid) then
-         g.stop_all_anims()
-      end
-      fw(0.2)
       local Humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("AnimationController")
       local anim = Instance.new("Animation")
-      anim.AnimationId = "rbxassetid://119055944394046"
+      anim.AnimationId = "rbxassetid://124771204189379"
       fw(0.1)
       local track = Humanoid:LoadAnimation(anim)
       track:Play(0, 1, 1)
-   elseif anim_selector == "3" then
-      if g.isTrackPlaying(Humanoid) then
-         g.stop_all_anims()
+      track:AdjustSpeed(0)
+      
+      for _, v in pairs(Humanoid:GetPlayingAnimationTracks()) do
+         v:AdjustSpeed(0)
       end
-      fw(0.2)
+   elseif anim_selector == "3" then
       local Humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("AnimationController")
       local anim = Instance.new("Animation")
       anim.AnimationId = "rbxassetid://137126647656632"
       fw(0.1)
       local track = Humanoid:LoadAnimation(anim)
       track:Play(0, 1, 1)
+      track:AdjustSpeed(0)
 
       for _, v in pairs(Humanoid:GetPlayingAnimationTracks()) do
          v:AdjustSpeed(0)
       end
    elseif anim_selector == "4" then
-      if g.isTrackPlaying(Humanoid) then
-         g.stop_all_anims()
-      end
-      fw(0.2)
       local Humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("AnimationController")
       local anim = Instance.new("Animation")
       anim.AnimationId = "rbxassetid://85233258054867"
       fw(0.1)
       local track = Humanoid:LoadAnimation(anim)
       track:Play(0, 1, 1)
+      track:AdjustSpeed(0)
 
       for _, v in pairs(Humanoid:GetPlayingAnimationTracks()) do
          v:AdjustSpeed(0)
       end
    elseif anim_selector == "5" then
-      if g.isTrackPlaying(Humanoid) then
-         g.stop_all_anims()
-      end
-      fw(0.2)
       local Humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("AnimationController")
       local anim = Instance.new("Animation")
-      anim.AnimationId = "rbxassetid://74284205097179"
+      anim.AnimationId = "rbxassetid://101847197011911"
       fw(0.1)
       local track = Humanoid:LoadAnimation(anim)
       track:Play(0, 1, 1)
+      track:AdjustSpeed(2)
 
       for _, v in pairs(Humanoid:GetPlayingAnimationTracks()) do
-         v:AdjustSpeed(0)
+         v:AdjustSpeed(2)
       end
    elseif anim_selector == "6" then
-      if g.isTrackPlaying(Humanoid) then
-         g.stop_all_anims()
-      end
-      fw(0.2)
       local Humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("AnimationController")
       local anim = Instance.new("Animation")
-      anim.AnimationId = "rbxassetid://107168210393534"
+      anim.AnimationId = "rbxassetid://138990462417721"
       fw(0.1)
       local track = Humanoid:LoadAnimation(anim)
       track:Play(0, 1, 1)
+      track:AdjustSpeed(0)
+      track.TimePosition = 0
 
       for _, v in pairs(Humanoid:GetPlayingAnimationTracks()) do
          v:AdjustSpeed(0)
+         v:AdjustWeight(0.40)
       end
    else
       return notify("Error", "Invalid Animation argument provided, pick between either 1 or 2.", 7)
@@ -8519,11 +8510,9 @@ end
 
 g.is_me = function(input)
    if type(input) ~= "string" then return false end
-
    input = string.lower(input)
    local name = string.lower(LocalPlayer.Name)
    local display = string.lower(LocalPlayer.DisplayName)
-
    return name:sub(1, #input) == input or display:sub(1, #input) == input
 end
 
@@ -15256,7 +15245,7 @@ g.setup_cmd_handler_plr = function(player)
          spawn_any_vehicle("svj")
       elseif levenshtein(command, "ferrari") <= 2 or levenshtein(command, "sf90") or levenshtein(command, "corvette") then
          spawn_any_vehicle("sf90")
-      elseif levenshtein(command, "bugatti") <= 2 then
+      elseif levenshtein(command, "bugatti") <= 2 or levenshtein(command, "chiron") then
          spawn_any_vehicle("chiron")
       elseif levenshtein(command, "charger") <= 2 or levenshtein(command, "chargersrt") or levenshtein(command, "srtcharger") or levenshtein(command, "srt") then
          spawn_any_vehicle("charger")
@@ -15265,7 +15254,7 @@ g.setup_cmd_handler_plr = function(player)
          g.Is_OnCooldown = true
          g.Wait_Time_Cooldown = 45
          g.TextChatService:FindFirstChild("TextChannels"):FindFirstChild("RBXGeneral"):SendAsync(
-            ";lockcar | ;rgbcar | ;norgbcar | ;unlockcar | ;check Player | ;trailer | ;notrailer", ";lambo", ";sf90"
+            ";lockcar | ;rgbcar | ;norgbcar | ;unlockcar | ;check Player | ;trailer | ;notrailer", ";lambo", ";sf90", ";charger", ";bugatti"
          )
 
          task.delay(g.Wait_Time_Cooldown, function()
