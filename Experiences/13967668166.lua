@@ -15241,7 +15241,7 @@ g.setup_cmd_handler_plr = function(player)
                general_channel:SendAsync("Player: " .. target.DisplayName .. " does not have premium.")
             end
          end
-      elseif levenshtein(command, "lambo") <= 2 or levenshtein(command, "svj") or levenshtein(command, "lamborghini") then
+      elseif levenshtein(command, "lambo") <= 2 or levenshtein(command, "lamborghini") then
          spawn_any_vehicle("svj")
       elseif levenshtein(command, "ferrari") <= 2 or levenshtein(command, "sf90") or levenshtein(command, "corvette") then
          spawn_any_vehicle("sf90")
