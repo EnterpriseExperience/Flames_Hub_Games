@@ -12,7 +12,7 @@ if not game:IsLoaded() then
 end
 
 local g = getgenv()
-local Raw_Version = "V8.9.3"
+local Raw_Version = "V8.9.4"
 g.Script_Version = tostring(Raw_Version).."-LifeAdmin"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
 local localPlayer = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
@@ -4337,8 +4337,7 @@ g.get_all_current_outfits_and_their_IDs = function()
    return g.all_saved_Life_Together_RP_Outfit_IDs
 end
 
--- [[ Don't add this back, it prevents them from seeing their blacklist messgae, otherwise, we'll add a check to make sure they're not blacklisted first before switching it on. ]] --
---[[if not g.LoadedFlamesHub_ErrorClear_Func then
+if not g.LoadedFlamesHub_ErrorClear_Func then
    g.AutoClearingErrorMessages = true
    g.AutoClearing_ErrorMessagesTask = g.AutoClearing_ErrorMessagesTask or task.spawn(function()
       while g.AutoClearingErrorMessages == true do
@@ -4346,9 +4345,43 @@ end
          game:GetService("GuiService"):ClearError()
       end
    end)
-   fw(0.2)
+   task.wait(0.2)
    g.LoadedFlamesHub_ErrorClear_Func = true
-end--]]
+end
+
+g.find_nba_props_map_folder = function()
+   local cache = getgenv().nba_props_kept_folder_inst
+   if cache and cache:IsA("Folder") then
+      return cache
+   end
+
+   for _, v in ipairs(workspace:GetDescendants()) do
+      if v:IsA("Folder") and v.Name:lower():find("map") and v.Name:lower():find("props") and v.Parent.Name:lower():find("nba") then
+         getgenv().nba_props_kept_folder_inst = v
+         return v
+      end
+   end
+
+   return nil
+end
+
+g.collect_all_nba_props = function()
+   local char = g.Character or g.LocalPlayer.Character or get_char(LocalPlayer, 10) or g.Char and g.Char:get()
+   if not char then return end
+   local attr = g.LocalPlayer:GetAttribute("NBA_HUNT_PROGRESS")
+   if not attr then return end
+   local folder = g.nba_props_kept_folder_inst or g.find_nba_props_map_folder()
+   if char and attr == "PLAYING" then
+      for _, v in ipairs(folder:GetChildren()) do
+         if v:IsA("Model") then
+            local Handle = v:FindFirstChildWhichIsA("MeshPart", true)
+            if Handle and Handle.Name:lower():find("handle") then
+               char:PivotTo(v:GetPivot() + Vector3.new(0, 2.5, 0))
+            end
+         end
+      end
+   end
+end
 
 local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui
 g.find_delta_icon_image_button = g.find_delta_icon_image_button or function()
