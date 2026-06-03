@@ -8437,9 +8437,10 @@ g.play_anim_on_local_plr = function(anim_selector)
       anim.AnimationId = "rbxassetid://124771204189379"
       fw(0.1)
       local track = Humanoid:LoadAnimation(anim)
+      repeat task.wait() until track.Length > 0
       track:Play(0, 1, 1)
-      track:AdjustSpeed(0)
-      
+      repeat task.wait() until track.IsPlaying and track.Speed >= 0.5
+      if not track.IsPlaying then return end
       for _, v in pairs(Humanoid:GetPlayingAnimationTracks()) do
          v:AdjustSpeed(0)
       end
@@ -8487,11 +8488,10 @@ g.play_anim_on_local_plr = function(anim_selector)
       local track = Humanoid:LoadAnimation(anim)
       track:Play(0, 1, 1)
       track:AdjustSpeed(0)
-      track.TimePosition = 0
-
+      track.TimePosition = 2.49
+      fw(0.1)
       for _, v in pairs(Humanoid:GetPlayingAnimationTracks()) do
          v:AdjustSpeed(0)
-         v:AdjustWeight(0.40)
       end
    else
       return notify("Error", "Invalid Animation argument provided, pick between either 1 or 2.", 7)
