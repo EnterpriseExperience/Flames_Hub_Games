@@ -18098,8 +18098,8 @@ local function print_bytes(label, s)
    print(label .. ": " .. table.concat(bytes, ","))
 end
 local function clean(s) return s:gsub("[%c%z%s]", ""):gsub("[^\32-\126]", "") end
-local script_url = "https://raw.githubusercontent.com/dudeididntliterally/Backup_Repo/refs/heads/main/Life_Together_Admin.lua"
-local version_url = "https://raw.githubusercontent.com/dudeididntliterally/Backup_Repo/refs/heads/main/Script_Versions_JSON.json"
+local script_url = "https://raw.githubusercontent.com/EnterpriseExperience/Flames_Hub_Games/refs/heads/main/Experiences/13967668166.lua"
+local version_url = "https://raw.githubusercontent.com/EnterpriseExperience/MicUpSource/refs/heads/main/Script_Versions_JSON"
 local function ws_get_version()
    local http_req = request or http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request)
    if not http_req then return nil end
