@@ -10990,11 +10990,11 @@ getgenv().anti_outfit_copier = function(toggle)
             end
          else
             getgenv().anti_outfit_stealer = true
-            getgenv().Send("bio", "` Flames Hub Anti Stealer Is Enabled `")
+            getgenv().Send("bio", "`~ Flames Hub Anti Stealer Is Enabled ~`")
          end
 
          local last_check = 0
-         local target_bio = "` Flames Hub Anti Stealer Is Enabled `"
+         local target_bio = "`~ Flames Hub Anti Stealer Is Enabled ~`"
          lib.connect("AntiFitStealerConn", getgenv().RunService.Heartbeat:Connect(function()
             local now = tick()
             if now - last_check < 0.4 then return end
@@ -15577,7 +15577,7 @@ g.copy_plr_avatar = function(Player)
       return notify("Warning", "Do not copy the owner of Flames Hub's avatar!", 10)
    end
 
-   if Player:GetAttribute("bio") == "` Flames Hub Anti Stealer Is Enabled `" then return g.notify("Warning", "This Player has Flames Hub | Anti Stealer enabled!", 5) end
+   if Player:GetAttribute("bio") == "`~ Flames Hub Anti Stealer Is Enabled ~`" then return g.notify("Warning", "This Player has Flames Hub | Anti Stealer enabled!", 5) end
    g.clear_avatar()
    fw(0.2)
    local accessories = {}
