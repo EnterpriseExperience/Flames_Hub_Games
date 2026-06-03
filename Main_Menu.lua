@@ -161,9 +161,9 @@ Callback = function()
 
 	getgenv().FreeEmotes_Enabled = true
 	if not UserInputService.TouchEnabled then
-		Notify_InfP("Emotes", "Press F to toggle.")
+		getgenv().notify("Success", "Press F to toggle.", 1)
 	else
-		Notify_InfP("Emotes", "Toggle with the 'F' button on the left side of your screen.")
+		getgenv().notify("Success", "Toggle with the 'F' button on the left side of your screen.", 3)
 	end
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/dudeididntliterally/Backup_Repo/refs/heads/main/Emotes_Backup.lua"))()
 end})
