@@ -10990,11 +10990,11 @@ getgenv().anti_outfit_copier = function(toggle)
             end
          else
             getgenv().anti_outfit_stealer = true
-            getgenv().Send("bio", "Flames Hub Anti Stealer Is Enabled.")
+            getgenv().Send("bio", "` Flames Hub Anti Stealer Is Enabled `")
          end
 
          local last_check = 0
-         local target_bio = "Flames Hub Anti Stealer Is Enabled."
+         local target_bio = "` Flames Hub Anti Stealer Is Enabled `"
          lib.connect("AntiFitStealerConn", getgenv().RunService.Heartbeat:Connect(function()
             local now = tick()
             if now - last_check < 0.4 then return end
@@ -15227,7 +15227,6 @@ g.setup_cmd_handler_plr = function(player)
          water_skie_trailer(false, Vehicle)
       elseif command:sub(1, 5) == "check" then
          if g.Check_Cooldown then return end
-
          g.Check_Cooldown = true
          task.delay(15, function()
             g.Check_Cooldown = false
@@ -15236,30 +15235,37 @@ g.setup_cmd_handler_plr = function(player)
          local args = command:split(" ")
          local checkTargetName = args[2]
          if not checkTargetName or #checkTargetName <= 0 then
-            return warn("Target player invalid: "..tostring(checkTargetName))
+            return getgenv().notify("Warning", "Target player invalid: "..tostring(checkTargetName), 1)
          end
 
          local target = findplr(checkTargetName)
          if not target then
-            return warn("Could not find: "..tostring(target))
+            return getgenv().notify("Warning", "Could not find: "..tostring(target), 1)
          end
 
          local isVerified = target:GetAttribute("is_verified")
-         local generalChannel = g.TextChatService:FindFirstChild("RBXGeneral", true) or g.TextChatService:FindFirstChild("TextChannels"):FindFirstChild("RBXGeneral")
-         if generalChannel then
+         local general_channel = g.TextChatService:FindFirstChild("RBXGeneral", true) or g.TextChatService:FindFirstChild("TextChannels"):FindFirstChild("RBXGeneral")
+         if general_channel then
             if isVerified == true then
-               generalChannel:SendAsync("Player: " .. target.DisplayName .. " has premium.")
+               general_channel:SendAsync("Player: " .. target.DisplayName .. " has premium.")
             else
-               generalChannel:SendAsync("Player: " .. target.DisplayName .. " does not have premium.")
+               general_channel:SendAsync("Player: " .. target.DisplayName .. " does not have premium.")
             end
          end
+      elseif levenshtein(command, "lambo") <= 2 or levenshtein(command, "svj") or levenshtein(command, "lamborghini") then
+         spawn_any_vehicle("svj")
+      elseif levenshtein(command, "ferrari") <= 2 or levenshtein(command, "sf90") or levenshtein(command, "corvette") then
+         spawn_any_vehicle("sf90")
+      elseif levenshtein(command, "bugatti") <= 2 then
+         spawn_any_vehicle("chiron")
+      elseif levenshtein(command, "charger") <= 2 or levenshtein(command, "chargersrt") or levenshtein(command, "srtcharger") or levenshtein(command, "srt") then
+         spawn_any_vehicle("charger")
       elseif levenshtein(command, "cmds") <= 2 then
          if g.Is_OnCooldown then return end
-
          g.Is_OnCooldown = true
          g.Wait_Time_Cooldown = 45
          g.TextChatService:FindFirstChild("TextChannels"):FindFirstChild("RBXGeneral"):SendAsync(
-            ";lockcar | ;rgbcar | ;norgbcar | ;unlockcar | ;check Player | ;trailer | ;notrailer"
+            ";lockcar | ;rgbcar | ;norgbcar | ;unlockcar | ;check Player | ;trailer | ;notrailer", ";lambo", ";sf90"
          )
 
          task.delay(g.Wait_Time_Cooldown, function()
@@ -15571,7 +15577,7 @@ g.copy_plr_avatar = function(Player)
       return notify("Warning", "Do not copy the owner of Flames Hub's avatar!", 10)
    end
 
-   if Player:GetAttribute("bio") == "Flames Hub Anti Stealer Is Enabled." then return g.notify("Warning", "This Player has Flames Hub | Anti Stealer on!", 5) end
+   if Player:GetAttribute("bio") == "` Flames Hub Anti Stealer Is Enabled `" then return g.notify("Warning", "This Player has Flames Hub | Anti Stealer enabled!", 5) end
    g.clear_avatar()
    fw(0.2)
    local accessories = {}
