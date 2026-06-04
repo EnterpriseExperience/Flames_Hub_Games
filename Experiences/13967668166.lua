@@ -8861,18 +8861,32 @@ local commands = {
       run = function(args)
          local target = args[2]
          if not is_me(target) then return end
-         local current_pants = g.GetWornAssetId("pants")
-         local current_shirt = g.GetWornAssetId("shirt")
          local blank_pants = 15885405395
          local blank_shirt = 15821796333
-         if current_pants ~= blank_pants and current_shirt ~= blank_shirt then g.CacheWornClothing() end
-         for _, item in ipairs(g.GetCachedLayered()) do
-            g.Get("wear", item.AccessoryType, 0)
-            task.wait(0.45)
+         local current_pants = g.GetWornAssetId("pants")
+         local current_shirt = g.GetWornAssetId("shirt")
+         if current_pants ~= blank_pants or current_shirt ~= blank_shirt then
+            g.CacheWornClothing()
          end
-         wait(0.25)
-         g.Get("wear", "Shirt", blank_shirt)
-         g.Get("wear", "Pants", blank_pants)
+         local Humanoid = g.Humanoid or g.LocalPlayer.Character and g.LocalPlayer.Character:FindFirstChildOfClass("Humanoid") or g.Char:get_hum()
+         if Humanoid then
+            local desc = Humanoid:GetAppliedDescription()
+            for _, info in ipairs(desc:GetAccessories(true)) do
+               if info.IsLayered then
+                  g.Get("wear", info.AssetId, info.AccessoryType.Name .. "Accessory")
+                  task.wait(0.45)
+               end
+            end
+         end
+         task.wait(0.25)
+         if current_shirt and current_shirt ~= blank_shirt then
+            g.Get("wear", current_shirt, "Shirt")
+         end
+         if current_pants and current_pants ~= blank_pants then
+            g.Get("wear", current_pants, "Pants")
+         end
+         g.Get("wear", blank_shirt, "Shirt")
+         g.Get("wear", blank_pants, "Pants")
       end
    },
 
@@ -8881,30 +8895,54 @@ local commands = {
       run = function(args)
          local target = args[2]
          if not is_me(target) then return end
-         local current_pants = g.GetWornAssetId("pants")
-         local current_shirt = g.GetWornAssetId("shirt")
          local blank_pants = 15885405395
          local blank_shirt = 15821796333
-         if current_pants ~= blank_pants and current_shirt ~= blank_shirt then g.CacheWornClothing() end
-         for _, item in ipairs(g.GetCachedLayered()) do
-            g.Get("wear", item.AccessoryType, 0)
-            task.wait(0.45)
+         local current_pants = g.GetWornAssetId("pants")
+         local current_shirt = g.GetWornAssetId("shirt")
+         if current_pants ~= blank_pants or current_shirt ~= blank_shirt then
+            g.CacheWornClothing()
          end
-         wait(0.25)
-         g.Get("wear", "Shirt", blank_shirt)
-         g.Get("wear", "Pants", blank_pants)
+         local Humanoid = g.Humanoid or g.LocalPlayer.Character and g.LocalPlayer.Character:FindFirstChildOfClass("Humanoid") or g.Char:get_hum()
+         if Humanoid then
+            local desc = Humanoid:GetAppliedDescription()
+            for _, info in ipairs(desc:GetAccessories(true)) do
+               if info.IsLayered then
+                  g.Get("wear", info.AssetId, info.AccessoryType.Name .. "Accessory")
+                  task.wait(0.45)
+               end
+            end
+         end
+         task.wait(0.25)
+         if current_shirt and current_shirt ~= blank_shirt then
+            g.Get("wear", current_shirt, "Shirt")
+         end
+         if current_pants and current_pants ~= blank_pants then
+            g.Get("wear", current_pants, "Pants")
+         end
+         g.Get("wear", blank_shirt, "Shirt")
+         g.Get("wear", blank_pants, "Pants")
       end
    },
 
    ["!restore"] = {
       display = "!restore [player]",
       run = function(args)
+         local target = args[2]
+         if not is_me(target) then return end
+         local blank_pants = 15885405395
+         local blank_shirt = 15821796333
          local cached_pants = g.GetCachedClothingId("pants")
          local cached_shirt = g.GetCachedClothingId("shirt")
-         g.Get("wear", "Shirt", cached_shirt)
-         g.Get("wear", "Pants", cached_pants)
+         local current_pants = g.GetWornAssetId("pants")
+         local current_shirt = g.GetWornAssetId("shirt")
+         if current_shirt == blank_shirt and cached_shirt then
+            g.Get("wear", cached_shirt, "Shirt")
+         end
+         if current_pants == blank_pants and cached_pants then
+            g.Get("wear", cached_pants, "Pants")
+         end
          for _, item in ipairs(g.GetCachedLayered()) do
-            g.Get("wear", item.AccessoryType, item.AssetId)
+            g.Get("wear", item.AssetId, item.AccessoryType .. "Accessory")
             task.wait(0.45)
          end
       end
@@ -8916,9 +8954,8 @@ local commands = {
          if g.Fix_Camera_Head_Cooldown_Plr_Active then return end
          g.Fix_Camera_Head_Cooldown_Plr_Active = true
          local cam = workspace.CurrentCamera or workspace:FindFirstChildOfClass("Camera")
-         local head = g.Head or g.Character:FindFirstChild("Head") or get_head(LocalPlayer, 10)
+         local head = g.Head or g.Character:FindFirstChild("Head") or get_head(LocalPlayer, 10) or g.Char:get_head()
          if not head then return end
-
          workspace.CurrentCamera:remove()
          wait(.1)
          repeat wait() until LocalPlayer.Character ~= nil
