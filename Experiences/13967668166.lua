@@ -8797,13 +8797,10 @@ local commands = {
       run = function(args)
          local target = args[2]
          if not is_me(target) then return end
-         local attr = g.LocalPlayer:GetAttribute("is_verified")
-         if attr == false then return end
+         if g.LocalPlayer:GetAttribute("is_verified") == false then return end
          if not g.Invisible_Module then return end
-         local Is_Invis = g.Invisible_Module.enabled.get()
-
-         if Is_Invis then
-            Invisible_Module.enabled.set(false)
+         if g.Invisible_Module.enabled.get() then
+            g.Invisible_Module.enabled.set(false)
          end
       end
    },
@@ -8813,13 +8810,10 @@ local commands = {
       run = function(args)
          local target = args[2]
          if not is_me(target) then return end
-         local attr = g.LocalPlayer:GetAttribute("is_verified")
-         if attr == false then return end
+         if g.LocalPlayer:GetAttribute("is_verified") == false then return end
          if not g.Invisible_Module then return end
-         local Is_Invis = g.Invisible_Module.enabled.get()
-
-         if Is_Invis then
-            Invisible_Module.enabled.set(false)
+         if g.Invisible_Module.enabled.get() then
+            g.Invisible_Module.enabled.set(false)
          end
       end
    },
@@ -8829,13 +8823,10 @@ local commands = {
       run = function(args)
          local target = args[2]
          if not is_me(target) then return end
-         local attr = g.LocalPlayer:GetAttribute("is_verified")
-         if attr == false then return end
+         if g.LocalPlayer:GetAttribute("is_verified") == false then return end
          if not g.Invisible_Module then return end
-         local Is_Invis = g.Invisible_Module.enabled.get()
-
-         if not Is_Invis then
-            Invisible_Module.enabled.set(true)
+         if not g.Invisible_Module.enabled.get() then
+            g.Invisible_Module.enabled.set(true)
          end
       end
    },
@@ -8845,13 +8836,10 @@ local commands = {
       run = function(args)
          local target = args[2]
          if not is_me(target) then return end
-         local attr = g.LocalPlayer:GetAttribute("is_verified")
-         if attr == false then return end
+         if g.LocalPlayer:GetAttribute("is_verified") == false then return end
          if not g.Invisible_Module then return end
-         local Is_Invis = g.Invisible_Module.enabled.get()
-
-         if not Is_Invis then
-            Invisible_Module.enabled.set(true)
+         if not g.Invisible_Module.enabled.get() then
+            g.Invisible_Module.enabled.set(true)
          end
       end
    },
