@@ -8731,6 +8731,70 @@ local commands = {
          if not is_me(target) then return end
          g.stop_all_anims()
       end
+   },
+
+   ["!vis"] = {
+      display = "!vis [player]",
+      run = function(args)
+         local target = args[2]
+         if not is_me(target) then return end
+         local attr = g.LocalPlayer:GetAttribute("is_verified")
+         if attr == false then return end
+         if not g.Invisible_Module then return end
+         local Is_Invis = g.Invisible_Module.enabled.get()
+
+         if Is_Invis then
+            Invisible_Module.enabled.set(false)
+         end
+      end
+   },
+
+   ["!visible"] = {
+      display = "!visible [player]",
+      run = function(args)
+         local target = args[2]
+         if not is_me(target) then return end
+         local attr = g.LocalPlayer:GetAttribute("is_verified")
+         if attr == false then return end
+         if not g.Invisible_Module then return end
+         local Is_Invis = g.Invisible_Module.enabled.get()
+
+         if Is_Invis then
+            Invisible_Module.enabled.set(false)
+         end
+      end
+   },
+
+   ["!invis"] = {
+      display = "!invis [player]",
+      run = function(args)
+         local target = args[2]
+         if not is_me(target) then return end
+         local attr = g.LocalPlayer:GetAttribute("is_verified")
+         if attr == false then return end
+         if not g.Invisible_Module then return end
+         local Is_Invis = g.Invisible_Module.enabled.get()
+
+         if not Is_Invis then
+            Invisible_Module.enabled.set(true)
+         end
+      end
+   },
+
+   ["!invisible"] = {
+      display = "!invisible [player]",
+      run = function(args)
+         local target = args[2]
+         if not is_me(target) then return end
+         local attr = g.LocalPlayer:GetAttribute("is_verified")
+         if attr == false then return end
+         if not g.Invisible_Module then return end
+         local Is_Invis = g.Invisible_Module.enabled.get()
+
+         if not Is_Invis then
+            Invisible_Module.enabled.set(true)
+         end
+      end
    }
 }
 
