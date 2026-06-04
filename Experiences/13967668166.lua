@@ -13369,6 +13369,18 @@ g.always_show_title_of_player_regardless_of_chats = function(toggled)
    end
 end
 
+local function WaitForAttribute(Instance, Attribute, Timeout)
+   local Existing = Instance:GetAttribute(Attribute)
+   if Existing ~= nil then return Existing end
+   local Start = tick()
+   while tick() - Start < (Timeout or 10) do
+      local Val = Instance:GetAttribute(Attribute)
+      if Val ~= nil then return Val end
+      task.wait(0.1)
+   end
+   return nil
+end
+
 g.change_RP_Name = function(New_Name)
    getgenv().Send("roleplay_name", tostring(New_Name))
 end
@@ -13378,47 +13390,57 @@ g.change_bio = function(New_Bio)
 end
 wait(0.25)
 -- [[ ultra safe checking that always works + falls back to your current roleplay name if not already saved so you don't have to do it yourself. ]] --
-if isfile and readfile then
-   if isfile("LifeTogether_RP_Admin_Custom_Name.txt") then
-      notify("Success", "Got your last RP name (it was erased by Life Together RP), but we're setting it back!", 15)
-      local saved_name = readfile("LifeTogether_RP_Admin_Custom_Name.txt")
-      if saved_name and #saved_name > 0 then
-         change_RP_Name(saved_name)
-      else
-         writefile("LifeTogether_RP_Admin_Custom_Name.txt", tostring(g.LocalPlayer:GetAttribute("roleplay_name")) or "DEFAULT")
-         local read_from_name_file = readfile("LifeTogether_RP_Admin_Custom_Name.txt")
-         wait(0.25)
-         change_RP_Name(read_from_name_file)
-      end
-   else
-      g.notify("Success", "Creating 'Custon Name' file for you (it didn't exist)...", 10)
-      writefile("LifeTogether_RP_Admin_Custom_Name.txt", tostring(g.LocalPlayer:GetAttribute("roleplay_name")) or "DEFAULT")
-      local read_from_name_file = readfile("LifeTogether_RP_Admin_Custom_Name.txt")
-      if isfile("LifeTogether_RP_Admin_Custom_Name.txt") then g.notify("Success", "Created Custom Name file.", 3) end
-      wait(0.25)
-      change_RP_Name(read_from_name_file)
+g.WaitForAttribute = function(Instance, Attribute, Timeout)
+   local Existing = Instance:GetAttribute(Attribute)
+   if Existing ~= nil then return Existing end
+   local Start = tick()
+   while tick() - Start < (Timeout or 10) do
+      local Val = Instance:GetAttribute(Attribute)
+      if Val ~= nil then return Val end
+      task.wait(0.1)
    end
+   return nil
 end
 
-if isfile and readfile then
-   if isfile("LifeTogether_RP_Admin_Custom_Bio.txt") then
-      g.notify("Success", "Got your last RP bio (it was erased by Life Together RP), but we're setting it back!", 15)
-      local saved_bio = readfile("LifeTogether_RP_Admin_Custom_Bio.txt")
-      if saved_bio and #saved_bio > 0 then
-         change_bio(saved_bio)
-      else
-         writefile("LifeTogether_RP_Admin_Custom_Bio.txt", tostring(g.LocalPlayer:GetAttribute("bio")) or "DEFAULT")
-         local read_from_file = readfile("LifeTogether_RP_Admin_Custom_Bio.txt")
-         wait(0.25)
-         change_bio(read_from_file)
-      end
+g.SafeRead = function(File, Fallback)
+   if not (isfile and isfile(File)) then return Fallback end
+   local Val = readfile(File)
+   if not Val or #Val == 0 or Val == "nil" then return Fallback end
+   return Val
+end
+
+g.SafeAttr = function(Attribute)
+   local Val = g.WaitForAttribute(g.LocalPlayer, Attribute, 10)
+   if Val == nil then return nil end
+   local Str = tostring(Val)
+   return (#Str > 0 and Str ~= "nil") and Val or nil
+end
+
+if isfile and readfile and writefile then
+   local Saved_Name = g.SafeRead("LifeTogether_RP_Admin_Custom_Name.txt", "DEFAULT")
+   if Saved_Name then
+      g.notify("Success", "Got your last RP name (it was erased by Life Together RP), but we're setting it back!", 15)
+      g.change_RP_Name(Saved_Name)
    else
-      g.notify("Success", "Creating 'Custon Bio' file for you (it didn't exist)...", 10)
-      writefile("LifeTogether_RP_Admin_Custom_Bio.txt", tostring(g.LocalPlayer:GetAttribute("bio")) or "DEFAULT")
-      local read_from_file = readfile("LifeTogether_RP_Admin_Custom_Bio.txt")
+      g.notify("Success", "Creating 'Custom Name' file for you (it didn't exist)...", 10)
+      local Name_To_Write = g.SafeAttr("roleplay_name")
+      writefile("LifeTogether_RP_Admin_Custom_Name.txt", Name_To_Write)
+      if isfile("LifeTogether_RP_Admin_Custom_Name.txt") then g.notify("Success", "Created Custom Name file.", 3) end
+      task.wait(0.25)
+      g.change_RP_Name(Name_To_Write)
+   end
+
+   local Saved_Bio = g.SafeRead("LifeTogether_RP_Admin_Custom_Bio.txt", "DEFAULT")
+   if Saved_Bio then
+      g.notify("Success", "Got your last RP bio (it was erased by Life Together RP), but we're setting it back!", 15)
+      g.change_bio(Saved_Bio)
+   else
+      g.notify("Success", "Creating 'Custom Bio' file for you (it didn't exist)...", 10)
+      local Bio_To_Write = g.SafeAttr("bio")
+      writefile("LifeTogether_RP_Admin_Custom_Bio.txt", Bio_To_Write)
       if isfile("LifeTogether_RP_Admin_Custom_Bio.txt") then g.notify("Success", "Created Custom Bio file.", 3) end
-      wait(0.25)
-      change_bio(read_from_file)
+      task.wait(0.25)
+      g.change_bio(Bio_To_Write)
    end
 end
 
