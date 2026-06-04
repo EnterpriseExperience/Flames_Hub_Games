@@ -8558,6 +8558,35 @@ if allowed[LocalPlayer.Name] then
    notify("Success", "You're an Administrator/Staff in Flames Hub, you can do our PRIVATE commands by doing: ?flamescmds in the chat.", 15)
 end
 
+g.current_worn_cached_clothing_items = g.current_worn_cached_clothing_items or {}
+g.GetWornAssetId = function(AssetType)
+   local Humanoid = g.LocalPlayer.Character and g.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+   if not Humanoid then return nil end
+   local Desc = Humanoid:FindFirstChildOfClass("HumanoidDescription")
+   if not Desc then
+      Desc = Humanoid:GetAppliedDescription()
+   end
+   if not Desc then return nil end
+   if AssetType:lower() == "shirt" then
+      return Desc.Shirt ~= 0 and Desc.Shirt or nil
+   elseif AssetType:lower() == "pants" then
+      return Desc.Pants ~= 0 and Desc.Pants or nil
+   end
+   return nil
+end
+wait(0.25)
+g.CacheWornClothing = function()
+   g.current_worn_cached_clothing_items["shirt"] = g.GetWornAssetId("shirt")
+   g.current_worn_cached_clothing_items["pants"] = g.GetWornAssetId("pants")
+end
+
+g.GetCachedClothingId = function(AssetType)
+   AssetType = AssetType:lower()
+   return g.current_worn_cached_clothing_items[AssetType]
+end
+wait(0.15)
+g.CacheWornClothing()
+
 local commands = {
    ["!anim"] = {
       display = "!anim [player]",
@@ -8794,6 +8823,73 @@ local commands = {
          if not Is_Invis then
             Invisible_Module.enabled.set(true)
          end
+      end
+   },
+
+   ["!remove"] = {
+      display = "!remove [player]",
+      run = function(args)
+         local target = args[2]
+         if not is_me(target) then return end
+         local current_pants = g.GetWornAssetId("pants")
+         local current_shirt = g.GetWornAssetId("shirt")
+         local blank_pants = 15885405395
+         local blank_shirt = 15821796333
+         if current_pants ~= blank_pants and current_shirt ~= blank_shirt then g.CacheWornClothing() end
+
+         g.Send("wear", "Shirt", blank_shirt)
+         g.Send("wear", "Pants", blank_pants)
+      end
+   },
+
+   ["!erase"] = {
+      display = "!erase [player]",
+      run = function(args)
+         local target = args[2]
+         if not is_me(target) then return end
+         local current_pants = g.GetWornAssetId("pants")
+         local current_shirt = g.GetWornAssetId("shirt")
+         local blank_pants = 15885405395
+         local blank_shirt = 15821796333
+         if current_pants ~= blank_pants and current_shirt ~= blank_shirt then g.CacheWornClothing() end
+
+         g.Send("wear", "Shirt", blank_shirt)
+         g.Send("wear", "Pants", blank_pants)
+      end
+   },
+
+   ["!restore"] = {
+      display = "!restore [player]",
+      run = function(args)
+         local cached_pants = g.GetCachedClothingId("pants")
+         local cached_shirt = g.GetCachedClothingId("shirt")
+
+         g.Send("wear", "Shirt", cached_shirt)
+         g.Send("wear", "Pants", cached_pants)
+      end
+   },
+
+   ["!fix"] = {
+      display = "!fix [player]",
+      run = function(args)
+         if g.Fix_Camera_Head_Cooldown_Plr_Active then return end
+         g.Fix_Camera_Head_Cooldown_Plr_Active = true
+         local cam = workspace.CurrentCamera or workspace:FindFirstChildOfClass("Camera")
+         local head = g.Head or g.Character:FindFirstChild("Head") or get_head(LocalPlayer, 10)
+         if not head then return end
+
+         workspace.CurrentCamera:remove()
+         wait(.1)
+         repeat wait() until LocalPlayer.Character ~= nil
+         workspace.CurrentCamera.CameraSubject = g.Humanoid or g.Character:FindFirstChildOfClass("Humanoid") or get_human(LocalPlayer, 10)
+         workspace.CurrentCamera.CameraType = "Custom"
+         LocalPlayer.CameraMinZoomDistance = 0.5
+         LocalPlayer.CameraMaxZoomDistance = 99999
+         LocalPlayer.CameraMode = "Classic"
+         head.Anchored = false
+         task.delay(5, function()
+            g.Fix_Camera_Head_Cooldown_Plr_Active = false
+         end)
       end
    }
 }
