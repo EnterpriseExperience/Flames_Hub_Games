@@ -8575,14 +8575,44 @@ g.GetWornAssetId = function(AssetType)
    return nil
 end
 wait(0.25)
+local LayeredTypes = {
+   [Enum.AccessoryType.TShirt] = true,
+   [Enum.AccessoryType.Shirt] = true,
+   [Enum.AccessoryType.Pants] = true,
+   [Enum.AccessoryType.Jacket] = true,
+   [Enum.AccessoryType.Sweater] = true,
+   [Enum.AccessoryType.Shorts] = true,
+   [Enum.AccessoryType.LeftShoe] = true,
+   [Enum.AccessoryType.RightShoe] = true,
+   [Enum.AccessoryType.DressSkirt] = true,
+}
+
 g.CacheWornClothing = function()
    g.current_worn_cached_clothing_items["shirt"] = g.GetWornAssetId("shirt")
    g.current_worn_cached_clothing_items["pants"] = g.GetWornAssetId("pants")
+   g.current_worn_cached_clothing_items["layered"] = {}
+   local Character = g.Character or g.LocalPlayer.Character or get_char(LocalPlayer, 10) or g.Char:get()
+   if not Character then return end
+   local hum = g.Humanoid or g.Character and g.Character:FindFirstChildOfClass("Humanoid") or get_human(LocalPlayer, 10) or g.Char:get_hum()
+   if not hum then return end
+   local desc = hum:GetAppliedDescription()
+   for _, info in ipairs(desc:GetAccessories(true)) do
+      if info.IsLayered then
+         table.insert(g.current_worn_cached_clothing_items["layered"], {
+            AssetId = info.AssetId,
+            AccessoryType = info.AccessoryType.Name,
+         })
+      end
+   end
 end
 
 g.GetCachedClothingId = function(AssetType)
    AssetType = AssetType:lower()
    return g.current_worn_cached_clothing_items[AssetType]
+end
+
+g.GetCachedLayered = function()
+   return g.current_worn_cached_clothing_items["layered"] or {}
 end
 wait(0.15)
 g.CacheWornClothing()
@@ -8836,7 +8866,11 @@ local commands = {
          local blank_pants = 15885405395
          local blank_shirt = 15821796333
          if current_pants ~= blank_pants and current_shirt ~= blank_shirt then g.CacheWornClothing() end
-
+         for _, item in ipairs(g.GetCachedLayered()) do
+            g.Get("wear", item.AccessoryType, 0)
+            task.wait(0.45)
+         end
+         wait(0.25)
          g.Get("wear", "Shirt", blank_shirt)
          g.Get("wear", "Pants", blank_pants)
       end
@@ -8852,7 +8886,11 @@ local commands = {
          local blank_pants = 15885405395
          local blank_shirt = 15821796333
          if current_pants ~= blank_pants and current_shirt ~= blank_shirt then g.CacheWornClothing() end
-
+         for _, item in ipairs(g.GetCachedLayered()) do
+            g.Get("wear", item.AccessoryType, 0)
+            task.wait(0.45)
+         end
+         wait(0.25)
          g.Get("wear", "Shirt", blank_shirt)
          g.Get("wear", "Pants", blank_pants)
       end
@@ -8863,9 +8901,12 @@ local commands = {
       run = function(args)
          local cached_pants = g.GetCachedClothingId("pants")
          local cached_shirt = g.GetCachedClothingId("shirt")
-
          g.Get("wear", "Shirt", cached_shirt)
          g.Get("wear", "Pants", cached_pants)
+         for _, item in ipairs(g.GetCachedLayered()) do
+            g.Get("wear", item.AccessoryType, item.AssetId)
+            task.wait(0.45)
+         end
       end
    },
 
