@@ -4371,13 +4371,13 @@ g.collect_all_nba_props = function()
    local attr = g.LocalPlayer:GetAttribute("NBA_HUNT_PROGRESS")
    if not attr then return end
    local folder = g.nba_props_kept_folder_inst or g.find_nba_props_map_folder()
+   if not folder then return end
    if char and attr == "PLAYING" then
       for _, v in ipairs(folder:GetChildren()) do
+         if g.LocalPlayer:GetAttribute("NBA_HUNT_PROGRESS") ~= "PLAYING" then break end
          if v:IsA("Model") then
-            local Handle = v:FindFirstChildWhichIsA("MeshPart", true)
-            if Handle and Handle.Name:lower():find("handle") then
-               char:PivotTo(v:GetPivot() + Vector3.new(0, 2.5, 0))
-            end
+            char:PivotTo(v:GetPivot() + Vector3.new(0, 2.5, 0))
+            task.wait(0.35)
          end
       end
    end
@@ -13513,29 +13513,31 @@ g.SafeAttr = function(Attribute)
 end
 
 if isfile and readfile and writefile then
-   local Saved_Name = g.SafeRead("LifeTogether_RP_Admin_Custom_Name.txt", "DEFAULT")
-   if Saved_Name then
+   local Saved_Name = g.SafeRead("LifeTogether_RP_Admin_Custom_Name.txt", nil)
+   if Saved_Name == nil then
+      writefile("LifeTogether_RP_Admin_Custom_Name.txt", "DEFAULT")
+      g.notify("Success", "Creating 'Custom Name' file for you (it didn't exist)...", 10)
+      Saved_Name = "DEFAULT"
+   end
+   if Saved_Name ~= "DEFAULT" then
       g.notify("Success", "Got your last RP name (it was erased by Life Together RP), but we're setting it back!", 15)
       g.change_RP_Name(Saved_Name)
    else
-      g.notify("Success", "Creating 'Custom Name' file for you (it didn't exist)...", 10)
       local Name_To_Write = g.SafeAttr("roleplay_name")
-      writefile("LifeTogether_RP_Admin_Custom_Name.txt", Name_To_Write)
-      if isfile("LifeTogether_RP_Admin_Custom_Name.txt") then g.notify("Success", "Created Custom Name file.", 3) end
-      task.wait(0.25)
       g.change_RP_Name(Name_To_Write)
    end
 
-   local Saved_Bio = g.SafeRead("LifeTogether_RP_Admin_Custom_Bio.txt", "DEFAULT")
-   if Saved_Bio then
+   local Saved_Bio = g.SafeRead("LifeTogether_RP_Admin_Custom_Bio.txt", nil)
+   if Saved_Bio == nil then
+      writefile("LifeTogether_RP_Admin_Custom_Bio.txt", "DEFAULT")
+      g.notify("Success", "Creating 'Custom Bio' file for you (it didn't exist)...", 10)
+      Saved_Bio = "DEFAULT"
+   end
+   if Saved_Bio ~= "DEFAULT" then
       g.notify("Success", "Got your last RP bio (it was erased by Life Together RP), but we're setting it back!", 15)
       g.change_bio(Saved_Bio)
    else
-      g.notify("Success", "Creating 'Custom Bio' file for you (it didn't exist)...", 10)
       local Bio_To_Write = g.SafeAttr("bio")
-      writefile("LifeTogether_RP_Admin_Custom_Bio.txt", Bio_To_Write)
-      if isfile("LifeTogether_RP_Admin_Custom_Bio.txt") then g.notify("Success", "Created Custom Bio file.", 3) end
-      task.wait(0.25)
       g.change_bio(Bio_To_Write)
    end
 end
