@@ -8837,8 +8837,8 @@ local commands = {
          local blank_shirt = 15821796333
          if current_pants ~= blank_pants and current_shirt ~= blank_shirt then g.CacheWornClothing() end
 
-         g.Send("wear", "Shirt", blank_shirt)
-         g.Send("wear", "Pants", blank_pants)
+         g.Get("wear", "Shirt", blank_shirt)
+         g.Get("wear", "Pants", blank_pants)
       end
    },
 
@@ -8853,8 +8853,8 @@ local commands = {
          local blank_shirt = 15821796333
          if current_pants ~= blank_pants and current_shirt ~= blank_shirt then g.CacheWornClothing() end
 
-         g.Send("wear", "Shirt", blank_shirt)
-         g.Send("wear", "Pants", blank_pants)
+         g.Get("wear", "Shirt", blank_shirt)
+         g.Get("wear", "Pants", blank_pants)
       end
    },
 
@@ -8864,8 +8864,8 @@ local commands = {
          local cached_pants = g.GetCachedClothingId("pants")
          local cached_shirt = g.GetCachedClothingId("shirt")
 
-         g.Send("wear", "Shirt", cached_shirt)
-         g.Send("wear", "Pants", cached_pants)
+         g.Get("wear", "Shirt", cached_shirt)
+         g.Get("wear", "Pants", cached_pants)
       end
    },
 
@@ -15810,7 +15810,6 @@ g.copy_plr_avatar = function(Player)
       Shirt = desc.Shirt or 0,
       Pants = desc.Pants or 0,
       GraphicTShirt = desc.GraphicTShirt or 0,
-
       RunAnimation = desc.RunAnimation or 0,
       WalkAnimation = desc.WalkAnimation or 0,
       JumpAnimation = desc.JumpAnimation or 0,
@@ -15818,7 +15817,6 @@ g.copy_plr_avatar = function(Player)
       ClimbAnimation = desc.ClimbAnimation or 0,
       IdleAnimation = desc.IdleAnimation or 0,
       SwimAnimation = desc.SwimAnimation or 0,
-
       HeightScale = desc.HeightScale or 1,
       WidthScale = desc.WidthScale or 1,
       DepthScale = desc.DepthScale or 1,
