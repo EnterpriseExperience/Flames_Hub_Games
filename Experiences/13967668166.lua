@@ -8798,9 +8798,9 @@ local commands = {
          local target = args[2]
          if not is_me(target) then return end
          if g.LocalPlayer:GetAttribute("is_verified") == false then return end
-         if not g.Invisible_Module then return end
-         if g.Invisible_Module.enabled.get() then
-            g.Invisible_Module.enabled.set(false)
+         if not g.InvisibleMode then return end
+         if g.InvisibleMode.enabled.get() then
+            g.InvisibleMode.enabled.set(false)
          end
       end
    },
@@ -8811,9 +8811,9 @@ local commands = {
          local target = args[2]
          if not is_me(target) then return end
          if g.LocalPlayer:GetAttribute("is_verified") == false then return end
-         if not g.Invisible_Module then return end
-         if g.Invisible_Module.enabled.get() then
-            g.Invisible_Module.enabled.set(false)
+         if not g.InvisibleMode then return end
+         if g.InvisibleMode.enabled.get() then
+            g.InvisibleMode.enabled.set(false)
          end
       end
    },
@@ -8824,9 +8824,9 @@ local commands = {
          local target = args[2]
          if not is_me(target) then return end
          if g.LocalPlayer:GetAttribute("is_verified") == false then return end
-         if not g.Invisible_Module then return end
-         if not g.Invisible_Module.enabled.get() then
-            g.Invisible_Module.enabled.set(true)
+         if not g.InvisibleMode then return end
+         if not g.InvisibleMode.enabled.get() then
+            g.InvisibleMode.enabled.set(true)
          end
       end
    },
@@ -8837,9 +8837,9 @@ local commands = {
          local target = args[2]
          if not is_me(target) then return end
          if g.LocalPlayer:GetAttribute("is_verified") == false then return end
-         if not g.Invisible_Module then return end
-         if not g.Invisible_Module.enabled.get() then
-            g.Invisible_Module.enabled.set(true)
+         if not g.InvisibleMode then return end
+         if not g.InvisibleMode.enabled.get() then
+            g.InvisibleMode.enabled.set(true)
          end
       end
    },
