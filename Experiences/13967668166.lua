@@ -5239,84 +5239,35 @@ if not g.Flames_Hub_Owner_Title_Animated_Initialized then
 end
 
 -- [[ if someone has a bad outfit, like those fling outfits, this will detect it and destroy it. ]] --
-local g = getgenv()
 local Players = cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
-local RunService = cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
 local Local_Player = Players.LocalPlayer
 local Lib = g.FlamesLibrary
-g.Collision_Loops = g.Collision_Loops or {}
-local Collision_Loops = g.Collision_Loops
-local Excluded_Parts = {
-   HumanoidRootPart = true,
-   LowerTorso = true,
-   UpperTorso = true,
-   Torso = true,
-   Head = true,
-}
 
 g.Delete_Bad_Accessories = function(Target_Char)
-   for _, v in ipairs(Target_Char:GetDescendants()) do
-      if v:IsA("Accessory") and v.AccessoryType == Enum.AccessoryType.Jacket and v.Name:lower():find("aura") then
-         v:Destroy()
-      end
-   end
-end
-
-g.Turn_Off_Bad_Players_Collision = function(Target_Char)
-   for _, v in ipairs(Target_Char:GetDescendants()) do
-      if v:IsA("BasePart") and not Excluded_Parts[v.Name] then
-         v.CanCollide = false
-      end
-   end
-end
-
-local function Start_Collision_Loop(Player, Char)
-   local User_Id = Player.UserId
-   if Collision_Loops[User_Id] then
-      Collision_Loops[User_Id]:Disconnect()
-      Collision_Loops[User_Id] = nil
-   end
-   task.wait(0.15)
-   Collision_Loops[User_Id] = RunService.Heartbeat:Connect(function()
-      if not Char or not Char.Parent then
-         Collision_Loops[User_Id]:Disconnect()
-         Collision_Loops[User_Id] = nil
-         return
-      end
-      for _, v in ipairs(Char:GetDescendants()) do
-         if v:IsA("BasePart") and v.CanCollide and not Excluded_Parts[v.Name] then
-            v.CanCollide = false
-         end
-      end
-   end)
-   Lib.connect("collision_loop_" .. User_Id, Collision_Loops[User_Id])
+	for _, v in ipairs(Target_Char:GetDescendants()) do
+		if v:IsA("Accessory") and v.AccessoryType == Enum.AccessoryType.Jacket and v.Name:lower():find("aura") then
+			v:Destroy()
+		end
+	end
 end
 
 local function Setup_Player(Player)
-   if Player == Local_Player then return end
-   if Player.Character then
-      g.Delete_Bad_Accessories(Player.Character)
-      Start_Collision_Loop(Player, Player.Character)
-   end
-   Lib.connect("bad_accessories_" .. Player.UserId, Player.CharacterAdded:Connect(function(New_Char)
-      if not New_Char or not New_Char.Parent then
-         repeat task.wait() until New_Char and New_Char:FindFirstChild("Humanoid")
-      end
-      g.Delete_Bad_Accessories(New_Char)
-      Start_Collision_Loop(Player, New_Char)
-   end))
+	if Player == Local_Player then return end
+	if Player.Character then
+		g.Delete_Bad_Accessories(Player.Character)
+	end
+	Lib.connect("bad_accessories_" .. Player.UserId, Player.CharacterAdded:Connect(function(New_Char)
+		if not New_Char or not New_Char.Parent then
+			repeat task.wait() until New_Char and New_Char:FindFirstChild("Humanoid")
+		end
+		g.Delete_Bad_Accessories(New_Char)
+	end))
 end
 
 for _, Player in ipairs(Players:GetPlayers()) do Setup_Player(Player) end
 Lib.connect("bad_accessories_player_added", Players.PlayerAdded:Connect(Setup_Player))
 Lib.connect("bad_accessories_player_removing", Players.PlayerRemoving:Connect(function(Player)
-   local User_Id = Player.UserId
-   if Collision_Loops[User_Id] then
-      Collision_Loops[User_Id]:Disconnect()
-      Collision_Loops[User_Id] = nil
-   end
-   Lib.disconnect("bad_accessories_" .. User_Id)
-   Lib.disconnect("collision_loop_" .. User_Id)
+	Lib.disconnect("bad_accessories_" .. Player.UserId)
 end))
 
 if not g.Loaded_Actual_Chat_Actors_Global_Setter then
