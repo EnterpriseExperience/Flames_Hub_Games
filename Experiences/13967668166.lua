@@ -8677,7 +8677,6 @@ local commands = {
       run = function(args)
          local target = args[2]
          if not is_me(target) then return end
-         local plr_controls = 
          if g.Humanoid then pcall(function() g.Humanoid.WalkSpeed = 0 end) end
          if g.HumanoidRootPart then pcall(function() g.HumanoidRootPart.Anchored = true end) end
          local Controls = GetControlModule()
