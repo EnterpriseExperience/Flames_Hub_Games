@@ -69,6 +69,10 @@ local scriptstoload = {
         id = 11145865512,
         link = base_url .. "11145865512.lua"
     },
+    ["Southern Mudding"] = {
+        id = 79480724066456,
+        link = base_url .. "79480724066456.lua"
+    }
 }
 
 local function matcheswhat(tpplaces, togo)
