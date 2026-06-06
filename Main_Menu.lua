@@ -100,10 +100,43 @@ local function get_place_name(place_id)
     if ok and info then return info.Name end
 end
 
+local function FormatCEFloatStr(value) -- not in use anymore.
+    if value == 0 then
+        return "0.0000000E+0"
+    end
+    local abs_val = math.abs(value)
+    local exponent = math.floor(math.log10(abs_val))
+    local mantissa = value / (10 ^ exponent)
+    while math.abs(mantissa) >= 10 do
+        mantissa = mantissa / 10
+        exponent = exponent + 1
+    end
+    while math.abs(mantissa) < 1 do
+        mantissa = mantissa * 10
+        exponent = exponent - 1
+    end
+    local formatted = string.format("%.7f", mantissa)
+    if tonumber(formatted) >= 10 then
+        mantissa = mantissa / 10
+        exponent = exponent + 1
+        formatted = string.format("%.7f", mantissa)
+    end
+    local exp_sign = exponent >= 0 and "+" or "-"
+    return formatted .. "E" .. exp_sign .. math.abs(exponent)
+end
+
+local function GenerateRandomCEFloat(min_exp, max_exp)
+    local mantissa = 1 + math.random() * 8.9999999
+    local exponent = math.random(min_exp, max_exp)
+    local formatted = string.format("%.7f", mantissa)
+    local exp_sign = exponent >= 0 and "+" or "-"
+    return formatted .. "E" .. exp_sign .. math.abs(exponent)
+end
+
 local flames_ui = loadstring(game:HttpGet("https://raw.githubusercontent.com/EnterpriseExperience/MicUpSource/refs/heads/main/Luna_UI.lua"))()
 local Window = flames_ui:CreateWindow({
-    Name = "Flames Hub | Loader",
-    Subtitle = "Welcome to: Flames Hub | Game Loader.",
+    Name = "Flames Hub | "..tostring(GenerateRandomCEFloat(-9, 9)),
+    Subtitle = "Flames Hub | Game Loader.",
     LogoID = "0",
     LoadingEnabled = true,
     LoadingTitle = "Flames Hub | Presents",
@@ -127,8 +160,17 @@ local Window = flames_ui:CreateWindow({
         }
     }
 })
-
 wait(0.1)
+if not getgenv().Looping_Window_Name_On_Flames_Hubs_Loader then
+    getgenv().Looping_Window_Name_On_Flames_Hubs_Loader = true
+    getgenv().spawned_change_window_name_tasked_loop = true
+    getgenv().window_changing_main_automatic_loop_task = task.spawn(function()
+        while getgenv().spawned_change_window_name_tasked_loop == true do
+            task.wait(0.01)
+            Window:Set({Name = "Flames Hub | " .. tostring(GenerateRandomCEFloat(-9, 9)),})
+        end
+    end)
+end
 g.Buttons = g.Buttons or {}
 local Tab1 = Window:CreateTab({Name = "🏡 Home 🏡", Icon = "view_in_ar", ImageSource = "Material", ShowTitle = true})
 local Section1 = Tab1:CreateSection("Section | Home Page")
@@ -136,7 +178,16 @@ local Tab2 = Window:CreateTab({Name = "🎮 Game TPs 🎮", Icon = "view_in_ar",
 local Section2 = Tab2:CreateSection("Section | Game TPs Page")
 local Tab3 = Window:CreateTab({Name = "⭐ Extras ⭐", Icon = "view_in_ar", ImageSource = "Material", ShowTitle = true})
 local Section3 = Tab3:CreateSection("Section | Extras Page")
-local function destroy_current_ui() if not flames_ui then return end flames_ui:Destroy_UI() end
+local function destroy_current_ui()
+    if not flames_ui then return end
+    flames_ui:Destroy_UI()
+    getgenv().Looping_Window_Name_On_Flames_Hubs_Loader = false
+    getgenv().spawned_change_window_name_tasked_loop = false
+    if getgenv().window_changing_main_automatic_loop_task then
+        pcall(function() task.cancel(getgenv().window_changing_main_automatic_loop_task) end)
+        getgenv().window_changing_main_automatic_loop_task = nil
+    end
+end
 local function get_nameless_admin_loaded()
     local registry = getreg and getreg() or getgenv()
     local na_env = registry
