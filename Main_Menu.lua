@@ -136,7 +136,7 @@ local Tab2 = Window:CreateTab({Name = "🎮 Game TPs 🎮", Icon = "view_in_ar",
 local Section2 = Tab2:CreateSection("Section | Game TPs Page")
 local Tab3 = Window:CreateTab({Name = "⭐ Extras ⭐", Icon = "view_in_ar", ImageSource = "Material", ShowTitle = true})
 local Section3 = Tab3:CreateSection("Section | Extras Page")
-local function destroy_current_ui() if not flames_ui then return end flames_ui:Destroy() end
+local function destroy_current_ui() if not flames_ui then return end flames_ui:Destroy_UI() end
 local function get_nameless_admin_loaded()
     local registry = getreg and getreg() or getgenv()
     local na_env = registry
