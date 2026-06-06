@@ -72,6 +72,10 @@ local scriptstoload = {
     ["Southern Mudding"] = {
         id = 79480724066456,
         link = base_url .. "79480724066456.lua"
+    },
+    ["Car Zone"] = {
+        id = 80200604311136,
+        link = base_url .. "80200604311136.lua"
     }
 }
 
