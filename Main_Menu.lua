@@ -212,7 +212,17 @@ Callback = function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/Source.lua"))()
 end})
 
+local Excluded_IDs = {99644611200703, 99154507657228}
+local function is_excluded(id)
+    local check = type(id) == "table" and id[1] or id
+    for _, v in ipairs(Excluded_IDs) do
+        if check == v then return true end
+    end
+    return false
+end
+
 for name, dude in pairs(scriptstoload) do
+    if is_excluded(dude.id) then continue end
     local strname = name:gsub("%W", "_")
     local id_display = typeof(dude.id) == "table" and tostring(dude.id[1]) or tostring(dude.id)
     local id_for_name = typeof(dude.id) == "table" and dude.id[1] or dude.id
@@ -236,8 +246,8 @@ for name, dude in pairs(scriptstoload) do
 end
 
 for name, schnawg in pairs(scriptstoload) do
+    if is_excluded(schnawg.id) then continue end
     local id_display = typeof(schnawg.id) == "table" and tostring(schnawg.id[1]) or tostring(schnawg.id)
-
     g.Buttons[name] = Tab2:CreateButton({
     Name = "Teleport To Game: "..tostring(name),
     Description = "Teleports you to "..tostring(name)..". Place ID: "..tostring(id_display),
