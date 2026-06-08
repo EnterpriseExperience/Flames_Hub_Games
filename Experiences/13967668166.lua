@@ -13541,7 +13541,7 @@ end
 if isfile and readfile and writefile and makefolder then
    local Folder = "Life_Together_Custom_Name_Configuration"
    local ConfigPath = Folder .. "/config.json"
-   local HttpService = getgenv().HttpService or cloneref and cloneref(game:GetService("HttpService")) or game:GetService("HttpService")
+   local HttpService = cloneref and cloneref(game:GetService("HttpService")) or game:GetService("HttpService")
    if not isfolder(Folder) then makefolder(Folder) end
    local Config = { Name = "DEFAULT", Bio = "DEFAULT" }
    local Existing = g.SafeRead(ConfigPath, nil)
@@ -13562,6 +13562,9 @@ if isfile and readfile and writefile and makefolder then
    else
       local Name_To_Write = g.SafeAttr("roleplay_name")
       g.change_RP_Name(Name_To_Write)
+      if Name_To_Write then
+         Config.Name = Name_To_Write
+      end
    end
 
    if Config.Bio ~= "DEFAULT" then
@@ -13570,7 +13573,12 @@ if isfile and readfile and writefile and makefolder then
    else
       local Bio_To_Write = g.SafeAttr("bio")
       g.change_bio(Bio_To_Write)
+      if Bio_To_Write then
+         Config.Bio = Bio_To_Write
+      end
    end
+
+   writefile(ConfigPath, HttpService:JSONEncode(Config))
 end
 
 g.job_spammer = function(toggle)
