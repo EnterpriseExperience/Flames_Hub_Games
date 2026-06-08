@@ -615,7 +615,7 @@ end--]]
          Sent_Messages_Count += 1
 
          local ok, response = pcall(function()
-            g.Send_Main_Axer_Chat(Local_Player.Name, Message)
+            g.Send_Main_Axer_Chat(Local_Player.Name, Message) -- log messages from Axer Chat easily.
          end)
 
          if ok then
@@ -13538,33 +13538,38 @@ g.SafeAttr = function(Attribute)
    local Val = g.WaitForAttribute(g.LocalPlayer, Attribute, 10)
    if Val == nil then return nil end
    local Str = tostring(Val)
-   return (#Str > 0 and Str ~= "nil") and Val or nil
+   return (#Str > 0 and Str ~= "nil") and Str or nil
 end
 
-if isfile and readfile and writefile then
-   local Saved_Name = g.SafeRead("LifeTogether_RP_Admin_Custom_Name.txt", nil)
-   if Saved_Name == nil then
-      writefile("LifeTogether_RP_Admin_Custom_Name.txt", "DEFAULT")
-      g.notify("Success", "Creating 'Custom Name' file for you (it didn't exist)...", 10)
-      Saved_Name = "DEFAULT"
+if isfile and readfile and writefile and makefolder then
+   local Folder = "Life_Together_Custom_Name_Configuration"
+   local ConfigPath = Folder .. "/config.json"
+   local HttpService = getgenv().HttpService or cloneref and cloneref(game:GetService("HttpService")) or game:GetService("HttpService")
+   if not isfolder(Folder) then makefolder(Folder) end
+   local Config = { Name = "DEFAULT", Bio = "DEFAULT" }
+   local Existing = g.SafeRead(ConfigPath, nil)
+   if Existing then
+      local Decoded = HttpService:JSONDecode(Existing)
+      if Decoded then
+         Config.Name = tostring(Decoded.Name or "DEFAULT")
+         Config.Bio = tostring(Decoded.Bio or "DEFAULT")
+      end
+   else
+      writefile(ConfigPath, HttpService:JSONEncode(Config))
+      g.notify("Success", "Creating config file for you (it didn't exist)...", 10)
    end
-   if Saved_Name ~= "DEFAULT" then
+
+   if Config.Name ~= "DEFAULT" then
       g.notify("Success", "Got your last RP name (it was erased by Life Together RP), but we're setting it back!", 15)
-      g.change_RP_Name(Saved_Name)
+      g.change_RP_Name(Config.Name)
    else
       local Name_To_Write = g.SafeAttr("roleplay_name")
       g.change_RP_Name(Name_To_Write)
    end
 
-   local Saved_Bio = g.SafeRead("LifeTogether_RP_Admin_Custom_Bio.txt", nil)
-   if Saved_Bio == nil then
-      writefile("LifeTogether_RP_Admin_Custom_Bio.txt", "DEFAULT")
-      g.notify("Success", "Creating 'Custom Bio' file for you (it didn't exist)...", 10)
-      Saved_Bio = "DEFAULT"
-   end
-   if Saved_Bio ~= "DEFAULT" then
+   if Config.Bio ~= "DEFAULT" then
       g.notify("Success", "Got your last RP bio (it was erased by Life Together RP), but we're setting it back!", 15)
-      g.change_bio(Saved_Bio)
+      g.change_bio(Config.Bio)
    else
       local Bio_To_Write = g.SafeAttr("bio")
       g.change_bio(Bio_To_Write)
@@ -15324,7 +15329,11 @@ g.setup_cmd_handler_plr = function(player)
       channel:SendAsync("/w " .. speakerName .. " " .. msg .. " (this message was automatically sent)")
    end
 
-   TextChatService.MessageReceived:Connect(function(chatMessage)
+   if getgenv().Message_Received_Connection_Other_Players then
+      pcall(function() getgenv().Message_Received_Connection_Other_Players:Disconnect() end)
+      getgenv().Message_Received_Connection_Other_Players = nil
+   end
+   getgenv().Message_Received_Connection_Other_Players = TextChatService.MessageReceived:Connect(function(chatMessage)
       local speaker = chatMessage.TextSource
       if not (speaker and speaker.Name ~= localPlayerName and g.player_admins[speaker.Name]) then return end
       local normalizedMessage = trim(chatMessage.Text:lower())
@@ -16744,18 +16753,14 @@ shadow.Visible = false
 g.clamp = g.clamp or function(n, lo, hi)
    if n < lo then return lo end
    if n > hi then return hi end
-
    return n
 end
 
 g.updatePosition = g.updatePosition or function()
    vw, vh = g.Workspace.CurrentCamera.ViewportSize.X, g.Workspace.CurrentCamera.ViewportSize.Y
    widthScale = clamp(0.6, 0.4, 0.8)
-
    heightPx = clamp(math.floor(vh * 0.07), 36, 72)
-
    frame.Size = UDim2.new(widthScale, 0, 0, heightPx)
-
    topOffset = math.max(12, math.floor(vh * 0.03))
    frame.Position = UDim2.new(0.5, 0, 0, topOffset)
    shadow.Position = UDim2.new(0.5, 0, 0, topOffset + math.floor(heightPx/2))
@@ -16765,10 +16770,7 @@ end
 updatePosition()
 
 g.camConn = nil
-if g.Workspace and g.Workspace.CurrentCamera then
-   g.camConn = g.Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updatePosition)
-end
-
+if g.Workspace and g.Workspace.CurrentCamera then g.camConn = g.Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updatePosition) end
 frame.BackgroundTransparency = 1
 label.TextTransparency = 1
 shadow.ImageTransparency = 1
@@ -16942,10 +16944,8 @@ g.spawn_notif_announcement_flames_hub = function(msg, duration)
    local Slide_In = TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
    local Slide_Out = TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
    local Fade_In = TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
    Container.BackgroundTransparency = 1
    Glow_Img.ImageTransparency = 1
-
    local target_y = UDim2.new(0.5, 0, 1, -bottom_offset)
 
    TweenService:Create(Container, Slide_In, {Position = target_y, BackgroundTransparency = 0.08}):Play()
@@ -16954,7 +16954,6 @@ g.spawn_notif_announcement_flames_hub = function(msg, duration)
 
    local pulse_conn
    local pulse_step = 0
-
    pulse_conn = RunService.Heartbeat:Connect(function(dt)
       if not Gui.Parent then
          pulse_conn:Disconnect()
