@@ -9784,85 +9784,83 @@ g.save_outfits_GUI = function()
    end)
 end
 
-g.already_loaded_chat_bypasser_script_flames_hub =
-   g.already_loaded_chat_bypasser_script_flames_hub or false
+g.already_loaded_workaround_script_flames_hub = g.already_loaded_workaround_script_flames_hub or false
+g.already_patched_discord_button = g.already_patched_discord_button or false
+g.load_workaround_script = function()
+	if g.already_loaded_workaround_script_flames_hub then
+		return g.notify("Warning", "Chat Workaround has already been loaded.", 5)
+	end
 
-g.chat_bypasser_failed_flames_hub =
-   g.chat_bypasser_failed_flames_hub or false
+	local FL = getgenv().FlamesLibrary
+	local hidden_gui_main = gethui and gethui() or get_hidden_gui and get_hidden_gui() or g.CoreGui or g.PlayerGui
+	local HttpService = g.HttpService or (cloneref and cloneref(game:GetService("HttpService"))) or game:GetService("HttpService")
+	g.already_loaded_workaround_script_flames_hub = true
+	loadstring(game:HttpGet('https://raw.githubusercontent.com/EnterpriseExperience/MicUpSource/refs/heads/main/Deadly_Chat_Backup_Script.lua'))()
+	local function patch_button(frame)
+		if g.already_patched_discord_button then return end
+		for _, desc in ipairs(frame:GetDescendants()) do
+			if desc:IsA("ImageButton") and desc.Name == "Discord" and desc.Image == "rbxassetid://7552532178" then
+				g.already_patched_discord_button = true
+				FL.disconnect(desc, "Activated")
+				FL.connect(desc, "Activated", function()
+					if http_requesting then
+						http_requesting({
+							Url = 'http://127.0.0.1:6463/rpc?v=1',
+							Method = 'POST',
+							Headers = {
+								['Content-Type'] = 'application/json',
+								Origin = 'https://discord.com'
+							},
+							Body = HttpService:JSONEncode({
+								cmd = 'INVITE_BROWSER',
+								nonce = HttpService:GenerateGUID(false),
+								args = {code = 'MTYKxQfpNJ'}
+							})
+						})
+					else
+						g.AllClipboards("https://discord.gg/MTYKxQfpNJ")
+					end
+				end)
+				break
+			end
+		end
+	end
 
-g.load_chat_bypasser_script = function()
-   if g.already_loaded_chat_bypasser_script_flames_hub then
-      return g.notify("Warning", "Chat Bypasser has already been loaded.", 5)
-   end
+	local function find_chat_frame()
+		for _, gui in ipairs(hidden_gui_main:GetChildren()) do
+			if gui:IsA("ScreenGui") then
+				local frame = gui:FindFirstChild("Chat System")
+				if frame and frame:IsA("Frame") then
+               frame.Draggable = true
+					return frame
+				end
+			end
+		end
+		return nil
+	end
 
-   if g.chat_bypasser_failed_flames_hub then
-      return g.notify("Error", "Chat Bypasser already failed to load on this executor.", 6)
-   end
-
-   if g.notify then
-      return g.notify("Warning", "Chat Bypasser does not work anymore, I will try to find a new method soon, but it needs to be one safe for any user, I'll look into it.", 30)
-   else
-      return warn("Chat Bypasser no longer works, new method coming soon.")
-   end
-
-   local ScriptContext = g.ScriptContext or ScriptContext or game:GetService("ScriptContext")
-   local errorConn
-
-   errorConn = ScriptContext.Error:Connect(function(message)
-      if typeof(message) == "string"
-         and message:lower():find("attempt to call a nil value") then
-
-         g.chat_bypasser_failed_flames_hub = true
-         g.notify(
-            "Error",
-            "Chat Bypasser failed to load. Your executor likely doesn't support this script.",
-            12
-         )
-
-         if errorConn then
-            errorConn:Disconnect()
-            errorConn = nil
-         end
-      end
-   end)
-
-   task.delay(5, function()
-      if not g.already_loaded_chat_bypasser_script_flames_hub
-         and not g.chat_bypasser_failed_flames_hub then
-
-         g.chat_bypasser_failed_flames_hub = true
-         g.notify(
-            "Error",
-            "Chat Bypasser failed to load. Your executor likely doesn't support this script.",
-            12
-         )
-      end
-
-      if errorConn then
-         errorConn:Disconnect()
-         errorConn = nil
-      end
-   end)
-
-   local ok, response = pcall(function()
-      loadstring(game:HttpGet(
-         "https://api.luarmor.net/files/v3/loaders/a675d4a69c2e1d8e301a4af260fb719b.lua" -- doesn't work anymore.
-      ))()
-   end)
-
-   if not ok then
-      g.chat_bypasser_failed_flames_hub = true
-      if errorConn then errorConn:Disconnect() end
-      return g.notify("Error", "Loader crashed immediately: "..tostring(response), 15)
-   end
-
-   task.delay(1, function()
-      if g.chat_bypasser_failed_flames_hub then return end
-      g.already_loaded_chat_bypasser_script_flames_hub = true
-      g.notify("Success", "Loading Chat Bypasser, please wait...", 6)
-      g.notify("Info", "The key is: typethisout", 35)
-      g.notify("Info", "Turn on 'Auto Bypass' in the script.", 35)
-   end)
+	local chat_frame = find_chat_frame()
+	if chat_frame then
+		patch_button(chat_frame)
+	else
+		local conn
+		conn = FL.connect(hidden_gui_main, "ChildAdded", function(child)
+			if child:IsA("ScreenGui") then
+				local frame = child:FindFirstChild("Chat System")
+				if frame and frame:IsA("Frame") then
+					FL.disconnect(conn)
+					patch_button(frame)
+					return
+				end
+				FL.connect(child, "ChildAdded", function(grandchild)
+					if grandchild.Name == "Chat System" and grandchild:IsA("Frame") then
+						FL.disconnect(conn)
+						patch_button(grandchild)
+					end
+				end)
+			end
+		end)
+	end
 end
 
 g.vehicle_fly = g.vehicle_fly or false
@@ -9881,7 +9879,6 @@ g.cleanup = function()
       pcall(function() c:Disconnect() end)
    end
    g.vehiclefly_conns = {}
-
    if g.vehiclefly_bv then
       g.vehiclefly_bv.Velocity = Vector3.zero
       g.vehiclefly_bv:Destroy()
@@ -18323,10 +18320,8 @@ local function ws_get_version()
    end)
 
    if not ok or not result or result.StatusCode ~= 200 then return nil end
-
    local ok2, data = pcall(function() return game:GetService("HttpService"):JSONDecode(result.Body) end)
    if not ok2 or type(data) ~= "table" then return nil end
-
    local version = data.version or data.Version
    if not version then return nil end
 
