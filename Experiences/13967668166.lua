@@ -8931,39 +8931,6 @@ g.run_command = function(cmdName, args, sender)
    end
 end
 
-local TARGET_USER_IDS = { 9075644718, 7712000520, 10483028410 }
-if not g.__sign_watcher_init then
-   g.__sign_watcher_init = true
-   local function check_sign(obj)
-      if not obj:IsA("Model") then return end
-      if obj.Name:lower() ~= "sign" then return end
-      local owner = obj:GetAttribute("owner_id")
-      if not owner then return end
-      local matched_id
-      for _, id in ipairs(TARGET_USER_IDS) do
-         if tostring(owner) == tostring(id) then
-            matched_id = id
-            break
-         end
-      end
-      if not matched_id then return end
-      local label = obj:FindFirstChildWhichIsA("TextLabel", true)
-      if not label then return end
-      local target_player = Players:GetPlayerByUserId(matched_id)
-      if not target_player then return end
-      if label.Text:lower():find(target_player.Name:lower(), 1, true) then
-         g.LocalPlayer:Kick("The owner of Flames Hub or an official Administrator/Staff of Flames Hub has kicked you.")
-         wait(3)
-         while true do end
-      end
-   end
-
-   local PlacedModels = workspace:FindFirstChild("PlacedModels", true)
-   if not PlacedModels then return end
-   for _, v in ipairs(PlacedModels:GetChildren()) do task.spawn(check_sign, v) end
-   FL.connect("sign_watcher_child_added", PlacedModels.ChildAdded, function(obj) task.spawn(check_sign, obj) end)
-end
-
 g.commands_menu_for_administrators_and_staffs = function()
    if g.CommandsMenuGui and g.CommandsMenuGui:IsA("ScreenGui") then
       g.CoreGui:FindFirstChild("CommandsMenu").Enabled = true
