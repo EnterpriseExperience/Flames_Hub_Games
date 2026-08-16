@@ -53,6 +53,12 @@ getgenv().Decode_Lua_Escapes = function(Escaped_String)
 	return table.concat(Chars)
 end
 
+g.words_tbl = {
+    "root_access","packet_inject","xor_key","decrypting",
+    "init_stealth","spoof_id","kernel_hook","bruteforce",
+    "sys_reboot","net_breach","ghost_mode","backdoor_init"
+}
+
 g.FuzzyFindChild = function(parent, query, timeout)
     if not parent or typeof(parent) ~= "Instance" then return nil end
     if not query or query == "" then return nil end
@@ -626,9 +632,7 @@ getgenv().FlamesLibrary.safe_func = function(...)
     for i = 1, select("#", ...) do
         local f = select(i, ...)
         local ok, t = pcall(typeof, f)
-        if ok and t == "function" then
-            return f
-        end
+        if ok and t == "function" then return f end
     end
     return function() end
 end
@@ -5507,7 +5511,7 @@ get_or_set("get_player_scripts", PlayerScripts)
 get_or_set("get_player_backpack", Backpack)
 if not getgenv().Anti_Idle_Controller_Loaded then
     getgenv().Anti_Idle_Controller_Loaded = true
-    if getconnections or get_signal_cons and typeof(getconnections) == "function" and typeof(get_signal_cons) == "function" then
+    if getconnections or get_signal_cons typeof(getconnections) == "function" and typeof(get_signal_cons) == "function" then
         local gc = getconnections or get_signal_cons
         local idle = lp.Idled
         if gc and typeof(gc) == "function" and idle then
