@@ -42,11 +42,12 @@ wait(0.25)
 if not g.LifeTogether_Actual_Flames_Hub_Running_Functioning_Currently_On_Client then if g.notify and typeof(g.notify) == "function" then g.notify("Success", "Got LocalPlayer: "..tostring(g.LocalPlayer), 5) end end
 local RunService = cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
 local CoreGui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
-local has_gethui = (typeof(get_hui) == "function") or (typeof(g.get_hui) == "function")
+local has_gethui = (typeof(gethui) == "function") or (typeof(g.gethui) == "function")
 local has_gethidden = (typeof(get_hidden_gui) == "function") or (typeof(g.get_hidden_gui) == "function")
+local ReplicatedStorage = g.ReplicatedStorage or cloneref and cloneref(game:GetService("ReplicatedStorage")) or game:GetService("ReplicatedStorage")
 if not has_gethui and not has_gethidden and not g.roblox_hidden_gui_location then
     if RunService:IsStudio() then
-        local lp = g.LocalPlayer or game.Players.LocalPlayer or game:GetService("Players").LocalPlayer
+        local lp = g.LocalPlayer or Players.LocalPlayer or game:GetService("Players").LocalPlayer
         local player_gui = lp and lp:FindFirstChildWhichIsA("PlayerGui")
         g.roblox_hidden_gui_location = player_gui or CoreGui
     else
@@ -126,7 +127,7 @@ g.isProperty = g.isProperty or function(inst, prop)
 end
 
 g.hasProp = g.hasProp or function(inst, prop)
-    return inst and isProperty(inst, prop) ~= nil
+    return inst and g.isProperty(inst, prop) ~= nil
 end
 
 g.setProperty = g.setProperty or function(inst, prop, v)
@@ -135,7 +136,7 @@ g.setProperty = g.setProperty or function(inst, prop, v)
 end
 
 g.safeSet = g.safeSet or function(inst, prop, val)
-    if inst and hasProp(inst, prop) then setProperty(inst, prop, val) end
+    if inst and g.hasProp(inst, prop) then g.setProperty(inst, prop, val) end
 end
 
 local function isVerified()
@@ -171,7 +172,7 @@ g.disabled_global_value_correctly = g.disabled_global_value_correctly or functio
 end
 
 g.LifeTogether_Actual_Flames_Hub_Running_Functioning_Currently_On_Client = true
-local userid = game.Players.LocalPlayer.UserId
+local userid = localPlayer.UserId
 local http = g.HttpService or cloneref and cloneref(game:GetService("HttpService")) or game:GetService("HttpService")
 local lib = g.FlamesLibrary
 getgenv().lib = getgenv().FlamesLibrary -- necessary for some reason.
@@ -1998,7 +1999,7 @@ g.open_difficulty_editor = function()
     Instance.new("UICorner", close_btn).CornerRadius = UDim.new(0, 6)
     close_btn.MouseButton1Click:Connect(function() outer.Visible = false end)
 
-    if dragify then dragify(outer) end
+    if g.dragify then g.dragify(outer) end
     local list_frame = Instance.new("ScrollingFrame")
     list_frame.Size = UDim2.new(1, 0, 1, -92)
     list_frame.Position = UDim2.new(0, 0, 0, 42)
@@ -3795,7 +3796,7 @@ g.open_minigame_menu = function()
         },
     }
 
-    local Is_Mobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+    local Is_Mobile = g.UserInputService.TouchEnabled and not g.UserInputService.KeyboardEnabled
     local gui = Instance.new("ScreenGui")
     gui.Name = "MinigameMenuGUI"
     gui.IgnoreGuiInset = true
@@ -3847,7 +3848,7 @@ g.open_minigame_menu = function()
     title_lbl.TextXAlignment = Enum.TextXAlignment.Left
     title_lbl.Parent = header
 
-    if dragify then dragify(outer) end
+    if g.dragify then g.dragify(outer) end
     local minimized = false
     local content_frame
     local function make_header_btn(text, x_offset)
@@ -4028,9 +4029,9 @@ g.open_minigame_menu = function()
 
     if getgenv().Keybind_Toggle_Initialized then pcall(function() getgenv().Keybind_Toggle_Initialized:Disconnect() end) task.wait() getgenv().Keybind_Toggle_Initialized = nil end
     wait(0.25)
-    local Is_Mobile = UserInputService.TouchEnabled
+    local Is_Mobile = g.UserInputService.TouchEnabled
     if not Is_Mobile then
-        getgenv().Keybind_Toggle_Initialized = UserInputService.InputBegan:Connect(function(Input, Game_Processed_Event)
+        getgenv().Keybind_Toggle_Initialized = g.UserInputService.InputBegan:Connect(function(Input, Game_Processed_Event)
             if Game_Processed_Event then return end
             if Input.KeyCode == Enum.KeyCode.RightControl and getgenv().Keybind_Input_Disabled_For_Mini_Game == false then
                 if gui and gui:IsA("ScreenGui") then gui.Enabled = not gui.Enabled end
@@ -4039,7 +4040,7 @@ g.open_minigame_menu = function()
     end
 end
 
-create_flames_hub_unique_id(game.Players.LocalPlayer.UserId)
+create_flames_hub_unique_id(Players.LocalPlayer.UserId)
 wait(0.3)
 local flames_unique_server_ID = get_flames_hub_unique_id()
 local masked_flames_hub_server_ID = get_masked_flames_hub_unique_id()
@@ -4074,61 +4075,60 @@ g.originalIO = g.originalIO or {}
 g.spectateConns = g.spectateConns or {}
 local fw = getgenv().FlamesLibrary.wait
 local name = "administrator_watcher_conn_Flames_Hub"
-originalIO.ensureCam = function(spectate_target)
-    if not spectate_target or not spectate_subject then return end
-    if not workspace then return end
+g.originalIO.ensureCam = function(spectate_target)
+    if not spectate_target then return end
     local cam = workspace.CurrentCamera
     if not cam then return end
-    if isProperty(cam, "CameraSubject") == nil then return end
-    if cam.CameraSubject ~= spectate_subject then setProperty(cam, "CameraSubject", spectate_subject) end
+    if g.isProperty(cam, "CameraSubject") == nil then return end
+    if cam.CameraSubject ~= spectate_target then g.setProperty(cam, "CameraSubject", spectate_target) end
 end
 
-originalIO.hookCameraGuard = function(spectate_target)
+g.originalIO.hookCameraGuard = function(spectate_target)
     if not workspace then return end
     local cam = workspace.CurrentCamera
     if not cam then return end
-    if spectateConns.cam then
-        spectateConns.cam:Disconnect()
-        spectateConns.cam = nil
+    if g.spectateConns.cam then
+        g.spectateConns.cam:Disconnect()
+        g.spectateConns.cam = nil
     end
     wait(0.25)
-    if isProperty(cam, "CameraSubject") ~= nil then
-        spectateConns.cam = g.FlamesLibrary.connect("spectate_cam", cam:GetPropertyChangedSignal("CameraSubject"):Connect(function()
-            if not spectate_target or not spectate_subject then return end
-            originalIO.ensureCam()
+    if g.isProperty(cam, "CameraSubject") ~= nil then
+        g.spectateConns.cam = g.FlamesLibrary.connect("spectate_cam", cam:GetPropertyChangedSignal("CameraSubject"):Connect(function()
+            if not spectate_target then return end
+            g.originalIO.ensureCam()
         end))
     end
 
-    if not spectateConns.camW and isProperty(workspace, "CurrentCamera") ~= nil then
-        spectateConns.camW = g.FlamesLibrary.connect("spectate_camW", workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
-            if not spectate_target or not spectate_subject then return end
-            originalIO.hookCameraGuard()
-            originalIO.ensureCam()
+    if not g.spectateConns.camW and g.isProperty(workspace, "CurrentCamera") ~= nil then
+        g.spectateConns.camW = g.FlamesLibrary.connect("spectate_camW", workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+            if not spectate_target then return end
+            g.originalIO.hookCameraGuard()
+            g.originalIO.ensureCam()
         end))
     end
 end
 
-originalIO.captureIO = function(name)
+g.originalIO.captureIO = function(name)
     local fn
-    if rawget then fn = rawget(_G, name) end
+    if rawget and typeof(rawget) == "function" then fn = rawget(_G, name) end
     if type(fn) ~= "function" then fn = _G[name] end
-    if type(fn) == "function" then originalIO[name] = fn end
+    if type(fn) == "function" then g.originalIO[name] = fn end
 end
 wait(0.15)
-if not originalIO.__captured then
-    originalIO.__captured = true
-    originalIO.captureIO('readfile')
-    originalIO.captureIO('writefile')
-    originalIO.captureIO('appendfile')
-    originalIO.captureIO('listfiles')
-    originalIO.captureIO('makefolder')
-    originalIO.captureIO('delfile')
-    originalIO.captureIO('delfolder')
-    originalIO.captureIO('isfile')
-    originalIO.captureIO('isfolder')
+if not g.originalIO.__captured then
+    g.originalIO.__captured = true
+    g.originalIO.captureIO('readfile')
+    g.originalIO.captureIO('writefile')
+    g.originalIO.captureIO('appendfile')
+    g.originalIO.captureIO('listfiles')
+    g.originalIO.captureIO('makefolder')
+    g.originalIO.captureIO('delfile')
+    g.originalIO.captureIO('delfolder')
+    g.originalIO.captureIO('isfile')
+    g.originalIO.captureIO('isfolder')
 end
 
-originalIO.pathVariants = function(path)
+g.originalIO.pathVariants = function(path)
     if type(path) ~= "string" then return { path } end
     if path:match('^[%w_]+://') then return { path } end
     local variants, seen = {}, {}
@@ -4139,10 +4139,10 @@ originalIO.pathVariants = function(path)
         end
     end
     add(path)
-    add(path:gsub('\\+', '\\'))
-    add(path:gsub('//+', '/'))
-    add(path:gsub('/', '\\'))
-    add(path:gsub('\\', '/'))
+    add((path:gsub('\\+', '\\')))
+    add((path:gsub('//+', '/')))
+    add((path:gsub('/', '\\')))
+    add((path:gsub('\\', '/')))
     local trimmed = path:gsub('^%.[/\\]+', '')
     if trimmed ~= path then
         add(trimmed)
@@ -4152,8 +4152,8 @@ originalIO.pathVariants = function(path)
     return variants
 end
 
-originalIO.resolveWithListfiles = function(target)
-    local lf = originalIO.listfiles
+g.originalIO.resolveWithListfiles = function(target)
+    local lf = g.originalIO.listfiles
     if type(lf) ~= "function" then
         return nil
     end
@@ -4161,7 +4161,7 @@ originalIO.resolveWithListfiles = function(target)
     if not dir or filename == '' then
         return nil
     end
-    local dirVariants = originalIO.pathVariants(dir)
+    local dirVariants = g.originalIO.pathVariants(dir)
     local results = {}
     local lowered = filename:lower()
     for _, candidateDir in ipairs(dirVariants) do
@@ -4228,7 +4228,7 @@ local function resolve_service(input)
     local best_score = math.huge
 
     for _, svc in ipairs(children) do
-        local score = levenshtein(lowered, svc.Name:lower())
+        local score = g.levenshtein(lowered, svc.Name:lower())
         if score < best_score then
             best_score = score
             best_name = svc.Name
@@ -4425,7 +4425,7 @@ g.randomString = g.randomString or function()
 end
 
 g.blankfunction = g.blankfunction or function(...) return ... end
-local CoreGui = g.CoreGui or safe_wrapper("CoreGui")
+local CoreGui = g.CoreGui or g.safe_wrapper("CoreGui")
 if g.LifeTogether_RP_ScriptHub_Loaded then
     if g.notify then
         return g.notify("Warning", "Life Together RP Hub has already been loaded.", 8)
@@ -4454,9 +4454,9 @@ end
 wait(0.2)
 if not g.dragify then
     do
-        local uis = safe_wrapper("UserInputService")
-        local ts  = safe_wrapper("TweenService")
-        local rs  = safe_wrapper("RunService")
+        local uis = g.safe_wrapper("UserInputService")
+        local ts  = g.safe_wrapper("TweenService")
+        local rs  = g.safe_wrapper("RunService")
         local active_frame     = nil
         local active_drag_start = nil
         local active_start_pos  = nil
@@ -4716,17 +4716,17 @@ local title_allowed_list_tbl = {
     ["ddosama136703"] = "Staff",
     ["AuraWithClipFarmin"] = "Owner",
 }
-local GlobalEnv_Framework = load_script("GlobalEnv_Framework")
-local Life_Together_Network = load_script("Life_Together_Network")
-local Functions_API_LifeTogether = load_script("Functions_API_LifeTogether")
-local TextChatService_MessageConnection = load_script("TextChatService_MessageConnection")
-local LifeTogether_Anti_Staff = load_script("LifeTogether_Anti_Staff")
-local TextChatService_Unsuspension_Framework = load_script("TextChatService_Unsuspension_Framework")
-local Vehicle_Mapper = load_script("Vehicle_Mapper")
-local LifeTogether_Framework_Base_1 = load_script("LifeTogether_Framework_Base_1")
-local LifeTogether_Framework_Base_2 = load_script("LifeTogether_Framework_Base_2")
-local Dex_Explorer_Checker = load_script("Dex_Explorer_Checker")
-local Configuration_API = load_script("Configuration_API")
+local GlobalEnv_Framework = g.load_script("GlobalEnv_Framework")
+local Life_Together_Network = g.load_script("Life_Together_Network")
+local Functions_API_LifeTogether = g.load_script("Functions_API_LifeTogether")
+local TextChatService_MessageConnection = g.load_script("TextChatService_MessageConnection")
+local LifeTogether_Anti_Staff = g.load_script("LifeTogether_Anti_Staff")
+local TextChatService_Unsuspension_Framework = g.load_script("TextChatService_Unsuspension_Framework")
+local Vehicle_Mapper = g.load_script("Vehicle_Mapper")
+local LifeTogether_Framework_Base_1 = g.load_script("LifeTogether_Framework_Base_1")
+local LifeTogether_Framework_Base_2 = g.load_script("LifeTogether_Framework_Base_2")
+local Dex_Explorer_Checker = g.load_script("Dex_Explorer_Checker")
+local Configuration_API = g.load_script("Configuration_API")
 g.LifeTogetherRP_Admin = true
 g.make_round = g.make_round or function(obj, radius)
     local uic = Instance.new("UICorner")
@@ -4746,19 +4746,18 @@ if type(LifeTogether_Framework_Base_1) == "function" then LifeTogether_Framework
 if type(LifeTogether_Framework_Base_2) == "function" then LifeTogether_Framework_Base_2() end
 if type(Dex_Explorer_Checker) == "function" then Dex_Explorer_Checker() end
 if g.ConstantUpdate_Checker_Live then g.notify("Success", "Enabled/Re-Enabled LIVE update checker.", 5) end
-local Players = g.Players or game:GetService("Players") or safe_wrapper("Players")
+local Players = g.Players or game:GetService("Players") or g.safe_wrapper("Players")
 local LocalPlayer = g.LocalPlayer or Players.LocalPlayer
 local raw_getconns = getconnections or get_signal_cons
-local get_conns = Lib and Lib.safe_func(_getconns)
-local LogService = g.LogService or game:GetService("LogService") or safe_wrapper("LogService")
-local UserInputService = g.UserInputService or safe_wrapper("UserInputService")
-local HttpService = g.HttpService or safe_wrapper("HttpService")
+local get_conns = Lib and Lib.safe_func(raw_getconns)
+local LogService = g.LogService or game:GetService("LogService") or g.safe_wrapper("LogService")
+local UserInputService = g.UserInputService or g.safe_wrapper("UserInputService")
+local HttpService = g.HttpService or g.safe_wrapper("HttpService")
 local isMobile = UserInputService.TouchEnabled
 local hookfn = hookfunction or blankfunction
 local hookmeta = hookmetamethod or blankfunction
 g.all_saved_Life_Together_RP_Outfit_IDs = {}
 g.get_all_current_outfits_and_their_IDs = function()
-    local ReplicatedStorage = ReplicatedStorage or cloneref(game:GetService("ReplicatedStorage"))
     local Data = require(ReplicatedStorage:FindFirstChild("Data", true))
     if typeof(Data) ~= "table" then return end
     local Outfits = Data.outfits
@@ -4790,7 +4789,7 @@ g.find_nba_props_map_folder = function()
 end
 
 g.collect_all_nba_props = function()
-    local char = g.Character or g.LocalPlayer.Character or get_char(LocalPlayer, 10) or g.Char and g.Char:get()
+    local char = g.Character or g.LocalPlayer.Character or g.get_char(LocalPlayer, 10) or g.Char and g.Char:get()
     if not char then return end
     local attr = g.LocalPlayer:GetAttribute("NBA_HUNT_PROGRESS")
     if not attr then return end
@@ -4807,7 +4806,7 @@ g.collect_all_nba_props = function()
     end
 end
 
-local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui or PlayerGui
+local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or g.CoreGui or g.PlayerGui
 g.find_delta_icon_image_button = g.find_delta_icon_image_button or function()
     local cached = g.deltas_icon_image_button_descendant_flames_hub_value
     if cached and cached:IsA("ImageButton") and cached.Parent then
@@ -4889,7 +4888,7 @@ end
 
 local function FindPlayer(query)
     if not query then
-        if g.notify and typeof(g.notify) then notify("Error", "Something unexpected happened while trying to find: "..tostring(query), 6) end
+        if g.notify and typeof(g.notify) then g.notify("Error", "Something unexpected happened while trying to find: "..tostring(query), 6) end
         return nil
     end
 
@@ -4916,7 +4915,7 @@ local function FindPlayer(query)
         -- lower is better, weighted worse than substring. --
         -----------------------------------------------------------
         local function fuzzy_score(target)
-            return levenshtein(query, target) -- query the target.
+            return g.levenshtein(query, target) -- query the target.
         end
         -----------------------------------------------------------
         -- [[ perfect UserId match. ]] --
@@ -4958,8 +4957,7 @@ if game.PlaceId ~= 13967668166 and game.PlaceId ~= 99644611200703 and game.Place
     if g.notify and typeof(g.notify) == "function" then
         return g.notify("Error", "This game isn't allowed to run with this script (only: Life Together RP (main), Ski Resort, and Bora Bora).", 30)
     else
-        NotifyLib:External_Notification("Error", "This game isn't allowed to run with this script (only: Life Together RP (main), Ski Resort, and Bora Bora).", 30)
-        return 
+        return warn("This game isn't allowed to run with this script (only: Life Together RP (main), Ski Resort, and Bora Bora).")
     end
 end
 
@@ -5173,14 +5171,6 @@ local function Device_Detector()
     return platform_map[platform] or "Unknown Device"
 end
 
-g.Known_Admin_Commands = nil
-if not g.Known_Admin_Commands then
-    local known = {}
-
-    for cmd in cmdsString:gmatch("{prefix}([%w_%-]+)") do table.insert(known, cmd:lower()) end
-    g.Known_Admin_Commands = known
-end
-
 g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
     local cmds = g.cmdsString
     if type(cmds) ~= "string" then return 0 end
@@ -5201,31 +5191,14 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
     return total
 end
 
-local holiday = getholiday() or ""
+local holiday = g.getholiday() or ""
 local h = holiday ~= "" and (" " .. holiday) or ""
 local Announcement_Message = "[discord.gg/MTYKxQfpNJ]: Join our Discord server, also, it looks like Life Together RP patched Laser + Pistol."
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
-g.Script_Version_GlobalGenv = Script_Version -- also keep it like this so it can over-write new version properly.
+g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.
 local SoundService = g.SoundService or cloneref(game:GetService("SoundService"))
 local RS = g.ReplicatedStorage or cloneref and cloneref(game:GetService("ReplicatedStorage")) or game:GetService("ReplicatedStorage")
-if not g.Has_Already_Changed_Sound_IDs_And_Volume then
-    g.Has_Already_Changed_Sound_IDs_And_Volume = true
-    for _,v in pairs(SoundService:GetChildren()) do
-        if v:IsA("Sound") and v.Name:lower():find("notif") then
-            v.Volume = 1
-            if current_device == "Windows" then
-                v.SoundId = Sound_ID_Windows
-            elseif current_device == "iOS" then
-                v.SoundId = Sound_ID_iPhone
-            elseif current_device == "Android" then
-                v.SoundId = Sound_ID_Android
-            else
-                v.SoundId = Sound_ID_Universal
-            end
-        end
-    end
-end
 
 if not g.Flames_Hub_Owner_Title_Animated_Initialized then
     g.Flames_Hub_Owner_Title_Animated_Initialized = true
@@ -5253,14 +5226,14 @@ if not g.Flames_Hub_Owner_Title_Animated_Initialized then
         lib.spawn(key, "spawn", function()
             local index = 1
             while label and label.Parent do
-                local tween = TweenService:Create(
+                local tween = g.TweenService:Create(
                     label,
                     TweenInfo.new(0.4, Enum.EasingStyle.Linear),
-                    { TextColor3 = colors[index] }
+                    { TextColor3 = g.colors[index] }
                 )
                 tween:Play()
                 tween.Completed:Wait()
-                index = (index % #colors) + 1
+                index = (index % #g.colors) + 1
             end
             lib.disconnect(key)
         end)
@@ -5272,7 +5245,7 @@ if not g.Flames_Hub_Owner_Title_Animated_Initialized then
         lib.spawn(key, "spawn", function()
             while billboard and billboard.Parent do
                 local goal = going_up and { StudsOffset = Vector3.new(0, 3, 0) } or { StudsOffset = Vector3.new(0, 2.5, 0) }
-                local tween = TweenService:Create(
+                local tween = g.TweenService:Create(
                     billboard,
                     TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
                     goal
@@ -5477,22 +5450,22 @@ end
 
 g.LoadPerformanceStatsGUI = function()
     if g.performance_stats then
-        notify("Info", "Performance Statistics GUI is already loaded.", 5)
+        g.notify("Info", "Performance Statistics GUI is already loaded.", 5)
         return
     end
 
-    notify("Info", "Loading Performance Statistics GUI...", 5)
+    g.notify("Info", "Loading Performance Statistics GUI...", 5)
 
     local success, err = pcall(function()
-        local src = get_script_text("grab_file_performance")
+        local src = g.get_script_text("grab_file_performance")
         if src == "" then
-            notify("Error", "no valid source", 5)
+            g.notify("Error", "no valid source", 5)
         end
         loadstring(src)()
     end)
 
     if not success then
-        notify("Error", "Failed to load Performance Statistics GUI: "..tostring(err), 8)
+        g.notify("Error", "Failed to load Performance Statistics GUI: "..tostring(err), 8)
         return
     end
 
@@ -5503,9 +5476,9 @@ g.LoadPerformanceStatsGUI = function()
     until g.performance_stats or timeout <= 0
 
     if g.performance_stats then
-        notify("Success", "Loaded Performance Statistics GUI.", 5)
+        g.notify("Success", "Loaded Performance Statistics GUI.", 5)
     else
-        notify("Warning", "Failed to confirm Performance Statistics GUI load.", 8)
+        g.notify("Warning", "Failed to confirm Performance Statistics GUI load.", 8)
     end
 end
 
@@ -5527,7 +5500,7 @@ end
 
 g.NightVisionEnabled = g.NightVisionEnabled or false
 g.ensureColorCorrection = function(name, props)
-    local effect = Lighting:FindFirstChild(name)
+    local effect = g.Lighting:FindFirstChild(name)
     if not effect then
         effect = Instance.new("ColorCorrectionEffect")
         effect.Name = name
@@ -5540,7 +5513,7 @@ g.ensureColorCorrection = function(name, props)
 end
 
 local ccEffects = {
-    NightVisionColorCorrection = ensureColorCorrection("NightVisionColorCorrection", {
+    NightVisionColorCorrection = g.ensureColorCorrection("NightVisionColorCorrection", {
         Enabled = false,
         Brightness = 0,
         Contrast = -0.1,
@@ -5625,7 +5598,7 @@ function create_message_instance(inst_name, message, duration)
     if new_msg and new_msg:IsA("Hint") and new_msg.Parent ~= nil then new_msg:Destroy() end
 end
 
-g.Net = g.Net or find_module_s("Net") or require(g.Core:FindFirstChild("Net"))
+g.Net = g.Net or g.find_module_s("Net") or require(g.Core:FindFirstChild("Net"))
 g.owner_joined = function(Name)
    local owner_text_content = "Flames Hub | Owner has joined this server ("..tostring(Name).."), this is my current and only account right now, so come to me if you need help/assistance."
    getgenv().notify("Success", owner_text_content, 15)
@@ -5644,7 +5617,7 @@ g.Teleport_Checker_For_Script = g.LocalPlayer.OnTeleport:Connect(function(State)
 	end
 end)
 
-g.LocalPlayer = g.LocalPlayer or safe_wrapper("LocalPlayer")
+g.LocalPlayer = g.LocalPlayer or g.safe_wrapper("LocalPlayer")
 local some_vehicles = {
     "Monster Truck",
     "SVJ",
@@ -5666,7 +5639,7 @@ local some_vehicles = {
 }
 fw(0.1)
 if not g.Spawned_Vehicle_Checker then
-    local Net = find_module_s("Net") or require(g.Core:FindFirstChild("Net"))
+    local Net = g.find_module_s("Net") or require(g.Core:FindFirstChild("Net"))
     g.notify("Success", "Spoofing Vehicle spawner...", 10)
 
     for _, car in ipairs(some_vehicles) do
@@ -5677,6 +5650,7 @@ end
 fw(0.2)
 g.find_placed_models_folder = function()
     local cached_folder = getgenv().cached_placed_models_folder
+    if cached_folder and cached_folder.Parent and cached_folder:IsDescendantOf(workspace) then return cached_folder end
 
     for _, v in ipairs(g.Workspace:GetDescendants()) do
         local n = v.Name:lower()
@@ -5689,8 +5663,8 @@ g.find_placed_models_folder = function()
     return nil
 end
 
-if not getgenv().cached_placed_models_folder then g.find_placed_models_folder() end
-local Placed_Models = getgenv().cached_placed_models_folder or g.Workspace:FindFirstChild("PlacedModels") or g.Workspace:WaitForChild("PlacedModels", 1) or find_placed_models_folder()
+if not getgenv().cached_placed_models_folder then pcall(function() g.find_placed_models_folder() end) end
+local Placed_Models = getgenv().cached_placed_models_folder or g.Workspace:FindFirstChild("PlacedModels") or g.Workspace:WaitForChild("PlacedModels", 1) or g.find_placed_models_folder()
 g.workspace_editor_script_GUI = function()
     if g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub") and g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub"):IsA("ScreenGui") then
         g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub").Enabled = true
@@ -5719,8 +5693,8 @@ g.has_server_admin = function()
     local is_priv_server = g.is_in_private_server()
     if not is_priv_server then return false end
     for _, player in ipairs(Players:GetPlayers()) do
-        local hrp = get_root(player)
-        if hrp then
+        local hrp = g.get_root(player, Players.RespawnTime + 0.5)
+        if hrp and hrp.Parent and hrp:IsDescendantOf(game) then
             local billboard = hrp:FindFirstChild("CharacterBillboardGui")
             if billboard then
                 local label = billboard:FindFirstChild("ServerAdmin")
@@ -5736,7 +5710,7 @@ end
 
 g.get_server_admin_player = function()
     local function check_player(player)
-        local hrp = get_root(player)
+        local hrp = g.get_root(player, Players.RespawnTime + 0.5)
         if not hrp then return false end
         local billboard = hrp:FindFirstChild("CharacterBillboardGui")
         if not billboard then return false end
@@ -5750,19 +5724,19 @@ g.get_server_admin_player = function()
         end
     end
 
-    if check_player(g.LocalPlayer or game.Players.LocalPlayer) then
-        return g.LocalPlayer or game.Players.LocalPlayer
+    if check_player(g.LocalPlayer or Players.LocalPlayer) then
+        return g.LocalPlayer or Players.LocalPlayer
     end
 
     return nil
 end
 
 g.is_localplayer_server_owner = function()
-    if not has_server_admin() then
+    if not g.has_server_admin() then
         return false
     end
 
-    local admin_player = get_server_admin_player()
+    local admin_player = g.get_server_admin_player()
     local local_player = g.LocalPlayer
     return admin_player and local_player and admin_player == local_player
 end
@@ -5782,70 +5756,64 @@ g.notify_priv_server_owner = function()
 end
 
 g.server_admin_tp = function(Player)
-    local check_is_localplr_priv_server_owner = is_localplayer_server_owner()
+    local check_is_localplr_priv_server_owner = g.is_localplayer_server_owner()
     if not check_is_localplr_priv_server_owner then
-        return notify("Warning", "You do not own this Private Server!", 6)
+        return g.notify("Warning", "You do not own this Private Server!", 6)
     end
 
     if typeof(Player) ~= "Instance" or not Player:IsA("Player") then
-        return notify("Error", "That player doesn't exist or is not a Player.", 6)
+        return g.notify("Error", "That player doesn't exist or is not a Player.", 6)
     end
 
     g.Send("server_admin_teleport_to_player", Player.UserId)
 end
 
 g.disable_emote_func = function()
-    local lp = g.LocalPlayer or game.Players.LocalPlayer
-    local Humanoid = get_human(lp)
-    if not Humanoid then return notify("Error", "Humanoid not found, try resetting.", 5) end
-
+    local lp = g.LocalPlayer or Players.LocalPlayer
+    local Humanoid = g.Humanoid or g.get_human(lp, Players.RespawnTime + 0.5)
+    if not Humanoid then return g.notify("Error", "Humanoid not found, try resetting.", 5) end
     pcall(function()
         for _, v in ipairs(Humanoid:GetPlayingAnimationTracks()) do
             v:Stop()
         end
     end)
-    if g.Is_Currently_Emoting then
-        g.Is_Currently_Emoting = false
-    end
+    if g.Is_Currently_Emoting then g.Is_Currently_Emoting = false end
 end
 
 if not g.Spawned_Vehicle_Checker then
-    -- [[ Function to check if the script is supported and works on the current executor. ]] --
+    local Net = g.Net or require(g.Core:FindFirstChild("Net"))
     local success, response = pcall(function()
-        local Net = g.Net or require(g.Core:FindFirstChild("Net"))
-
         Net.get("spawn_vehicle", "Monster Truck")
         wait(3)
-        return get_vehicle()
+        return g.get_vehicle()
     end)
 
     if success and response then
         fw(0.1)
-        if get_vehicle() and g.Humanoid.Sit or g.Humanoid.Sit == true then
+        if g.get_vehicle() and g.Humanoid.Sit or g.Humanoid.Sit == true then
             g.Humanoid:ChangeState(3)
             fw(0.2)
-            Net.get("spawn_vehicle", get_vehicle().Name or "Monster Truck")
-        elseif get_vehicle() and g.Humanoid.Sit == false then
-            Net.get("spawn_vehicle", get_vehicle().Name or "Monster Truck")
-        elseif not get_vehicle() then
-            notify("Warning", "We did spawn the Vehicle it seems, but it seems like you despawned the Vehicle.", 10)
-        elseif not get_vehicle() and g.Humanoid.Sit == true then
+            Net.get("spawn_vehicle", g.get_vehicle().Name or "Monster Truck")
+        elseif g.get_vehicle() and g.Humanoid.Sit == false then
+            Net.get("spawn_vehicle", g.get_vehicle().Name or "Monster Truck")
+        elseif not g.get_vehicle() then
+            g.notify("Warning", "We did spawn the Vehicle it seems, but it seems like you despawned the Vehicle.", 10)
+        elseif not g.get_vehicle() and g.Humanoid.Sit == true then
             pcall(function() g.Humanoid:ChangeState(3) end)
-            notify("Warning", "We did not find your Vehicle, but it seems like it worked.", 5)
+            g.notify("Warning", "We did not find your Vehicle, but it seems like it worked.", 5)
         end
     else
         if not success then
             g.LifeTogetherRP_Admin = false
             g.LifeTogether_Actual_Flames_Hub_Running_Functioning_Currently_On_Client = false
-            --notify("Error", "This script does not work on this executor!", 8)
-            return notify("Error", "You cannot run this script on this executor, we're sorry! (if you believe this was in error, re-run the script).", 12)
+            return g.notify("Error", "You cannot run this script on this executor, we're sorry! (if you believe this was in error, re-run the script).", 12)
         end
     end
 
     g.Spawned_Vehicle_Checker = true
 end
 
-local Char = g.Char or require(game.ReplicatedStorage:FindFirstChild("Char", true))
+local Char = g.Char or require(ReplicatedStorage:FindFirstChild("Char", true))
 g.get_current_character_life_together_rp = function()
     return Char.get()
 end
@@ -5950,8 +5918,8 @@ g.createUI = function()
     end)
 end
 
-setupCharacter()
-createUI()
+g.setupCharacter()
+g.createUI()
 
 if g.invis_main_FE_connections.Heartbeat then
     pcall(function() g.invis_main_FE_connections.Heartbeat:Disconnect() end)
@@ -5978,8 +5946,8 @@ end
 wait(0.25)
 g.invis_main_FE_connections.CharacterAdded = player.CharacterAdded:Connect(function()
     g.is_invisible_script_toggled = false
-    setupCharacter()
-    createUI()
+    g.setupCharacter()
+    g.createUI()
 end)
 
 g.invisible_toggle_connections = g.invis_main_FE_connections
@@ -6007,7 +5975,7 @@ g.AllCars = {
 local CarMap = {}
 
 g.kick_plr = g.kick_plr or function(player)
-    if not is_localplayer_server_owner() then return g.notify("Error", "You are not the private server owner!", 5) end
+    if not g.is_localplayer_server_owner() then return g.notify("Error", "You are not the private server owner!", 5) end
     local name
     if typeof(player) == "Instance" then name = player.Name else name = tostring(player) end
     if not allowed[player.Name] then
@@ -6030,11 +5998,11 @@ g.load_chat_main_GUI = function()
 end
 
 g.server_lock_whitelist_gui = g.server_lock_whitelist_gui or function()
-    if not is_localplayer_server_owner() then
-        return notify("Error", "You are not the private server owner!", 5)
+    if not g.is_localplayer_server_owner() then
+        return g.notify("Error", "You are not the private server owner!", 5)
     end
     if g.ServerLockWhitelistManagerGUI then
-        return notify("Warning", "Server-Lock whitelist manager is already running!", 5)
+        return g.notify("Warning", "Server-Lock whitelist manager is already running!", 5)
     end
 
     g.ServerLockWhitelistManagerGUI = true
@@ -6053,8 +6021,7 @@ g.server_lock_whitelist_gui = g.server_lock_whitelist_gui or function()
     Main.BorderSizePixel = 0
     Main.Parent = ScreenGui
 
-    dragify(Main)
-
+    if g.dragify and typeof(g.dragify) == "function" then g.dragify(Main) end
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 8)
     UICorner.Parent = Main
@@ -6095,7 +6062,7 @@ g.server_lock_whitelist_gui = g.server_lock_whitelist_gui or function()
     UICorner.Parent = CloseButton
 
     CloseButton.MouseButton1Click:Connect(function()
-        TweenService:Create(Main, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 300, 0, 0), Transparency = 1}):Play()
+        g.TweenService:Create(Main, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 300, 0, 0), Transparency = 1}):Play()
         wait(0.25)
         g.ServerLockWhitelistManagerGUI = false
         ScreenGui:Destroy()
@@ -6223,14 +6190,14 @@ g.server_lock_whitelist_gui = g.server_lock_whitelist_gui or function()
         local name = Input.Text
         if name ~= "" then
             if g.server_whitelist[name] then
-                return notify("Warning", tostring(name).." is already in the server-lock whitelist!", 5)
+                return g.notify("Warning", tostring(name).." is already in the server-lock whitelist!", 5)
             end
 
             g.server_whitelist[name] = true
             Input.Text = ""
             wait(0.3)
             if g.server_whitelist[name] then
-                notify("Success", tostring(name).." was added to server-lock whitelist! (they won't get kicked by server-lock).", 15)
+                g.notify("Success", tostring(name).." was added to server-lock whitelist! (they won't get kicked by server-lock).", 15)
             end
             refresh_list()
         end
@@ -6240,14 +6207,14 @@ g.server_lock_whitelist_gui = g.server_lock_whitelist_gui or function()
         local name = Input.Text
         if name ~= "" then
             if not g.server_whitelist[name] then
-                return notify("Warning", tostring(name).." is not in the server-lock whitelist!", 5)
+                return g.notify("Warning", tostring(name).." is not in the server-lock whitelist!", 5)
             end
 
             g.server_whitelist[name] = nil
             Input.Text = ""
             wait(0.3)
             if not g.server_whitelist[name] then
-                notify("Success", tostring(name).." was removed from the server-lock whitelist! (they WILL get kicked by server-lock).", 15)
+                g.notify("Success", tostring(name).." was removed from the server-lock whitelist! (they WILL get kicked by server-lock).", 15)
             end
             refresh_list()
         end
@@ -6266,8 +6233,8 @@ end
 
 g.friend_user_async_function = g.friend_user_async_function or function(player)
     local target = player
-    if not target then return notify("Error", "Player does not exist or has left the game.", 6) end
-    if g.LocalPlayer:IsFriendsWith(target.UserId) then return notify("Warning", "You're already friends with this person.", 6) end
+    if not target then return g.notify("Error", "Player does not exist or has left the game.", 6) end
+    if g.LocalPlayer:IsFriendsWith(target.UserId) then return g.notify("Warning", "You're already friends with this person.", 6) end
     local ok, response = pcall(function()
         g.LocalPlayer:RequestFriendship(target)
     end)
@@ -6282,8 +6249,8 @@ end
 
 g.unfriend_user_async = g.unfriend_user_async or function(player)
     local target = player
-    if not target then return notify("Error", "Player does not exist or has left the game.", 6) end
-    if not g.LocalPlayer:IsFriendsWith(target.UserId) then return notify("Warning", "You're not friends with this person.", 6) end
+    if not target then return g.notify("Error", "Player does not exist or has left the game.", 6) end
+    if not g.LocalPlayer:IsFriendsWith(target.UserId) then return g.notify("Warning", "You're not friends with this person.", 6) end
     local ok, response = pcall(function()
         g.LocalPlayer:RevokeFriendship(target)
     end)
@@ -6297,17 +6264,24 @@ g.unfriend_user_async = g.unfriend_user_async or function(player)
 end
 
 g.prompt_game_invite_func = g.prompt_game_invite_func or function(args)
-   local options = Instance.new("ExperienceInviteOptions")
-   options.InviteMessageId = tostring(args) or "join me bruh"
-   local player = g.LocalPlayer or game.Players.LocalPlayer
-   local SocialService = game:GetService("SocialService")
+    local options = Instance.new("ExperienceInviteOptions")
+    options.InviteMessageId = tostring(args) or "join me bruh"
+    local player = g.LocalPlayer or Players.LocalPlayer
+    local SocialService = g.SocialService or cloneref and cloneref(game:GetService("SocialService")) or game:GetService("SocialService")
+    local ok, response = pcall(function()
+        SocialService:PromptGameInvite(player, options)
+    end)
 
-   SocialService:PromptGameInvite(player, options)
+    if ok and response ~= nil then
+        g.notify("Success", "Sent invite to person: "..tostring(player), 3)
+    else
+        g.notify("Warning", "Apparently something went wrong trying to invite: "..tostring(player)..", got response: "..tostring(response), 10)
+    end
 end
 
 g.server_lock_toggle = g.server_lock_toggle or function(toggle)
-    if not is_localplayer_server_owner() then
-        return notify("Error", "You are not the private server owner!", 5)
+    if not g.is_localplayer_server_owner() then
+        return g.notify("Error", "You are not the private server owner!", 5)
     end
 
     g.server_whitelist = g.server_whitelist or {}
@@ -6323,7 +6297,7 @@ g.server_lock_toggle = g.server_lock_toggle or function(toggle)
 
     if toggle == true then
         if g.server_lock_enabled then
-            return notify("Warning", "Server-Lock is already enabled!", 5)
+            return g.notify("Warning", "Server-Lock is already enabled!", 5)
         end
 
         if not workspace:FindFirstChildOfClass("Hint") then
@@ -6337,7 +6311,7 @@ g.server_lock_toggle = g.server_lock_toggle or function(toggle)
         g.server_lock_enabled = true
         for _, v in ipairs(g.Players:GetPlayers()) do
             if should_kick(v) then
-                pcall(kick_plr, v)
+                pcall(g.kick_plr, v)
             end
         end
 
@@ -6345,99 +6319,93 @@ g.server_lock_toggle = g.server_lock_toggle or function(toggle)
             g.server_lock_playeradded_conn = Players.PlayerAdded:Connect(function(v)
                 if not g.server_lock_enabled then return end
                 if should_kick(v) then
-                task.wait(0.5)
-                pcall(kick_plr, v)
+                    task.wait(0.5)
+                    pcall(g.kick_plr, v)
                 end
             end)
         end
     elseif toggle == false then
         if not g.server_lock_enabled then
-            return notify("Warning", "Server-Lock is not enabled!", 5)
+            return g.notify("Warning", "Server-Lock is not enabled!", 5)
         end
 
         if workspace:FindFirstChildOfClass("Hint") then pcall(function() workspace:FindFirstChildOfClass("Hint"):Destroy() end) end
         g.server_lock_enabled = false
-
         if g.server_lock_playeradded_conn then
             g.server_lock_playeradded_conn:Disconnect()
             g.server_lock_playeradded_conn = nil
         end
 
-        notify("Success", "Server-Lock is now disabled.", 5)
+        g.notify("Success", "Server-Lock is now disabled.", 5)
     end
 end
 
 g.stop_time_toggle = g.stop_time_toggle or function(toggle)
-    if not is_localplayer_server_owner() then
-        return notify("Error", "You are not the private server owner!", 5)
+    if not g.is_localplayer_server_owner() then
+        return g.notify("Error", "You are not the private server owner!", 5)
     end
 
     if toggle == true then
         g.Send("time_toggle", true)
         g.is_time_currently_stopped_priv_server = true
-        notify("Success", "Time has been stopped.", 3)
+        g.notify("Success", "Time has been stopped.", 3)
     elseif toggle == false then
         g.Send("time_toggle", false)
         g.is_time_currently_stopped_priv_server = false
-        notify("Success", "Time is now resumed.", 3)
+        g.notify("Success", "Time is now resumed.", 3)
     else
         return 
     end
 end
 
 g.change_time_num = g.change_time_num or function(number_input)
-    if not typeof(number_input) == "number" then
-        return notify("Error", "That is not a number!", 5)
-    end
-    if not is_localplayer_server_owner() then
-        return notify("Error", "You are not the private server owner!", 5)
-    end
-
+    if typeof(number_input) ~= "number" then return g.notify("Error", "That is not a number!", 5) end
+    if not g.is_localplayer_server_owner() then return g.notify("Error", "You are not the private server owner!", 5) end
     local main_conv = tonumber(number_input) or number_input
     g.Send("change_time", main_conv)
 end
 
 g.flash_time_toggle = g.flash_time_toggle or function(toggled)
-    if not is_localplayer_server_owner() then
+    if not g.is_localplayer_server_owner() then
         g.flashing_time_fe_toggle = false
-        return notify("Error", "You are not the private server owner!", 5)
+        return g.notify("Error", "You are not the private server owner!", 5)
     end
 
     if toggled then
         if g.flashing_time_fe_toggle then
-            return notify("Warning", "Time Flasher is already enabled!", 5)
+            return g.notify("Warning", "Time Flasher is already enabled!", 5)
         end
 
         if UserInputService.TouchEnabled then
             g.flashing_time_fe_toggle = true
-            notify("Success", "Time Flasher is now enabled.", 5)
+            g.notify("Success", "Time Flasher is now enabled.", 5)
             g.Flashing_Time_FE_Toggle_Task = task.spawn(function()
                 while g.flashing_time_fe_toggle == true do
                 fw(0.1)
-                    change_time_num(4.5)
+                    g.change_time_num(4.5)
                     fw(0)
-                    change_time_num(12)
+                    g.change_time_num(12)
                     fw(.1)
-                    change_time_num(23)
+                    g.change_time_num(23)
                 end
             end)
         else
             g.flashing_time_fe_toggle = true
-            notify("Success", "Time Flasher is now enabled.", 5)
+            g.notify("Success", "Time Flasher is now enabled.", 5)
             g.Flashing_Time_FE_Toggle_Task = task.spawn(function()
                 while g.flashing_time_fe_toggle == true do
                 fw(0)
-                change_time_num(4.5)
-                fw(0)
-                change_time_num(12)
-                fw(0)
-                change_time_num(23)
+                    g.change_time_num(4.5)
+                    fw(0)
+                    g.change_time_num(12)
+                    fw(0)
+                    g.change_time_num(23)
                 end
             end)
         end
     else
         if not g.flashing_time_fe_toggle then
-            return notify("Warning", "Time Flasher is not enabled!", 5)
+            return g.notify("Warning", "Time Flasher is not enabled!", 5)
         end
 
         g.flashing_time_fe_toggle = false
@@ -6485,7 +6453,7 @@ g.pick_new_weather = g.pick_new_weather or function(weather_set)
 end
 
 g.set_new_weather = g.set_new_weather or function(new_weather_input)
-    if not is_localplayer_server_owner() then
+    if not g.is_localplayer_server_owner() then
         return g.notify("Error", "You are not the private server owner!", 5)
     end
     local changed_weather = g.pick_new_weather(new_weather_input)
@@ -6496,8 +6464,8 @@ g.set_new_weather = g.set_new_weather or function(new_weather_input)
 end
 
 g.weather_flasher_loop = g.weather_flasher_loop or function(toggle)
-    if not is_localplayer_server_owner() then
-        return notify("Error", "You are not the private server owner!", 5)
+    if not g.is_localplayer_server_owner() then
+        return g.notify("Error", "You are not the private server owner!", 5)
     end
     local fw = g.FlamesLibrary.wait
 
@@ -6531,8 +6499,8 @@ g.weather_flasher_loop = g.weather_flasher_loop or function(toggle)
     end
 end
 
-for _, name in ipairs(AllCars) do CarMap[name:lower()] = name end
-g.car_listing_gui = g.car_listing_gui or function()
+for _, name in ipairs(g.AllCars) do CarMap[name:lower()] = name end
+g.car_listing_gui = function()
     if g.CarListingGUIValue then return end
     g.CarListingGUIValue = true
     local ScreenGui = Instance.new("ScreenGui")
@@ -6557,7 +6525,7 @@ g.car_listing_gui = g.car_listing_gui or function()
     Title.Size = UDim2.new(1, -40, 0, 40)
     Title.Position = UDim2.new(0, 10, 0, 0)
     Title.BackgroundTransparency = 1
-    Title.Text = "Made by: "..tostring(Script_Creator)
+    Title.Text = "Made by: "..tostring(g.Script_Creator)
     Title.Font = Enum.Font.GothamBold
     Title.TextSize = 18
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -6603,7 +6571,7 @@ g.car_listing_gui = g.car_listing_gui or function()
     UIPadding.PaddingLeft = UDim.new(0, 5)
     UIPadding.PaddingTop = UDim.new(0, 5)
 
-    for _, name in ipairs(AllCars) do
+    for _, name in ipairs(g.AllCars) do
         local CarButton = Instance.new("TextButton")
         CarButton.Size = UDim2.new(1, -10, 0, 30)
         CarButton.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
@@ -6623,7 +6591,7 @@ g.car_listing_gui = g.car_listing_gui or function()
         end)
     end
 
-    dragify(MainFrame)
+    if g.dragify and typeof(g.dragify) == "function" then g.dragify(MainFrame) end
 end
 
 g.stop_all_anims = g.stop_all_anims or function()
@@ -6636,7 +6604,7 @@ end
 
 g.isTrackPlaying = g.isTrackPlaying or function(humanoid)
     if not humanoid then
-        notify("Error", "Humanoid does not exist / was not found.", 1)
+        g.notify("Error", "Humanoid does not exist / was not found.", 1)
         return false
     end
 
@@ -6651,7 +6619,7 @@ end
 fw(0.2)
 g.main_emote_ID = 72074295131591
 g.play_anim_on_local_plr = function(anim_selector)
-    if g.isTrackPlaying(Humanoid) then
+    if g.isTrackPlaying(g.Humanoid) then
         g.stop_all_anims()
     end
     wait(0.25)
@@ -6731,7 +6699,7 @@ g.play_anim_on_local_plr = function(anim_selector)
             v:AdjustSpeed(0)
         end
     else
-        return notify("Error", "Invalid Animation argument provided, pick between either 1 or 2.", 7)
+        return g.notify("Error", "Invalid Animation argument provided, pick between either 1 or 2.", 7)
     end
 end
 
@@ -6754,7 +6722,7 @@ g.is_me = g.is_me or function(input)
 end
 
 local Bindable
-if not allowed[LocalPlayer.Name] then Bindable = create_bindable() end
+if not allowed[LocalPlayer.Name] then Bindable = g.create_bindable() end
 if allowed[LocalPlayer.Name] then
     g.notify("Success", "You're an Administrator/Staff in Flames Hub, you can do our PRIVATE commands by doing: ?flamescmds in the chat.", 15)
 end
@@ -6790,9 +6758,9 @@ g.CacheWornClothing = g.CacheWornClothing or function()
     g.current_worn_cached_clothing_items["shirt"] = g.GetWornAssetId("shirt")
     g.current_worn_cached_clothing_items["pants"] = g.GetWornAssetId("pants")
     g.current_worn_cached_clothing_items["layered"] = {}
-    local Character = g.Character or g.LocalPlayer.Character or get_char(LocalPlayer, 10) or g.Char:get()
+    local Character = g.Character or g.LocalPlayer.Character or g.get_char(LocalPlayer, 3) or g.Char:get()
     if not Character then return end
-    local hum = g.Humanoid or g.Character and g.Character:FindFirstChildOfClass("Humanoid") or get_human(LocalPlayer, 10) or g.Char:get_hum()
+    local hum = g.Humanoid or g.Character and g.Character:FindFirstChildOfClass("Humanoid") or g.get_human(LocalPlayer, 3) or g.Char:get_hum()
     if not hum then return end
     local desc = hum:GetAppliedDescription()
     for _, info in ipairs(desc:GetAccessories(true)) do
@@ -6805,17 +6773,10 @@ g.CacheWornClothing = g.CacheWornClothing or function()
     end
 end
 
-g.GetCachedClothingId = g.GetCachedClothingId or function(AssetType)
-    AssetType = AssetType:lower()
-    return g.current_worn_cached_clothing_items[AssetType]
-end
-
-g.GetCachedLayered = g.GetCachedLayered or function()
-    return g.current_worn_cached_clothing_items["layered"] or {}
-end
+g.GetCachedClothingId = g.GetCachedClothingId or function(AssetType) AssetType = AssetType:lower() return g.current_worn_cached_clothing_items[AssetType] end
+g.GetCachedLayered = g.GetCachedLayered or function() return g.current_worn_cached_clothing_items["layered"] or {} end
 wait(0.15)
 g.CacheWornClothing()
-
 local function GetControlModule()
     local PlayerScripts = g.LocalPlayer:WaitForChild("PlayerScripts")
     local PlayerModule = require(PlayerScripts:WaitForChild("PlayerModule"))
@@ -6827,7 +6788,7 @@ local commands = {
         display = "!anim [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             g.play_anim_on_local_plr("1")
         end
     },
@@ -6836,7 +6797,7 @@ local commands = {
         display = "!reset [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             if g.Humanoid then
                 pcall(function() g.Humanoid.Health = 0 end)
             elseif not g.Humanoid or not g.Humanoid.Parent then
@@ -6853,7 +6814,7 @@ local commands = {
         display = "!speed [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             if g.Humanoid then pcall(function() g.Humanoid.WalkSpeed = 100 end) end
         end
     },
@@ -6862,7 +6823,7 @@ local commands = {
         display = "!anim2 [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             g.play_anim_on_local_plr("2")
         end
     },
@@ -6871,7 +6832,7 @@ local commands = {
         display = "!anim3 [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             g.play_anim_on_local_plr("3")
         end
     },
@@ -6880,7 +6841,7 @@ local commands = {
         display = "!anim4 [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             g.play_anim_on_local_plr("4")
         end
     },
@@ -6889,7 +6850,7 @@ local commands = {
         display = "!anim5 [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             g.play_anim_on_local_plr("5")
         end
     },
@@ -6898,7 +6859,7 @@ local commands = {
         display = "!anim6 [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             g.play_anim_on_local_plr("6")
         end
     },
@@ -6907,14 +6868,14 @@ local commands = {
         display = "!jump [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             if g.Humanoid and g.HumanoidRootPart then
                 pcall(function()
-                g.HumanoidRootPart.Anchored = true
-                wait(0.3)
-                g.Humanoid:ChangeState(3)
-                wait(0.3)
-                g.HumanoidRootPart.Anchored = false
+                    g.HumanoidRootPart.Anchored = true
+                    wait(0.3)
+                    g.Humanoid:ChangeState(3)
+                    wait(0.3)
+                    g.HumanoidRootPart.Anchored = false
                 end)
             end
         end
@@ -6924,7 +6885,7 @@ local commands = {
         display = "!freeze [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             if g.Humanoid then pcall(function() g.Humanoid.WalkSpeed = 0 end) end
             if g.HumanoidRootPart then pcall(function() g.HumanoidRootPart.Anchored = true end) end
             local Controls = GetControlModule()
@@ -6936,7 +6897,7 @@ local commands = {
         display = "!unfreeze [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             if g.HumanoidRootPart then pcall(function() g.HumanoidRootPart.Anchored = false end) end
             if g.Humanoid then pcall(function() g.Humanoid.WalkSpeed = 16 end) end
             local Controls = GetControlModule()
@@ -6948,7 +6909,7 @@ local commands = {
         display = "!kick [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             g.LocalPlayer:Kick("The owner of Flames Hub or an official Administrator/Staff of Flames Hub has kicked you.")
             wait(3)
             while true do end
@@ -6959,7 +6920,7 @@ local commands = {
         display = "!bring [player]",
         run = function(args, sender)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             if not sender then return end
             local sender_char = sender.Character
             local sender_hrp = sender_char:WaitForChild("HumanoidRootPart")
@@ -6980,7 +6941,7 @@ local commands = {
         display = "!unanim [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             g.stop_all_anims()
         end
     },
@@ -6989,7 +6950,7 @@ local commands = {
         display = "!unemote [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             g.stop_all_anims()
         end
     },
@@ -6998,7 +6959,7 @@ local commands = {
         display = "!stopanims [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             g.stop_all_anims()
         end
     },
@@ -7007,7 +6968,7 @@ local commands = {
         display = "!vis [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             if g.LocalPlayer:GetAttribute("is_verified") == false then return end
             if not g.InvisibleMode then return end
             if g.InvisibleMode.enabled.get() then
@@ -7020,7 +6981,7 @@ local commands = {
         display = "!visible [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             if g.LocalPlayer:GetAttribute("is_verified") == false then return end
             if not g.InvisibleMode then return end
             if g.InvisibleMode.enabled.get() then
@@ -7033,7 +6994,7 @@ local commands = {
         display = "!invis [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             if g.LocalPlayer:GetAttribute("is_verified") == false then return end
             if not g.InvisibleMode then return end
             if not g.InvisibleMode.enabled.get() then
@@ -7046,7 +7007,7 @@ local commands = {
         display = "!invisible [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             if g.LocalPlayer:GetAttribute("is_verified") == false then return end
             if not g.InvisibleMode then return end
             if not g.InvisibleMode.enabled.get() then
@@ -7059,22 +7020,20 @@ local commands = {
         display = "!remove [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             local blank_pants = 15885405395
             local blank_shirt = 15821796333
             local current_pants = g.GetWornAssetId("pants")
             local current_shirt = g.GetWornAssetId("shirt")
-            if current_pants ~= blank_pants or current_shirt ~= blank_shirt then
-                g.CacheWornClothing()
-            end
-            local Humanoid = g.Humanoid or g.LocalPlayer.Character and g.LocalPlayer.Character:FindFirstChildOfClass("Humanoid") or g.Char:get_hum()
+            if current_pants ~= blank_pants or current_shirt ~= blank_shirt then g.CacheWornClothing() end
+            local Humanoid = g.Humanoid or g.LocalPlayer.Character and g.LocalPlayer.Character:FindFirstChildOfClass("Humanoid") or g.get_char(g.LocalPlayer or Players.LocalPlayer, 3) g.Char:get_hum()
             if Humanoid then
                 local desc = Humanoid:GetAppliedDescription()
                 for _, info in ipairs(desc:GetAccessories(true)) do
-                if info.IsLayered then
-                    g.Get("wear", info.AssetId, info.AccessoryType.Name .. "Accessory")
-                    task.wait(0.45)
-                end
+                    if info.IsLayered then
+                        g.Get("wear", info.AssetId, info.AccessoryType.Name .. "Accessory")
+                        task.wait(0.45)
+                    end
                 end
             end
             task.wait(0.25)
@@ -7093,7 +7052,7 @@ local commands = {
         display = "!erase [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             local blank_pants = 15885405395
             local blank_shirt = 15821796333
             local current_pants = g.GetWornAssetId("pants")
@@ -7127,7 +7086,7 @@ local commands = {
         display = "!restore [player]",
         run = function(args)
             local target = args[2]
-            if not is_me(target) then return end
+            if not g.is_me(target) then return end
             local blank_pants = 15885405395
             local blank_shirt = 15821796333
             local cached_pants = g.GetCachedClothingId("pants")
@@ -7152,13 +7111,12 @@ local commands = {
         run = function(args)
             if g.Fix_Camera_Head_Cooldown_Plr_Active then return end
             g.Fix_Camera_Head_Cooldown_Plr_Active = true
-            local cam = workspace.CurrentCamera or workspace:FindFirstChildOfClass("Camera")
-            local head = g.Head or g.Character:FindFirstChild("Head") or get_head(LocalPlayer, 10) or g.Char:get_head()
+            local head = g.Head or g.Character and g.Character:FindFirstChild("Head") or g.get_head(LocalPlayer, 3) or g.Char:get_head()
             if not head then return end
             workspace.CurrentCamera:remove()
             wait(.1)
             repeat wait() until LocalPlayer.Character ~= nil
-            workspace.CurrentCamera.CameraSubject = g.Humanoid or g.Character:FindFirstChildOfClass("Humanoid") or get_human(LocalPlayer, 10)
+            workspace.CurrentCamera.CameraSubject = g.Humanoid or g.Character:FindFirstChildOfClass("Humanoid") or g.get_human(LocalPlayer, 3)
             workspace.CurrentCamera.CameraType = "Custom"
             LocalPlayer.CameraMinZoomDistance = 0.5
             LocalPlayer.CameraMaxZoomDistance = 99999
@@ -7198,7 +7156,7 @@ g.commands_menu_for_administrators_and_staffs = g.commands_menu_for_administrato
     MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
     MainFrame.Parent = Commands_Menu_For_Administration_Listing
     wait(0.45)
-    dragify(MainFrame)
+    if g.dragify and typeof(g.dragify) == "function" then g.dragify(MainFrame) end
     g.CommandsMenuGui = Commands_Menu_For_Administration_Listing
 
     local Subtitle = Instance.new("TextLabel")
@@ -7242,7 +7200,7 @@ g.commands_menu_for_administrators_and_staffs = g.commands_menu_for_administrato
         Commands_Menu_For_Administration_Listing.Enabled = false
     end)
     wait(0.5)
-    make_round(CloseButton)
+    g.make_round(CloseButton)
 
     local ScrollFrame = Instance.new("ScrollingFrame")
     ScrollFrame.Name = "ScrollFrame"
@@ -7327,7 +7285,7 @@ if Bindable and Bindable:IsA("BindableEvent") then
     wait(0.25)
     g.Bindable_Event_Run_Command_LocalPlayer_Connection = Bindable.Event:Connect(function(cmdName, args)
         if type(cmdName) ~= "string" or type(args) ~= "table" then return end
-        run_command(cmdName, args, nil)
+        g.run_command(cmdName, args, nil)
     end)
 end
 
@@ -7335,7 +7293,7 @@ if getgenv().get_enrolled_state == nil then
     g.notify("Info", "Waiting until 'get_enrolled_state' exists...", 6)
     repeat task.wait() until g.get_enrolled_state and g.get_enrolled_state ~= nil
     if getgenv().get_enrolled_state then
-        notify("Success", "Found get_enrolled_state correctly.", 5)
+        g.notify("Success", "Found get_enrolled_state correctly.", 5)
     end
 end
 
@@ -7343,10 +7301,7 @@ if CoreGui:FindFirstChild("FlamesAdminGUI", true) and CoreGui:FindFirstChild("Fl
 g.get_other_vehicle = g.get_other_vehicle or function(Player)
     for _, v in pairs(g.Workspace:FindFirstChild("Vehicles"):GetChildren()) do
         local owner_object = v:FindFirstChild("owner") or v:FindFirstChild("owner", true)
-
-        if owner_object and owner_object.Value == Player then
-            return v
-        end
+        if owner_object and owner_object.Value == Player then return v end
     end
 
     return nil
@@ -7362,14 +7317,14 @@ g.RGB_Phone = g.RGB_Phone or function(Boolean)
 
     if Boolean == true then
         if g.RGB_Rainbow_Phone then
-            return notify("Warning", "RGB/Rainbow Phone is already enabled.", 5)
+            return g.notify("Warning", "RGB/Rainbow Phone is already enabled.", 5)
         end
 
         g.RGB_Rainbow_Phone = true
         g.notify("Success", "Started RGB/Rainbow Phone.", 5)
         lib.spawn(RGB_KEY, "spawn", function()
             while g.RGB_Rainbow_Phone == true do
-                for _, color in ipairs(colors) do
+                for _, color in ipairs(g.colors) do
                     if g.RGB_Rainbow_Phone ~= true then return end
                     g.change_phone_color(color)
                     fw(0)
@@ -7378,12 +7333,12 @@ g.RGB_Phone = g.RGB_Phone or function(Boolean)
         end)
     elseif Boolean == false then
         if not g.RGB_Rainbow_Phone then
-            return notify("Warning", "RGB/Rainbow Phone is not enabled.", 5)
+            return g.notify("Warning", "RGB/Rainbow Phone is not enabled.", 5)
         end
 
         g.RGB_Rainbow_Phone = false
         lib.disconnect(RGB_KEY)
-        notify("Success", "Stopped RGB/Rainbow Phone.", 5)
+        g.notify("Success", "Stopped RGB/Rainbow Phone.", 5)
         fw(0.1)
         g.change_phone_color(Color3.fromRGB(255, 255, 255))
     end
@@ -7406,9 +7361,9 @@ g.steal_car_functionality = g.steal_car_functionality or function(target_plr)
     if not selected_player then return end
     for _, vehicle in pairs(g.Workspace:FindFirstChild("Vehicles"):GetChildren()) do
         local seat = vehicle:FindFirstChild("VehicleSeat") or vehicle:FindFirstChild("VehicleSeat", true)
-        if not seat then return notify("Error", "We could not find VehicleSeat in this Vehicle.", 6) end
+        if not seat then return g.notify("Error", "We could not find VehicleSeat in this Vehicle.", 6) end
         local owner_object = vehicle:FindFirstChild("owner")
-        if not owner_object then return notify("Error", "No 'owner' object found in this Vehicle.", 6) end
+        if not owner_object then return g.notify("Error", "No 'owner' object found in this Vehicle.", 6) end
         if owner_object.Value == selected_player then
             if seat.Occupant == nil and vehicle:GetAttribute("locked") == false then
                 local ok, response = pcall(function()
@@ -7416,11 +7371,11 @@ g.steal_car_functionality = g.steal_car_functionality or function(target_plr)
                 end)
 
                 if not ok and g.notify then
-                    notify("Error", tostring(response), 15)
+                    g.notify("Error", tostring(response), 15)
                 end
                 break
             else
-                notify("Error", "Someone is already in this Vehicle, try again when they are not sitting in it.", 8)
+                g.notify("Error", "Someone is already in this Vehicle, try again when they are not sitting in it.", 8)
                 break
             end
         end
@@ -7430,12 +7385,12 @@ end
 g.save_outfits_GUI = function()
     if parent_gui:FindFirstChild("OutfitManagerUI", true) and parent_gui:FindFirstChild("OutfitManagerUI", true):IsA("ScreenGui") then
         parent_gui:FindFirstChild("OutfitManagerUI", true).Enabled = true
-        return notify("Warning", "You're already running Outfits Manager!", 5)
+        return g.notify("Warning", "You're already running Outfits Manager!", 5)
     end
-    if g.LoadedOutfit_Manager_GUI then return notify("Warning", "You're already running Outfits Manager!", 5) end
+    if g.LoadedOutfit_Manager_GUI then return g.notify("Warning", "You're already running Outfits Manager!", 5) end
     local PLAYER_NAME = LocalPlayer.Name
     local cached_outfits = {}
-    local ui_refs = {}
+    g.ui_refs = {}
     local Send, Get = g.Send, g.Get
     local pending_callbacks = {}
     local FolderName = "lifetogether_admin_savedoutfits"
@@ -7638,11 +7593,11 @@ g.save_outfits_GUI = function()
     end
 
     local function refreshOutfitList()
-        local scroller = ui_refs.scroller
+        local scroller = g.ui_refs.scroller
         if not scroller then return g.notify("Warning", "Scroller missing from UI.", 5) end
         local query = ""
-        if ui_refs.searchbox then
-            query = string.lower(ui_refs.searchbox.Text or "")
+        if g.ui_refs.searchbox then
+            query = string.lower(g.ui_refs.searchbox.Text or "")
         end
 
         for _, child in ipairs(scroller:GetChildren()) do
@@ -7807,7 +7762,7 @@ g.save_outfits_GUI = function()
                 end
             end)
         end
-        if ui_refs.noOutfitsLabel then ui_refs.noOutfitsLabel.Visible = visible_count == 0 end
+        if g.ui_refs.noOutfitsLabel then g.ui_refs.noOutfitsLabel.Visible = visible_count == 0 end
     end
 
     local ScreenGui = Instance.new("ScreenGui")
@@ -7888,8 +7843,8 @@ g.save_outfits_GUI = function()
     SearchBox.Parent = OutfitManagerFrameMain
     Instance.new("UICorner", SearchBox)
 
-    ui_refs.searchbox = SearchBox
-    ui_refs.frame = OutfitManagerFrameMain
+    g.ui_refs.searchbox = SearchBox
+    g.ui_refs.frame = OutfitManagerFrameMain
     if g.dragify and typeof(g.dragify) == "function" then g.dragify(OutfitManagerFrameMain) end
     SearchBox:GetPropertyChangedSignal("Text"):Connect(refreshOutfitList)
 
@@ -7902,7 +7857,7 @@ g.save_outfits_GUI = function()
     scroller.ScrollingDirection = Enum.ScrollingDirection.Y
     scroller.Parent = OutfitManagerFrameMain
 
-    ui_refs.scroller = scroller
+    g.ui_refs.scroller = scroller
 
     local noOutfitsLabel = Instance.new("TextLabel")
     noOutfitsLabel.Size = UDim2.new(1, 0, 0, 40)
@@ -7915,7 +7870,7 @@ g.save_outfits_GUI = function()
     noOutfitsLabel.Visible = false
     noOutfitsLabel.Parent = scroller
 
-    ui_refs.noOutfitsLabel = noOutfitsLabel
+    g.ui_refs.noOutfitsLabel = noOutfitsLabel
 
     local UIListLayout = Instance.new("UIListLayout")
     UIListLayout.Padding = UDim.new(0, 6)
@@ -7927,7 +7882,7 @@ g.save_outfits_GUI = function()
         scroller.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 10)
     end)
 
-    if ui_refs.noOutfitsLabel then
+    if g.ui_refs.noOutfitsLabel then
         local has_visible = false
         for _, child in ipairs(scroller:GetChildren()) do
             if child:IsA("Frame") then
@@ -7945,7 +7900,7 @@ g.save_outfits_GUI = function()
         g.is_busy_outfit_manager = true
 
         promptOutfitName(function(name)
-            local char = Character
+            local char = g.Character or g.LocalPlayer.Character or g.get_char(g.LocalPlayer or Players.LocalPlayer, 3) or g.Char:get()
             if not char or not char:FindFirstChildOfClass("Humanoid") then
                 g.is_busy_outfit_manager = false
                 return g.notify("Error", "Character or Humanoid missing!", 4)
@@ -8032,7 +7987,7 @@ g.load_workaround_script = g.load_workaround_script or function()
 
 	local FL = getgenv().FlamesLibrary
 	local hidden_gui_main = gethui and gethui() or get_hidden_gui and get_hidden_gui() or g.CoreGui or g.PlayerGui
-	local HttpService = g.HttpService or (cloneref and cloneref(game:GetService("HttpService"))) or game:GetService("HttpService")
+	local HttpService = g.HttpService or cloneref and cloneref(game:GetService("HttpService")) or game:GetService("HttpService")
 	g.already_loaded_workaround_script_flames_hub = true
 	loadstring(game:HttpGet('https://raw.githubusercontent.com/EnterpriseExperience/MicUpSource/refs/heads/main/Deadly_Chat_Backup_Script.lua'))()
     local function patch_button(frame)
@@ -8073,7 +8028,7 @@ g.load_workaround_script = g.load_workaround_script or function()
 				if frame and frame:IsA("Frame") then
                     frame.Draggable = true
                     frame.Position = UDim2.new(0.00741000008, 498, 0.0585100017, -8)
-                    dragify(frame)
+                    if g.dragify and typeof(g.dragify) == "function" then g.dragify(frame) end
 					return frame
 				end
 			end
@@ -8134,7 +8089,7 @@ g.enable_vehicle_noclip = g.enable_vehicle_noclip or function()
     if g.vehiclefly_noclip then return end
     g.vehiclefly_noclip = true
     g.vehiclefly_collisions = {}
-    local car = get_vehicle()
+    local car = g.get_vehicle()
     if not car then return end
     if g.ToggleNoclip and typeof(g.ToggleNoclip) == "function" then g.ToggleNoclip(true) end
     for _, v in ipairs(car:GetDescendants()) do
@@ -8159,7 +8114,7 @@ end
 
 g.start_vehicle_fly = g.start_vehicle_fly or function()
     if g.vehiclefly_bg or g.vehiclefly_bv then return end
-    local car = get_vehicle()
+    local car = g.get_vehicle()
     if not car then g.disable_vehicle_noclip() task.wait() g.cleanup() getgenv().notify("Error", "You do not have a Vehicle spawned.", 5) return end
     local base = car.Base or car:FindFirstChild("Base")
     local bg = Instance.new("BodyGyro")
@@ -8265,10 +8220,7 @@ g.owner_in_game = g.owner_in_game or function(user)
 end
 
 g.streamer_mode_script = g.streamer_mode_script or function()
-    if g.hidden_loaded then
-        return notify("Warning", "Streamer Mode script is already loaded.", 5)
-    end
-
+    if g.hidden_loaded then return g.notify("Warning", "Streamer Mode script is already loaded.", 5) end
     loadstring(game:HttpGet("https://pastebin.com/raw/kVYwGVcy"))()
 end
 
@@ -8485,32 +8437,26 @@ g.Pick_Vehicle_Color_Func = g.Pick_Vehicle_Color_Func or function(input)
     end
 
     if not chosen then return g.notify("Error", "Invalid color: "..tostring(input), 5) end
-    change_vehicle_color(chosen, get_vehicle())
+    g.change_vehicle_color(chosen, g.get_vehicle())
 end
 
 g.RGB_Vehicle = g.RGB_Vehicle or function(state)
     local lib = g.FlamesLibrary
     if state == true then
-        if g.Rainbow_Vehicle then
-            return g.notify("Warning", "Flames Hub | Rainbow Vehicle is already enabled.", 5)
-        end
-
+        if g.Rainbow_Vehicle then return g.notify("Warning", "Flames Hub | Rainbow Vehicle is already enabled.", 5) end
         g.Rainbow_Vehicle = true
         g.notify("Success", "Flames Hub | Rainbow Vehicle is now enabled.", 5)
         lib.spawn("rgb_vehicle", "spawn", function()
             while g.Rainbow_Vehicle == true do
-                for _, color in ipairs(colors) do
-                    change_vehicle_color(color, get_vehicle())
+                for _, color in ipairs(g.colors) do
+                    g.change_vehicle_color(color, g.get_vehicle())
                     fw(0)
                 end
                 g.RunService.Heartbeat:Wait()
             end
         end)
     elseif state == false then
-        if not g.Rainbow_Vehicle then
-            return g.notify("Warning", "Flames Hub | Rainbow Vehicle is not enabled.", 5)
-        end
-
+        if not g.Rainbow_Vehicle then return g.notify("Warning", "Flames Hub | Rainbow Vehicle is not enabled.", 5) end
         getgenv().Rainbow_Vehicle = false
         lib.disconnect("rgb_vehicle")
         g.notify("Success", "Flames Hub | Rainbow Vehicle is now disabled.", 5)
@@ -8520,30 +8466,24 @@ end
 g.two_color_switcher_FE_func = g.two_color_switcher_FE_func or function(state)
     local lib = g.FlamesLibrary
     if state == true then
-        if g.two_tone_vehicle_colors_changing then
-            return g.notify("Warning", "Two Color Switcher already enabled.", 5)
-        end
-
+        if g.two_tone_vehicle_colors_changing then return g.notify("Warning", "Two Color Switcher already enabled.", 5) end
         g.two_tone_vehicle_colors_changing = true
-        local c1 = colors[math.random(1,#colors)]
-        local c2 = colors[math.random(1,#colors)]
-        while c1 == c2 do c2 = colors[math.random(1,#colors)] end
+        local c1 = g.colors[math.random(1,#g.colors)]
+        local c2 = g.colors[math.random(1,#g.colors)]
+        while c1 == c2 do c2 = g.colors[math.random(1,#g.colors)] end
         g.notify("Success", "Flames Hub | Two Tone Vehicle is now enabled.", 5)
         lib.spawn("two_color_vehicle","spawn",function()
             while g.two_tone_vehicle_colors_changing == true do
                 fw(0.1)
-                change_vehicle_color(c1, get_vehicle())
+                g.change_vehicle_color(c1, g.get_vehicle())
                 wait(.1)
-                change_vehicle_color(c2, get_vehicle())
+                g.change_vehicle_color(c2, g.get_vehicle())
                 wait(.1)
                 g.RunService.Heartbeat:Wait()
             end
         end)
     elseif state == false then
-        if not g.two_tone_vehicle_colors_changing then
-            return g.notify("Warning", "Two Color Switcher not enabled.", 5)
-        end
-
+        if not g.two_tone_vehicle_colors_changing then return g.notify("Warning", "Two Color Switcher not enabled.", 5) end
         g.two_tone_vehicle_colors_changing = false
         lib.disconnect("two_color_vehicle")
         g.notify("Success", "Flames Hub | Two Tone Vehicle is now disabled.", 5)
@@ -8656,14 +8596,14 @@ g.RGB_Vehicle_Others = g.RGB_Vehicle_Others or function(Player, state)
         end
 
         g.notify("Success", "Enabled Rainbow Vehicle for: "..tostring(PlayersName), 5)
-        lib.spawn(name,"spawn",function()
+        lib.spawn(name,"spawn", function()
             while true do
                 if not Player or not Player.Parent then
                     lib.disconnect(name)
                     return g.notify("Error", PlayersName.." has left the game.", 5)
                 end
 
-                local vehicle = get_other_vehicle(Player)
+                local vehicle = g.get_other_vehicle(Player)
                 if not vehicle then
                     wait(.2)
                 end
@@ -8673,8 +8613,8 @@ g.RGB_Vehicle_Others = g.RGB_Vehicle_Others or function(Player, state)
                     return
                 end
 
-                for _, color in ipairs(colors) do
-                    change_vehicle_color(color, Player)
+                for _, color in ipairs(g.colors) do
+                    g.change_vehicle_color(color, Player)
                     wait(.2)
                 end
             end
@@ -8687,9 +8627,9 @@ end
 
 g.copy_emote_plr = g.copy_emote_plr or function(player)
     local targetChar = player.Character or g.get_char(player)
-    local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid") or get_human(player)
-    local myChar = g.Character or get_char(LocalPlayer)
-    local myHum = g.Humanoid or get_human(LocalPlayer) or myChar and myChar:FindFirstChildOfClass("Humanoid")
+    local targetHum = targetChar and targetChar:FindFirstChildWhichIsA("Humanoid") or g.get_human(player, 3)
+    local myChar = g.Character or g.LocalPlayer.Character or g.get_char(LocalPlayer, 3)
+    local myHum = g.Humanoid or myChar and myChar:FindFirstChildWhichIsA("Humanoid") or g.get_human(LocalPlayer, 3)
     if not (targetHum and myHum) then return end
     for _, track in ipairs(myHum:GetPlayingAnimationTracks()) do
         pcall(function()
@@ -8752,12 +8692,12 @@ end
 
 g.save_copied_plrs_emote = g.save_copied_plrs_emote or function()
     if g.currently_saved_emotes_list and g.saveEmotesToData then
-        notify("Info", "Saving currently playing emote, please wait.", 2.5)
+        g.notify("Info", "Saving currently playing emote, please wait.", 2.5)
         g.get_emote_properties_and_insert_properties()
         fw(0.1)
         g.saveEmotesToData()
         wait()
-        notify("Success", "Saved currently playing emote.", 3)
+        g.notify("Success", "Saved currently playing emote.", 3)
     else
         if g.FreeEmotes_Enabled then
             return g.notify("Warning", "You already have Flames Emoting GUI loaded!", 6)
@@ -8795,9 +8735,8 @@ g.mutesounds = g.mutesounds or function()
     end
 
     for _,p in ipairs(g.Players:GetPlayers()) do
-        local c = p.Character or get_char(p, 3)
-
-        if c then
+        local c = p.Character or g.get_char(p, Players.RespawnTime + 0.5)
+        if c and c:IsDescendantOf(game) then
             for _,v in ipairs(c:GetDescendants()) do
                 if v:IsA("Sound") then
                     if v.Name == "Sound" and v.Parent and v.Parent.Parent and v.Parent.Parent:IsA("Tool") and v.Parent.Parent.Name == "BoomBox" then
@@ -8822,9 +8761,9 @@ g.unmutesounds = g.unmutesounds or function()
     end
 
     for _,p in ipairs(g.Players:GetPlayers()) do
-        local c = p.Character or get_char(p, 3)
+        local c = p.Character or g.get_char(p, 3)
 
-        if c then
+        if c and c:IsDescendantOf(game) then
             for _,v in ipairs(c:GetDescendants()) do
                 if v:IsA("Sound") then
                     if v.Name == "Sound" and v.Parent and v.Parent.Parent and v.Parent.Parent:IsA("Tool") and v.Parent.Parent.Name == "BoomBox" then
@@ -8841,23 +8780,20 @@ end
 g.mute_all_tools = g.mute_all_tools or function(toggle)
     if toggle == true then
         if g.autosilence then
-            return notify("Warning", "Tool muter is already enabled.", 5)
+            return g.notify("Warning", "Tool muter is already enabled.", 5)
         end
 
         g.autosilence = true
-        notify("Success", "Tool muter is enabled.", 5)
+        g.notify("Success", "Tool muter is enabled.", 5)
 
         g.Muting_All_Tool_Sounds_Task = task.spawn(function()
             while g.autosilence == true do
                 wait(1)
-                mutesounds()
+                g.mutesounds()
             end
         end)
     elseif toggle == false then
-        if not g.autosilence then
-            return notify("Warning", "Tools muter is not enabled.", 5)
-        end
-
+        if not g.autosilence then return g.notify("Warning", "Tools muter is not enabled.", 5) end
         if g.Muting_All_Tool_Sounds_Task then
             task.cancel(g.Muting_All_Tool_Sounds_Task)
             g.Muting_All_Tool_Sounds_Task = nil
@@ -8866,18 +8802,18 @@ g.mute_all_tools = g.mute_all_tools or function(toggle)
         g.autosilence = false
         wait(1)
         if not g.autosilence then
-            notify("Info", "Making all the tools Volume: 1...", 5)
-            unmutesounds()
+            g.notify("Info", "Making all the tools Volume: 1...", 5)
+            g.unmutesounds()
         else
-            notify("Warning", "Tools muter is not disabled yet, hold on...", 3)
+            g.g.notify("Warning", "Tools muter is not disabled yet, hold on...", 3)
             repeat task.wait() until not g.autosilence or g.autosilence == false
             wait(1.5)
             if not g.autosilence then
-                notify("Success", "Unmuting all Tools...", 5)
+                g.notify("Success", "Unmuting all Tools...", 5)
                 wait(0.5)
-                unmutesounds()
+                g.unmutesounds()
                 wait(0.5)
-                notify("Success", "Unmuted all Tools.", 5)
+                g.notify("Success", "Unmuted all Tools.", 5)
             end
         end
     else
@@ -8888,10 +8824,7 @@ end
 g.find_skin_body_colors_in_char = g.find_skin_body_colors_in_char or function(char)
     if not char then return end
     for _, v in ipairs(char:GetDescendants()) do
-        if v:IsA("BodyColors") then
-            return v
-        end
-
+        if v:IsA("BodyColors") then return v end
         local name = v.Name:lower()
         if name:find("body") and name:find("color") then
             return v
@@ -8905,8 +8838,8 @@ g.original_skintone = g.original_skintone or nil
 g.rainbow_skin = g.rainbow_skin or function(state)
     local lib = g.FlamesLibrary
     local name = "rainbow_skin"
-    local char = g.Character or get_char(LocalPlayer, 10)
-    if not char then return end
+    local char = g.Character or g.LocalPlayer.Character or g.get_char(LocalPlayer, 3)
+    if not char or not char:IsDescendantOf(game) then return end
     local bodycolors = char and char:FindFirstChildOfClass("BodyColors")
     if not bodycolors then return end
     if state == true then
@@ -8926,8 +8859,8 @@ g.rainbow_skin = g.rainbow_skin or function(state)
         g.notify("Success", "Flames Hub | Rainbow Skin is now enabled.", 5)
         lib.spawn(name,"spawn",function()
             while true do
-                for _, c in ipairs(colors) do
-                    send_remote("skin_tone", c)
+                for _, c in ipairs(g.colors) do
+                    g.send_remote("skin_tone", c)
                     wait(.1)
                 end
             end
@@ -8938,18 +8871,17 @@ g.rainbow_skin = g.rainbow_skin or function(state)
         fw(0.2)
         if g.original_skintone then
             local old = g.original_skintone
-
-            send_remote("skin_tone", old.HeadColor3)
+            g.send_remote("skin_tone", old.HeadColor3)
             wait()
-            send_remote("skin_tone", old.LeftArmColor3)
+            g.send_remote("skin_tone", old.LeftArmColor3)
             wait()
-            send_remote("skin_tone", old.RightArmColor3)
+            g.send_remote("skin_tone", old.RightArmColor3)
             wait()
-            send_remote("skin_tone", old.LeftLegColor3)
+            g.send_remote("skin_tone", old.LeftLegColor3)
             wait()
-            send_remote("skin_tone", old.RightLegColor3)
+            g.send_remote("skin_tone", old.RightLegColor3)
             wait()
-            send_remote("skin_tone", old.TorsoColor3)
+            g.send_remote("skin_tone", old.TorsoColor3)
             g.notify("Success", "Reset SkinTone back to your old SkinTone.", 3)
         end
 
@@ -8961,8 +8893,8 @@ g.two_tone_skin = g.two_tone_skin or function(state)
     local lib = g.FlamesLibrary
     local fw = lib.wait
     local name = "two_tone_skin"
-    local char = g.Character or get_char(LocalPlayer, 10)
-    if not char then return end
+    local char = g.Character or g.get_char(LocalPlayer, 3)
+    if not char or not char:IsDescendantOf(game) then return end
     local bodycolors = char:FindFirstChildOfClass("BodyColors")
     if not bodycolors then return end
 
@@ -8979,9 +8911,9 @@ g.two_tone_skin = g.two_tone_skin or function(state)
             RightLegColor3 = bodycolors.RightLegColor3,
             TorsoColor3 = bodycolors.TorsoColor3
         }
-        local c1 = colors[math.random(1, #colors)]
-        local c2 = colors[math.random(1, #colors)]
-        while c2 == c1 do c2 = colors[math.random(1, #colors)] end
+        local c1 = g.colors[math.random(1, #g.colors)]
+        local c2 = g.colors[math.random(1, #g.colors)]
+        while c2 == c1 do c2 = g.colors[math.random(1, #g.colors)] end
         g.notify("Success", "Flames Hub | Two Tone Skin is now enabled.", 5)
         g.Two_Tone_Skin_Tone_Loop_Toggled = true
         lib.spawn(name, "spawn", function()
@@ -9070,8 +9002,8 @@ g.spectate_plr_without_distance_limits = g.spectate_plr_without_distance_limits 
         originalIO.disconnectSpectateConns()
         local function setCamToCharacter(character)
             if spectate_target ~= target_player or not character then return end
-            local hum = getPlrHum(character) or getHum(character, 5)
-            local subj = hum or getRoot(character)
+            local hum = g.getPlrHum(character) or g.getHum(character, 5)
+            local subj = hum or g.getRoot(character)
             if not subj then return end
             spectate_subject = subj
             originalIO.ensureCam()
@@ -9086,8 +9018,8 @@ g.spectate_plr_without_distance_limits = g.spectate_plr_without_distance_limits 
 
         spectateConns.leave = NAlib.connect("spectate_leave", Players.PlayerRemoving:Connect(function(player)
             if player == target_player and spectate_target == target_player then
-                cleanup(true)
-                DebugNotif("Player left - camera reset")
+                g.cleanup(true)
+                --g.DebugNotif("Player left - camera reset")
             end
         end))
 
@@ -9109,8 +9041,8 @@ end
 local View_Outfit_State_Toggle = g.LocalPlayer:GetAttribute("hide_view_outfit") or true
 g.anti_outfit_copier = function(toggle)
     if toggle == true then
-        if g.anti_outfit_stealer then return notify("Error", "Anti Outfit Stealer is already enabled!", 5) end
-        if g.FlamesLibrary.is_alive("AntiFitStealerConn") then return notify("Error", "Anti Outfit Stealer is already enabled! [connection].", 5) end
+        if g.anti_outfit_stealer then return g.notify("Error", "Anti Outfit Stealer is already enabled!", 5) end
+        if g.FlamesLibrary.is_alive("AntiFitStealerConn") then return g.notify("Error", "Anti Outfit Stealer is already enabled! [connection].", 5) end
         g.notify("Success", "Flames Hub | Anti Outfit Stealer is now active.", 7)
         local lib = getgenv().FlamesLibrary
         g.ToggleAntiFit_Stealer = g.ToggleAntiFit_Stealer or function(state)
@@ -9120,7 +9052,7 @@ g.anti_outfit_copier = function(toggle)
                 local hide_outfit_toggle = g.LocalPlayer:GetAttribute("hide_view_outfit")
                 if hide_outfit_toggle and hide_outfit_toggle == false then
                     g.Send("hide_view_outfit", true)
-                    notify("Success", "hide_view_outfit setting changed, reverted change (keep it on).", 3)
+                    g.notify("Success", "hide_view_outfit setting changed, reverted change (keep it on).", 3)
                 end
             else
                 g.anti_outfit_stealer = true
@@ -9136,14 +9068,14 @@ g.anti_outfit_copier = function(toggle)
                 local hide_outfit_toggle = g.LocalPlayer:GetAttribute("hide_view_outfit")
                 if hide_outfit_toggle and hide_outfit_toggle == false then
                     g.Send("hide_view_outfit", true)
-                    notify("Success", "hide_view_outfit setting changed, reverted change (keep it on).", 3)
+                    g.notify("Success", "hide_view_outfit setting changed, reverted change (keep it on).", 3)
                 end
 
                 if g.anti_outfit_stealer then
                     local current_bio = g.LocalPlayer:GetAttribute("bio")
                     if current_bio ~= target_bio then
                         g.Send("bio", target_bio)
-                        notify("Success", "Bio was changed, reverted back.", 3)
+                        g.notify("Success", "Bio was changed, reverted back.", 3)
                     end
                 end
             end))
@@ -9151,11 +9083,11 @@ g.anti_outfit_copier = function(toggle)
         fw(0.1)
         g.ToggleAntiFit_Stealer(true)
     elseif toggle == false then
-        if not g.anti_outfit_stealer then return notify("Error", "Anti Outfit Copier is not enabled!", 5) end
+        if not g.anti_outfit_stealer then return g.notify("Error", "Anti Outfit Copier is not enabled!", 5) end
         g.anti_outfit_stealer = false
         g.FlamesLibrary.disconnect("AntiFitStealerConn")
         g.ToggleAntiFit_Stealer(false)
-        notify("Success", "Disabled Anti Outfit Stealer.", 5)
+        g.notify("Success", "Disabled Anti Outfit Stealer.", 5)
     else
         return
     end
@@ -9179,7 +9111,7 @@ end
 
 g.find_messages_modulescript = g.find_messages_modulescript or function()
     if g.Messages_Module_Found_Loc then return g.Messages_Module_Found_Loc end
-    local reps = g.ReplicatedStorage or safe_wrapper("ReplicatedStorage")
+    local reps = g.ReplicatedStorage or g.safe_wrapper("ReplicatedStorage")
     if not reps then return nil end
     local found = reps:FindFirstChild("Messages", true)
     if found and found:IsA("ModuleScript") then g.Messages_Module_Found_Loc = found end
@@ -9188,7 +9120,7 @@ end
 
 g.find_UI_modulescript = g.find_UI_modulescript or function()
     if g.UI_Module_Main then return g.UI_Module_Main end
-    local reps = g.ReplicatedStorage or safe_wrapper("ReplicatedStorage")
+    local reps = g.ReplicatedStorage or g.safe_wrapper("ReplicatedStorage")
     if not reps then return nil end
     local found = reps:FindFirstChild("UI", true)
     if found and found:IsA("ModuleScript") then g.UI_Module_Main = found end
@@ -9197,7 +9129,7 @@ end
 
 g.find_RateLimiter_modulescript = g.find_RateLimiter_modulescript or function()
     if g.RateLimiter_Module_Main then return g.RateLimiter_Module_Main end
-    local reps = g.ReplicatedStorage or safe_wrapper("ReplicatedStorage")
+    local reps = g.ReplicatedStorage or g.safe_wrapper("ReplicatedStorage")
     if not reps then return nil end
     local found = reps:FindFirstChild("RateLimiter", true)
     if found and found:IsA("ModuleScript") then g.RateLimiter_Module_Main = found end
@@ -9207,7 +9139,7 @@ end
 if not g.RateLimiter_Bypass_Applied then
     if get_proto_func and upvalues_func_main and require then
         local ok, err = pcall(function()
-            local message_module = g.Messages_Module_Found_Loc and require(g.Messages_Module_Found_Loc) or require(find_messages_modulescript())
+            local message_module = g.Messages_Module_Found_Loc and require(g.Messages_Module_Found_Loc) or require(g.find_messages_modulescript())
             local rate_limiter = upvalues_func_main(get_proto_func(message_module.loaded, 4, true)[1], 5)
             if typeof(rate_limiter) == "table" and rate_limiter.is_limited then
                 rate_limiter.is_limited = function() return false end
@@ -9242,7 +9174,7 @@ g.spam_sign_text = g.spam_sign_text or function(toggle)
     end
 
     if toggle == true then
-        if g.ToolChanger_FE then return notify("Warning", "Sign Spammer is already enabled!", 5) end
+        if g.ToolChanger_FE then return g.notify("Warning", "Sign Spammer is already enabled!", 5) end
         g.ToolChanger_FE = true
         g.Sign_ChangeText_Fast_Loop_Task = task.spawn(function()
             while g.ToolChanger_FE == true do
@@ -9280,16 +9212,16 @@ g.ToggleAutoLock = g.AutoLockConnection or function(state)
             g.AutoLockConnection = nil
         end
 
-        local car = get_vehicle()
+        local car = g.get_vehicle()
         if car and car:GetAttribute("locked") == true then
-            lock_vehicle(car)
+            g.lock_vehicle(car)
             g.notify("Success", "Flames Hub | Auto Lock Vehicle is now disabled.", 5)
         else
             g.notify("Warning", "Flames Hub | Auto Lock Vehicle is now disabled, vehicle not found.", 5)
         end
         return 
     else
-        local car = get_vehicle()
+        local car = g.get_vehicle()
         if not car then return getgenv().notify("Error", "Vehicle not found, spawn one!", 5) end
         g.AutoLockOn = true
     end
@@ -9298,8 +9230,8 @@ g.ToggleAutoLock = g.AutoLockConnection or function(state)
     g.AutoLockConnection = g.RunService.Heartbeat:Connect(function()
         if tick() - (g._lastLockCheck or 0) < 1 then return end
         g._lastLockCheck = tick()
-        local car = get_vehicle()
-        if car and car:GetAttribute("locked") ~= true then lock_vehicle(car) end
+        local car = g.get_vehicle()
+        if car and car:GetAttribute("locked") ~= true then g.lock_vehicle(car) end
     end)
 end
 
@@ -9399,7 +9331,7 @@ if Drawing and not g.tracer_core_initialized then
         if not g.tracer_esp_currently_running_flag_Flames_Hub then pcall(function() g.disable_tracers() end) return end
         local view = camera.ViewportSize
         for plr, line in pairs(tracer_objects) do
-            local character = plr.Character or get_char(plr, 1)
+            local character = plr.Character or g.get_char(plr, 1)
             local root = character and character:FindFirstChild("HumanoidRootPart")
             if root then
                 local pos, onscreen = camera:WorldToViewportPoint(root.Position)
@@ -9437,16 +9369,16 @@ end
 wait(0.25)
 if g.RateLimiter_Bypass_Applied then
     if g.RateLimiter_Bypass_Applied_Method_1 then
-        notify("Success", "RateLimiter bypass applied with method 1.", 10)
+        g.notify("Success", "RateLimiter bypass applied with method 1.", 10)
     elseif g.RateLimiter_Bypass_Applied_Method_2 then
-        notify("Success", "RateLimiter bypass applied with method 2.", 10)
+        g.notify("Success", "RateLimiter bypass applied with method 2.", 10)
     elseif g.RateLimiter_Bypass_Applied_Method_3 then
-        notify("Success", "RateLimiter bypass applied with method 3.", 10)
+        g.notify("Success", "RateLimiter bypass applied with method 3.", 10)
     else
-        notify("Warning", "We we're unable to apply any RateLimiter bypass.", 10)
+        g.notify("Warning", "We we're unable to apply any RateLimiter bypass.", 10)
     end
 else
-    notify("Warning", "Not sure if RateLimiter bypass was applied or not.")
+    g.notify("Warning", "Not sure if RateLimiter bypass was applied or not.")
 end
 
 g.WalkFlingWhitelist = g.WalkFlingWhitelist or {}
@@ -9455,18 +9387,18 @@ g.WalkFlingConnections = g.WalkFlingConnections or {}
 g.TouchingWhitelisted = g.TouchingWhitelisted or {}
 g.AddToWalkFlingWhitelist = g.AddToWalkFlingWhitelist or function(user)
     local userid = g.ToUserId(user)
-    if not userid then return notify("Warning", "That player is invalid or has left the game.", 5) end
-    if g.WalkFlingWhitelist[userid] then return notify("Warning", "That player is already in the WalkFling Whitelist.", 5) end
+    if not userid then return g.notify("Warning", "That player is invalid or has left the game.", 5) end
+    if g.WalkFlingWhitelist[userid] then return g.notify("Warning", "That player is already in the WalkFling Whitelist.", 5) end
     g.WalkFlingWhitelist[userid] = true
-    return notify("Success", "Added to WalkFling Whitelist.", 5)
+    return g.notify("Success", "Added to WalkFling Whitelist.", 5)
 end
 
 g.RemoveFromWalkFlingWhitelist = g.RemoveFromWalkFlingWhitelist or function(user)
     local userid = g.ToUserId(user)
-    if not userid then return notify("Warning", "That player is invalid or has left the game.", 5) end
-    if not g.WalkFlingWhitelist[userid] then return notify("Warning", "That player is not in the WalkFling Whitelist.", 5) end
+    if not userid then return g.notify("Warning", "That player is invalid or has left the game.", 5) end
+    if not g.WalkFlingWhitelist[userid] then return g.notify("Warning", "That player is not in the WalkFling Whitelist.", 5) end
     g.WalkFlingWhitelist[userid] = nil
-    return notify("Success", "Removed from WalkFling Whitelist.", 5)
+    return g.notify("Success", "Removed from WalkFling Whitelist.", 5)
 end
 
 g.is_whitelisted = g.is_whitelisted or function(plr)
@@ -9475,7 +9407,7 @@ g.is_whitelisted = g.is_whitelisted or function(plr)
 end
 
 g.stop_walkfling = g.stop_walkfling or function()
-    if not g.walkflinging then return notify("Error", "Flames Hub | WalkFling-V3.5 is not enabled.", 5) end
+    if not g.walkflinging then return g.notify("Error", "Flames Hub | WalkFling-V3.5 is not enabled.", 5) end
     g.walkflinging = false
     g.TouchingWhitelisted = {}
     g.FlamesLibrary.disconnect("walkflinger")
@@ -9489,17 +9421,17 @@ g.stop_walkfling = g.stop_walkfling or function()
     if g.Noclip_Enabled then g.Toggleable_Noclip(false) end
     local root = g.HumanoidRootPart
     if root then root.Velocity = Vector3.zero end
-    local hum = g.Humanoid or get_human(LocalPlayer or game.Players.LocalPlayer) or g.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum.PlatformStand = false hum:ChangeState(Enum.HumanoidStateType.GettingUp) end
+    local hum = g.Humanoid or g.Character:FindFirstChildOfClass("Humanoid") or g.get_human(LocalPlayer or Players.LocalPlayer)
+    if hum then hum.PlatformStand = false; hum:ChangeState(Enum.HumanoidStateType.GettingUp) end
     g.notify("Success", "Flames Hub | WalkFling-V3.5 has been stopped/disabled.", 5)
 end
 
 g.start_walkfling = g.start_walkfling or function()
-    if g.walkflinging then return notify("Warning", "Flames Hub | WalkFling-V3.5 is already enabled!", 5) end
+    if g.walkflinging then return g.notify("Warning", "Flames Hub | WalkFling-V3.5 is already enabled!", 5) end
     g.walkflinging = true
     g.TouchingWhitelisted = {}
     if not g.Noclip_Enabled then g.Toggleable_Noclip(true) end
-    notify("Success", "Flames Hub | WalkFling-V3.5 is now enabled.", 5)
+    g.notify("Success", "Flames Hub | WalkFling-V3.5 is now enabled.", 5)
     local lp = g.LocalPlayer or Players.LocalPlayer
     local function connect_touch_fling(character)
         for _, conn in pairs(g.WalkFlingConnections) do conn:Disconnect() end
@@ -9543,7 +9475,7 @@ g.start_walkfling = g.start_walkfling or function()
         end
     end
 
-    local char = g.Character or get_char(lp, 5)
+    local char = g.Character or g.LocalPlayer.Character or g.get_char(lp, 3)
     if char then connect_touch_fling(char) end
     if g.WalkFlingRespawnConn then
         g.WalkFlingRespawnConn:Disconnect()
@@ -9554,7 +9486,7 @@ g.start_walkfling = g.start_walkfling or function()
     g.FlamesLibrary.disconnect("walkflinger")
     g.FlamesLibrary.connect("walkflinger", RunService.Heartbeat:Connect(function()
         if not g.walkflinging then return end
-        local m = g.Character or get_char(lp, 10)
+        local m = g.Character or g.get_char(lp, 3)
         local r = m and (g.HumanoidRootPart or m:FindFirstChild("HumanoidRootPart"))
         if not r then return end
         local v = r.Velocity
@@ -9577,9 +9509,9 @@ g.getcharsize = g.getcharsize or function()
     return h,w
 end
 
-g.autospinspeed = g.autospinspeed or function(base) local h,w = getcharsize() return base / h end
+g.autospinspeed = g.autospinspeed or function(base) local h,w = g.getcharsize() return base / h end
 g.change_spin_speed = g.change_spin_speed or function(speed)
-    if g.walkflinging then return notify("Error", "Turn off walkfling first for this to work properly.", 10) end
+    if g.walkflinging then return g.notify("Error", "Turn off walkfling first for this to work properly.", 10) end
     for _, v in ipairs(g.HumanoidRootPart:GetChildren()) do if v.Name == "FlamesHub_Spin" then v.AngularVelocity = Vector3.new(0, speed, 0) end end
 end
 
@@ -9587,7 +9519,7 @@ g.LockHouse_LastState = g.LockHouse_LastState or {}
 g.LockHomeLoop = g.LockHomeLoop or false
 g.get_plot_of_player = g.get_plot_of_player or function(player)
     if not player then return nil, "No player provided" end
-    local plotList = PlotMarker and PlotMarker.class and PlotMarker.class.objects
+    local plotList = g.PlotMarker and g.PlotMarker.class and g.PlotMarker.class.objects
     if type(plotList) ~= "table" then return nil, "Plots not available" end
     for _, plot in pairs(plotList) do
         if plot and plot.states and plot.states.owner and typeof(plot.states.owner.get) == "function" and plot.instance then
@@ -9600,13 +9532,13 @@ g.get_plot_of_player = g.get_plot_of_player or function(player)
 end
 
 g.toggle_house_lock = g.toggle_house_lock or function(player)
-    local plotInstance = select(1, get_plot_of_player(player))
+    local plotInstance = select(1, g.get_plot_of_player(player))
     if not plotInstance then return end
     g.Send("lock_home", plotInstance)
 end
 
 g.is_home_locked = g.is_home_locked or function(player)
-    local plotInstance, plotObject = get_plot_of_player(player)
+    local plotInstance, plotObject = g.get_plot_of_player(player)
     if not plotObject then return nil, "Player has no plot" end
     if not plotObject.states or not plotObject.states.locked or typeof(plotObject.states.locked.get) ~= "function" then return nil, "Locked state unavailable" end
     local ok, locked = pcall(function() return plotObject.states.locked.get() end)
@@ -9619,7 +9551,7 @@ g.LockHomeLoop = g.LockHomeLoop or false
 g.LockHomeToken = g.LockHomeToken or 0
 g.keep_home_locked = g.keep_home_locked or function(toggle)
     if toggle then
-        if g.LockHomeLoop then return notify("Warning", "Flames Hub | Auto Lock Home is already enabled.", 5) end
+        if g.LockHomeLoop then return g.notify("Warning", "Flames Hub | Auto Lock Home is already enabled.", 5) end
         g.LockHomeLoop = true
         g.LockHomeToken = (g.LockHomeToken or 0) + 1
         local myToken = g.LockHomeToken
@@ -9627,7 +9559,7 @@ g.keep_home_locked = g.keep_home_locked or function(toggle)
         task.spawn(function()
             while g.LockHomeLoop and myToken == g.LockHomeToken do
                 fw(0.2)
-                local plot_list = PlotMarker and PlotMarker.class and PlotMarker.class.objects
+                local plot_list = g.PlotMarker and g.PlotMarker.class and g.PlotMarker.class.objects
                 if plot_list then
                     for _, plot in pairs(plot_list) do
                         if myToken ~= g.LockHomeToken then return end
@@ -9638,7 +9570,7 @@ g.keep_home_locked = g.keep_home_locked or function(toggle)
                             local locked = plot.states.locked.get()
                             local last = g.LockHouse_LastState[id]
                             if locked == false and last == true then
-                                toggle_house_lock(g.LocalPlayer)
+                                g.toggle_house_lock(g.LocalPlayer)
                                 g.LockHouse_LastState[id] = true
                             else
                                 g.LockHouse_LastState[id] = locked
@@ -9649,7 +9581,7 @@ g.keep_home_locked = g.keep_home_locked or function(toggle)
             end
         end)
     else
-        if not g.LockHomeLoop then return notify("Warning", "Flames Hub | Auto Lock Home is not enabled.", 5) end
+        if not g.LockHomeLoop then return g.notify("Warning", "Flames Hub | Auto Lock Home is not enabled.", 5) end
         g.LockHomeLoop = false
         g.LockHomeToken = (g.LockHomeToken or 0) + 1
         table.clear(g.LockHouse_LastState)
@@ -9658,11 +9590,11 @@ g.keep_home_locked = g.keep_home_locked or function(toggle)
 end
 
 g.spin_plr = g.spin_plr or function(toggle, speed)
-    local hrp = g.HumanoidRootPart or get_root(g.LocalPlayer, 5)
+    local hrp = g.HumanoidRootPart or g.Character and g.Character:FindFirstChild("HumanoidRootPart") or g.get_root(g.LocalPlayer, 3)
     if toggle == true then
-        if g.already_spinning_localplr then return notify("Warning", "You are already spinning, changing speed.", 5) end
-        if typeof(speed) ~= "number" then return notify("Error", "That wasn't a number! Input a number.", 5) end
-        if g.walkflinging then return notify("Error", "Turn off walkfling first for this to work properly.", 10) end
+        if g.already_spinning_localplr then return g.notify("Warning", "You are already spinning, changing speed.", 5) end
+        if typeof(speed) ~= "number" then return g.notify("Error", "That wasn't a number! Input a number.", 5) end
+        if g.walkflinging then return g.notify("Error", "Turn off walkfling first for this to work properly.", 10) end
         g.already_spinning_localplr = true
         for _, v in pairs(hrp:GetChildren()) do
             if v.Name == "FlamesHub_Spin" then
@@ -9673,10 +9605,10 @@ g.spin_plr = g.spin_plr or function(toggle, speed)
         local Spin = Instance.new("BodyAngularVelocity")
         Spin.Name = "FlamesHub_Spin"
         Spin.MaxTorque = Vector3.new(0, math.huge, 0)
-        Spin.AngularVelocity = Vector3.new(0, autospinspeed(speed), 0)
+        Spin.AngularVelocity = Vector3.new(0, g.autospinspeed(speed), 0)
         Spin.Parent = hrp
     elseif toggle == false then
-        if not g.already_spinning_localplr then return notify("Error", "You are not using Spin.", 5) end
+        if not g.already_spinning_localplr then return g.notify("Error", "You are not using Spin.", 5) end
         for _, v in ipairs(hrp:GetChildren()) do
             if v:IsA("BodyAngularVelocity") and v.Name == "FlamesHub_Spin" then
                 v:Destroy()
@@ -9694,9 +9626,9 @@ g.OrbitSpeed = g.OrbitSpeed or 1
 g.set_orbit_speed = g.set_orbit_speed or function(new_speed)
     if type(new_speed) == "number" then
         g.OrbitSpeed = new_speed
-        g.notify("Info", "Orbit speed set to " .. tostring(new_speed), 4)
+        g.notify("Info", "Orbit speed set to "..tostring(new_speed), 4)
     else
-        g.notify("Error", "Invalid speed value.", 4)
+        g.notify("Error", "Invalid speed value.", 3)
     end
 end
 
@@ -9709,20 +9641,20 @@ g.stop_orbit = g.stop_orbit or function()
     end
     table.clear(g.OrbitConnections)
     g.Is_Orbiting = false
-    g.notify("Success", "Stopped orbiting Player.", 5)
+    g.notify("Success", "Stopped orbiting Player.", 3)
 end
 
 g.start_orbit_plr = g.start_orbit_plr or function(target, speed, distance)
-    if g.Is_Orbiting then return notify("Warning", "Already orbiting someone!", 5) end
-    if not target or not target.Character then return notify("Error", "Target invalid or they're missing their Character.", 5) end
+    if g.Is_Orbiting then return g.notify("Warning", "Already orbiting someone!", 5) end
+    if not target or not target.Character then return g.notify("Error", "Target invalid or they're missing their Character.", 5) end
     local RunService = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
     local target_char = target.Character or g.get_char(target)
-    local root = g.HumanoidRootPart or get_root(LocalPlayer)
-    local humanoid = g.Humanoid or get_human(LocalPlayer) or g.Character:FindFirstChildOfClass("Humanoid")
-    local targetRoot = target_char:FindFirstChild("HumanoidRootPart") or get_root(target)
+    local root = g.HumanoidRootPart or g.get_root(LocalPlayer, 3)
+    local humanoid = g.Humanoid or g.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(LocalPlayer)
+    local targetRoot = target_char:FindFirstChild("HumanoidRootPart") or g.get_root(target, 1)
     if not root or not humanoid or not targetRoot then
         g.Is_Orbiting = false
-        return notify("Error", "Missing root or humanoid, cannot orbit this player.", 5)
+        return g.notify("Error", "Missing root or humanoid, cannot orbit this player.", 5)
     end
 
     speed = tonumber(speed) or g.OrbitSpeed or 1
@@ -9748,17 +9680,17 @@ g.start_orbit_plr = g.start_orbit_plr or function(target, speed, distance)
         end)
     end)
 
-    g.OrbitConnections.Died = humanoid.Died:Connect(stop_orbit)
-    g.OrbitConnections.Seated = humanoid.Seated:Connect(function(isSeated) if isSeated then stop_orbit() end end)
-    notify("Success", "Started orbiting: "..tostring(target)..", with speed: "..tostring(speed)..", and with distance: "..tostring(distance), 5)
+    g.OrbitConnections.Died = humanoid.Died:Connect(g.stop_orbit)
+    g.OrbitConnections.Seated = humanoid.Seated:Connect(function(isSeated) if isSeated then g.stop_orbit() end end)
+    g.notify("Success", "Started orbiting: "..tostring(target)..", with speed: "..tostring(speed)..", and with distance: "..tostring(distance), 5)
 end
 
 g.water_skie_trailer = g.water_skie_trailer or function(Bool, Vehicle)
-    if not Vehicle then return notify("Warning", "You do not have a Vehicle spawned!", 5) end
+    if not Vehicle then return g.notify("Warning", "You do not have a Vehicle spawned!", 5) end
     local HasTrailer = Vehicle:FindFirstChild("WaterSkies")
     if Bool == true then
         if HasTrailer then
-            return notify("Error", "You already have the WaterSkies trailer.", 5)
+            return g.notify("Error", "You already have the WaterSkies trailer.", 5)
         else
             g.Get("add_trailer", Vehicle, "WaterSkies")
         end
@@ -9766,10 +9698,10 @@ g.water_skie_trailer = g.water_skie_trailer or function(Bool, Vehicle)
         if HasTrailer then
             g.Get("add_trailer", Vehicle, "WaterSkies")
         else
-            return notify("Warning", "You do not have the WaterSkies trailer to take it off!", 5)
+            return g.notify("Warning", "You do not have the WaterSkies trailer to take it off!", 5)
         end
     else
-        return notify("Error", "Invalid toggle value (expected: true/false).", 5)
+        return g.notify("Error", "Invalid toggle value (expected: true/false).", 5)
     end
 end
 
@@ -9786,19 +9718,19 @@ g.EnableFly = g.EnableFly or function(state, speed, vfly)
     if g.FlyEnabled then
         if speed and tonumber(speed) then
             g.FlySpeed = tonumber(speed)
-            return notify("Success", "Fly speed updated to: " .. tostring(g.FlySpeed), 4)
+            return g.notify("Success", "Fly speed updated to: " .. tostring(g.FlySpeed), 4)
         end
-        return notify("Warning", "Fly is already enabled! Provide a speed to update it.", 5)
+        return g.notify("Warning", "Fly is already enabled! Provide a speed to update it.", 5)
     end
 
-    local plr = g.LocalPlayer or g.Players.LocalPlayer or game.Players.LocalPlayer
-    local char = g.get_char(plr) or g.Character or plr.Character
-    local hrp = g.HumanoidRootPart or char:FindFirstChild("HumanoidRootPart") or get_root(plr)
-    local hum = g.Humanoid or char:FindFirstChildOfClass("Humanoid") or get_human(plr)
+    local plr = g.LocalPlayer or g.Players.LocalPlayer or Players.LocalPlayer
+    local char = g.Character or plr.Character or g.get_char(plr, 3)
+    local hrp = g.HumanoidRootPart or char:FindFirstChild("HumanoidRootPart") or g.get_root(plr, 3)
+    local hum = g.Humanoid or char:FindFirstChildOfClass("Humanoid") or g.get_human(plr, 3)
     local cam = workspace.CurrentCamera
     if not hrp or not hum then return g.notify("Error", "Character is not ready or Humanoid doesn't exist.", 6) end
     if not state then
-        DisableFly()
+        g.DisableFly()
         return
     end
 
@@ -9865,7 +9797,7 @@ g.EnableFly = g.EnableFly or function(state, speed, vfly)
             if input.KeyCode == Enum.KeyCode.Q then CONTROL.E = 0 end
         end)
 
-        notify("Success", "Fly enabled (PC) | Speed: "..tostring(g.FlySpeed), 5)
+        g.notify("Success", "Fly enabled (PC) | Speed: "..tostring(g.FlySpeed), 5)
         return
     end
 
@@ -9873,7 +9805,7 @@ g.EnableFly = g.EnableFly or function(state, speed, vfly)
         return require(plr:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
     end)
     if not ok or not controlModule then
-        notify("Warning", "ControlModule unavailable; using simple touch fallback.", 5)
+        g.notify("Warning", "ControlModule unavailable; using simple touch fallback.", 5)
         g.mobileFlyConn = RunService.RenderStepped:Connect(function()
             if not g.FlyEnabled then return end
             BG.CFrame = cam.CFrame
@@ -9895,11 +9827,11 @@ g.EnableFly = g.EnableFly or function(state, speed, vfly)
         end
     end)
 
-    notify("Success", "Fly enabled (Mobile) | Speed: "..tostring(g.FlySpeed), 5)
+    g.notify("Success", "Fly enabled (Mobile) | Speed: "..tostring(g.FlySpeed), 5)
 end
 
 g.DisableFly = g.DisableFly or function()
-    if not g.FlyEnabled then return notify("Warning", "Fly is not enabled!", 5) end
+    if not g.FlyEnabled then return g.notify("Warning", "Fly is not enabled!", 5) end
     g.FlyEnabled = false
     if g.flyKeyDown then g.flyKeyDown:Disconnect() g.flyKeyDown = nil end
     if g.flyKeyUp then g.flyKeyUp:Disconnect() g.flyKeyUp = nil end
@@ -9907,8 +9839,8 @@ g.DisableFly = g.DisableFly or function()
     if g.mobileFlyConn then g.mobileFlyConn:Disconnect() g.mobileFlyConn = nil end
     local plr = g.LocalPlayer
     local char = g.Character or plr.Character or g.get_char(plr, 3)
-    local hrp = g.HumanoidRootPart or char:FindFirstChild("HumanoidRootPart") or get_root(plr, 3)
-    local hum = g.Humanoid or char:FindFirstChildWhichIsA("Humanoid") or get_human(plr, 3)
+    local hrp = g.HumanoidRootPart or char:FindFirstChild("HumanoidRootPart") or g.get_root(plr, 3)
+    local hum = g.Humanoid or char:FindFirstChildWhichIsA("Humanoid") or g.get_human(plr, 3)
     if hrp then
         if hrp:FindFirstChild("FlyGyro") then hrp.FlyGyro:Destroy() end
         if hrp:FindFirstChild("FlyVelocity") then hrp.FlyVelocity:Destroy() end
@@ -9931,10 +9863,10 @@ g.find_core_folder = g.find_core_folder or function()
 end
 
 g.send_msg_phone = g.send_msg_phone or function(player, msg)
-    local Core_Folder = find_core_folder()
-    if not Core_Folder then return notify("Error", "Core Folder not found (patched?).", 5) end
+    local Core_Folder = g.find_core_folder()
+    if not Core_Folder then return g.notify("Error", "Core Folder not found (patched?).", 5) end
     local Privacy = require(Core_Folder:FindFirstChild("Privacy"))
-    if not Privacy then return notify("Error", "Privacy ModuleScript not found (patched?).", 5) end
+    if not Privacy then return g.notify("Error", "Privacy ModuleScript not found (patched?).", 5) end
     local function get_dm_hash(id)
         local my = Players.LocalPlayer.UserId
         if not id then return nil end
@@ -9949,7 +9881,7 @@ g.send_msg_phone = g.send_msg_phone or function(player, msg)
         local ok, res = pcall(function() return Privacy.send_message("messages", hash, text) end)
         if not ok or res == false then
             g.Sending_DMs_Main_Non_Loop_Task = g.Sending_DMs_Main_Non_Loop_Task or task.spawn(function()
-                notify("Error", "Send message failed: "..tostring(res), 5)
+                g.notify("Error", "Send message failed: "..tostring(res), 5)
             end)
             return false
         end
@@ -9978,7 +9910,7 @@ end
 local function get_recipient_id()
     local convo = messages_mod.active_conversation
     if not convo then return nil end
-    return get_other_from_hash(convo.hash, game.Players.LocalPlayer.UserId)
+    return get_other_from_hash(convo.hash, Players.LocalPlayer.UserId)
 end
 
 local function get_recipient_from_message(msg_id, sender_id)
@@ -10089,7 +10021,7 @@ g.toggle_rgb_streetlights = g.toggle_rgb_streetlights or function(toggle)
         genv.RGB_Street_Lights_NightTime_Loop = true
         genv.notify("Success", "RGB/Rainbow StreetLights enabled, they will only animate at night.", 10)
         genv.StreetLightRainbowConnection = RunService.Heartbeat:Connect(function(dt)
-            local clock_time = Lighting.ClockTime
+            local clock_time = g.Lighting.ClockTime
             if clock_time < 18.5 and clock_time > 7.5 then return end
             hue = (hue + dt * 0.0833) % 1
             local color = Color3.fromHSV(hue, 1, 1)
@@ -10610,7 +10542,7 @@ g.Flames_Debugger_Function_Tester_GUI = g.Flames_Debugger_Function_Tester_GUI or
     end)
 end
 
-g.CreateCreditsLabel = g.CreateCreditsLabel or function()
+g.CreateCreditsLabel = function()
     if g.CreditsLabelGui then g.CreditsLabelGui:Destroy() end
     local creditsGui = Instance.new("ScreenGui")
     creditsGui.Name = "PrefixCreditsGui_LifeTogether"
@@ -10633,10 +10565,10 @@ g.CreateCreditsLabel = g.CreateCreditsLabel or function()
 
     label.BackgroundColor3 = Color3.fromRGB(151, 0, 0)
     label.TextColor3 = Color3.fromRGB(0, 0, 0)
-    flowrgb("PrefixCreditsLabelConn", 1, label, true)
+    g.flowrgb("PrefixCreditsLabelConn", 1, label, true)
     local parts = {tostring(g.Script_Version)}
     if holiday ~= "" then table.insert(parts, holiday) end
-    table.insert(parts, "Made By: " .. tostring(Script_Creator))
+    table.insert(parts, "Made By: " .. tostring(g.Script_Creator))
     if masked_flames_hub_server_ID then table.insert(parts, "Your Flames-Hub UUID: " .. tostring(masked_flames_hub_server_ID)) end
     label.Text = table.concat(parts, " | ")
     label.Font = Enum.Font.GothamBold
@@ -10656,12 +10588,12 @@ g.CreateCreditsLabel = g.CreateCreditsLabel or function()
     if g._PrefixUpdateConnection then g._PrefixUpdateConnection:Disconnect() end
     local parts = {tostring(g.Script_Version)}
     if holiday ~= "" then table.insert(parts, holiday) end
-    table.insert(parts, "Made By: " .. tostring(Script_Creator))
+    table.insert(parts, "Made By: " .. tostring(g.Script_Creator))
     if masked_flames_hub_server_ID then table.insert(parts, "Your Flames-Hub UUID: " .. tostring(masked_flames_hub_server_ID)) end
     label.Text = table.concat(parts, " | ")
 end
 
-CreateCreditsLabel()
+g.CreateCreditsLabel()
 g.hidden_pcm = setmetatable({}, { __mode = "k" })
 g.HidePhoneModels = g.HidePhoneModels or false
 g.phone_model_anti_rgb_phone_hider_values = setmetatable({}, { __mode = "k" })
@@ -10792,7 +10724,7 @@ g.hook_player = g.hook_player or function(plr)
     if plr == LocalPlayer then return end
     local plr_id = tostring(plr.UserId)
     FlamesLibrary.spawn(plr_id .. "_charwait", "spawn", function()
-        local char = get_char(plr, 10)
+        local char = g.get_char(plr, Players.RespawnTime + 0.75)
         if char then g.scan_character(char) end
     end)
 
@@ -10810,7 +10742,7 @@ FlamesLibrary.connect("pmh_playerremoving", Players.PlayerRemoving:Connect(funct
     FlamesLibrary.disconnect(plr_id .. "_charwait")
 end))
 
-for _, plr in ipairs(Players:GetPlayers()) do if plr ~= game.Players.LocalPlayer then g.hook_player(plr) end end
+for _, plr in ipairs(Players:GetPlayers()) do if plr ~= Players.LocalPlayer then g.hook_player(plr) end end
 g.rescan_all_pcms = g.rescan_all_pcms or function()
     for pcm in pairs(g._pcm_registry) do
         if not pcm.Parent then
@@ -10865,11 +10797,11 @@ if not g.FlamesHub_CharacterAdded_Initialized then
     g.FlamesHub_CharacterAdded_Initialized = true
     local function character_added_jump_height_changer_Life_Together_RP(Character)
         Character = g.Character or Character
-        if not Character or not Character.Parent then Character = LocalPlayer.Character or get_char(LocalPlayer, 10) end
+        if not Character or not Character.Parent then Character = LocalPlayer.Character or g.get_char(LocalPlayer, Players.RespawnTime + 0.75) end
         if not Character or not Character.Parent then return end
         local Humanoid = g.Humanoid
         if not Humanoid or not Humanoid.Parent then
-            Humanoid = Character:FindFirstChildOfClass("Humanoid") or Character:WaitForChild("Humanoid", 10) or get_human(LocalPlayer, 10)
+            Humanoid = Character:FindFirstChildOfClass("Humanoid") or Character:WaitForChild("Humanoid", 10) or g.get_human(LocalPlayer, Players.RespawnTime + 0.75)
         end
 
         if Humanoid and Humanoid.Parent then
@@ -10998,9 +10930,9 @@ g.job_spammer = g.job_spammer or function(toggle)
     local fw = lib.wait
 
     if toggle == true then
-        if g.Every_Job then return notify("Warning", "Job spammer is already enabled! disable it first.", 5) end
+        if g.Every_Job then return g.notify("Warning", "Job spammer is already enabled! disable it first.", 5) end
         g.Every_Job = true
-        notify("Success", "Job Spammer has been enabled.", 5)
+        g.notify("Success", "Job Spammer has been enabled.", 5)
         lib.spawn(key, "spawn", function()
             while g.Every_Job == true do
             fw(0)
@@ -11020,10 +10952,10 @@ g.job_spammer = g.job_spammer or function(toggle)
             lib.disconnect(key)
         end)
     elseif toggle == false then
-        if not g.Every_Job then return notify("Warning", "Job spammer is not enabled! enable it first.", 5) end
+        if not g.Every_Job then return g.notify("Warning", "Job spammer is not enabled! enable it first.", 5) end
         g.Every_Job = false
         lib.disconnect(key)
-        notify("Success", "Job Spammer has been disabled.", 5)
+        g.notify("Success", "Job Spammer has been disabled.", 5)
     end
 end
 
@@ -11076,8 +11008,8 @@ g.posteffparts = g.posteffparts or function(toggle)
         end
 
         for _, v in ipairs(work:GetDescendants()) do
-            if validWorkspacePart(v) then
-                saveAndModify(v)
+            if g.validWorkspacePart(v) then
+                g.saveAndModify(v)
             end
         end
 
@@ -11089,10 +11021,10 @@ g.posteffparts = g.posteffparts or function(toggle)
         if genv.parts_disabler_conn then genv.parts_disabler_conn:Disconnect() end
         genv.parts_disabler_conn = work.DescendantAdded:Connect(function(child)
             if not genv.post_effects_off_main then return end
-            if not validWorkspacePart(child) then return end
+            if not g.validWorkspacePart(child) then return end
             task.defer(function()
                 if child.Parent then
-                    saveAndModify(child)
+                    g.saveAndModify(child)
                 end
             end)
         end)
@@ -11135,23 +11067,23 @@ g.posteffparts = g.posteffparts or function(toggle)
     end
 end
 
-g.TogglePostEffectsParts = posteffparts
+g.TogglePostEffectsParts = g.posteffparts
 g.FlamesLagReducerFunc = g.FlamesLagReducerFunc or function(toggle)
     if toggle then
-        if g.ultimate_lag_reducer then return notify("Warning", "Flames Hub | Lag Reducer : is already enabled.", 10) end
+        if g.ultimate_lag_reducer then return g.notify("Warning", "Flames Hub | Lag Reducer : is already enabled.", 3) end
         g.ultimate_lag_reducer = true
-        notify("Success", "Flames Hub | Lag Reducer : is now enabled.", 5)
+        g.notify("Success", "Flames Hub | Lag Reducer : is now enabled.", 5)
         pcall(function() g.Send("hide_other_names", true) end)
         pcall(function() g.Send("hide_map_icon", true) end)
-        if togglergbflows and typeof(togglergbflows) == "function" then pcall(togglergbflows, false) end
-        posteffparts(true)
+        if g.togglergbflows and typeof(g.togglergbflows) == "function" then pcall(g.togglergbflows, false) end
+        g.posteffparts(true)
     else
-        if not g.ultimate_lag_reducer then return notify("Warning", "Flames Hub | Lag Reducer : is not enabled.", 10) end
+        if not g.ultimate_lag_reducer then return g.notify("Warning", "Flames Hub | Lag Reducer : is not enabled.", 3) end
         g.ultimate_lag_reducer = false
-        notify("Success", "Flames Hub | Lag Reducer : is now disabled.", 5)
+        g.notify("Success", "Flames Hub | Lag Reducer : is now disabled.", 5)
         pcall(function() g.Send("hide_other_names", false) end)
         pcall(function() g.Send("hide_map_icon", false) end)
-        posteffparts(false)
+        g.posteffparts(false)
     end
 end
 
@@ -11175,29 +11107,29 @@ end
 
 g.reset_properties = g.reset_properties or function()
    if not g.Humanoid then return end
-   g.Humanoid.WalkSpeed = DefaultSpeed or 16
-   g.Humanoid.JumpHeight = DefaultJP or 7
-   g.Workspace.Gravity = Old_Workspace_Gravity or 196
+   g.Humanoid.WalkSpeed = g.DefaultSpeed or 16
+   g.Humanoid.JumpHeight = g.DefaultJP or 7
+   g.Workspace.Gravity = g.Old_Workspace_Gravity or 196
 end
 
 g.rainbow_car = g.rainbow_car or function()
-    RGB_Vehicle(true)
+    g.RGB_Vehicle(true)
 end
 
 g.stop_rainbow_car = g.stop_rainbow_car or function()
-    RGB_Vehicle(false)
+    g.RGB_Vehicle(false)
 end
 
 g.rainbow_others_car = g.rainbow_others_car or function(Player)
-    RGB_Vehicle_Others(Player, true)
+    g.RGB_Vehicle_Others(Player, true)
 end
 
 g.stop_rainbow_others_car = g.stop_rainbow_others_car or function(Player)
-    RGB_Vehicle_Others(Player, false)
+    g.RGB_Vehicle_Others(Player, false)
 end
 
-local character = g.Character or g.LocalPlayer.Character or get_char(LocalPlayer or game.Players.LocalPlayer)
-local humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("Humanoid") or get_human(LocalPlayer or game.Players.LocalPlayer)
+local character = g.Character or g.LocalPlayer.Character or g.get_char(LocalPlayer or Players.LocalPlayer, 3)
+local humanoid = g.Humanoid or character and character:FindFirstChildOfClass("Humanoid") or g.get_human(LocalPlayer or Players.LocalPlayer, 3)
 local camera = Workspace.CurrentCamera or g.Workspace.CurrentCamera or workspace.CurrentCamera
 g.AdonisAdminFlyEnabled = g.AdonisAdminFlyEnabled or false
 g.AdonisAdminFlySpeed = g.AdonisAdminFlySpeed or 15
@@ -11220,12 +11152,12 @@ g.StartAdonisAdminFlyScript = g.StartAdonisAdminFlyScript or function()
         g.FlyPart = Instance.new("Part")
         g.FlyPart.Name = "PART_SURFER"
         g.FlyPart.Anchored = true
-        g.FlyPart.Parent = StarterPack
-        g.FlyPart.CFrame = HumanoidRootPart and HumanoidRootPart.CFrame or CFrame.new()
+        g.FlyPart.Parent = g.StarterPack or cloneref and cloneref(game:GetService("StarterPack")) or game:GetService("StarterPack")
+        g.FlyPart.CFrame = g.HumanoidRootPart and g.HumanoidRootPart.CFrame or CFrame.new()
     end
 
     g.FlyConnections.render = RunService.RenderStepped:Connect(function()
-        if not g.AdonisAdminFlyEnabled or not HumanoidRootPart then return end
+        if not g.AdonisAdminFlyEnabled or not g.HumanoidRootPart then return end
         local speed = tonumber(g.AdonisAdminFlySpeed) or 15
         speed = math.clamp(speed, 1, 300)
 
@@ -11263,7 +11195,7 @@ g.StartAdonisAdminFlyScript = g.StartAdonisAdminFlyScript or function()
         local moveCF = CFrame.new(offset)
         cf.Value = cf.Value:Lerp(moveCF, 0.2)
         g.FlyPart.CFrame = g.FlyPart.CFrame:Lerp(g.FlyPart.CFrame * cf.Value, 0.2)
-        HumanoidRootPart.CFrame = g.FlyPart.CFrame
+        g.HumanoidRootPart.CFrame = g.FlyPart.CFrame
         humanoid.PlatformStand = true
     end)
 
@@ -11301,7 +11233,7 @@ g.StartAdonisAdminFlyScript = g.StartAdonisAdminFlyScript or function()
 end
 
 g.Stop_Fly_3_Function = g.Stop_Fly_3_Function or function()
-    if not g.AdonisAdminFlyEnabled then return notify("Warning", "Fly-3 is not enabled.", 5) end
+    if not g.AdonisAdminFlyEnabled then return g.notify("Warning", "Fly-3 is not enabled.", 5) end
     g.AdonisAdminFlyEnabled = false
 
     for _, conn in pairs(g.FlyConnections) do if conn then conn:Disconnect() end end
@@ -11322,18 +11254,18 @@ g.fly2Heartbeat = nil
 g.fly2MobileConn = nil
 g.EnableFly2 = g.EnableFly2 or function(speed)
     if g.Enabled_Flying then
-        return notify("Warning", "Fly-2 is already enabled!", 5)
+        return g.notify("Warning", "Fly-2 is already enabled!", 5)
     end
 
     local UIS = g.UserInputService
-    local plr = g.LocalPlayer or game.Players.LocalPlayer
-    local char = g.Character or plr.Character or get_char(plr, 10)
-    local HRP = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or get_root(plr, 5)
-    local Humanoid = g.Humanoid or char and char:FindFirstChildOfClass("Humanoid") or get_human(plr, 5)
-    local Workspace = g.Workspace or safe_wrapper("Workspace")
-    local RunService = g.RunService or safe_wrapper("RunService")
-    local Debris = g.Debris or safe_wrapper("Debris")
-    if not HRP or not Humanoid then return notify("Error", "Character is not ready or Humanoid is missing.", 5) end
+    local plr = g.LocalPlayer or Players.LocalPlayer
+    local char = g.Character or plr.Character or g.get_char(plr, 3)
+    local HRP = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(plr, 3)
+    local Humanoid = g.Humanoid or char and char:FindFirstChildOfClass("Humanoid") or g.get_human(plr, 3)
+    local Workspace = g.Workspace or g.safe_wrapper("Workspace")
+    local RunService = g.RunService or g.safe_wrapper("RunService")
+    local Debris = g.Debris or g.safe_wrapper("Debris")
+    if not HRP or not Humanoid then return g.notify("Error", "Character is not ready or Humanoid is missing.", 5) end
     g.Enabled_Flying = true
     g.Fly2Speed = tonumber(speed) or 10
     g.Fly2Control = {F=0,B=0,L=0,R=0}
@@ -11396,7 +11328,7 @@ g.EnableFly2 = g.EnableFly2 or function(speed)
                 part.Material = Enum.Material.Neon
                 part.Size = Vector3.new(1,1,(pos - (lastPos or pos)).Magnitude + 2)
                 part.CFrame = CFrame.new((lastPos or pos) + ((pos - (lastPos or pos)) / 2), pos)
-                part.Color = colors[math.random(1, #colors)]
+                part.Color = g.colors[math.random(1, #g.colors)]
                 part.Parent = Workspace
                 Debris:AddItem(part, 1)
                 lastPos = pos
@@ -11434,25 +11366,25 @@ g.EnableFly2 = g.EnableFly2 or function(speed)
             part.Material = Enum.Material.Neon
             part.Size = Vector3.new(1,1,(pos - (lastPos or pos)).Magnitude + 2)
             part.CFrame = CFrame.new((lastPos or pos) + ((pos - (lastPos or pos)) / 2), pos)
-            part.Color = colors[math.random(1, #colors)]
+            part.Color = g.colors[math.random(1, #g.colors)]
             part.Parent = Workspace
             Debris:AddItem(part, 1)
             lastPos = pos
         end
     end)
 
-    notify("Success", "Fly-2 enabled (Mobile) | Speed: " .. tostring(g.Fly2Speed), 5)
+    g.notify("Success", "Fly-2 enabled (Mobile) | Speed: " .. tostring(g.Fly2Speed), 5)
 end
 
 g.DisableFly2 = g.DisableFly2 or function()
-    if not g.Enabled_Flying then return notify("Warning", "Fly-2 is not enabled, enable it first!", 5) end
+    if not g.Enabled_Flying then return g.notify("Warning", "Fly-2 is not enabled, enable it first!", 5) end
     g.Enabled_Flying = false
     if g.fly2InputBegan then g.fly2InputBegan:Disconnect() end
     if g.fly2InputEnded then g.fly2InputEnded:Disconnect() end
     if g.fly2Heartbeat then g.fly2Heartbeat:Disconnect() end
     if g.fly2MobileConn then g.fly2MobileConn:Disconnect() end
-    local HRP = g.HumanoidRootPart or g.Character:FindFirstChild("HumanoidRootPart") or get_root(g.LocalPlayer, 10)
-    local Humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("Humanoid") or get_human(g.LocalPlayer, 10)
+    local HRP = g.HumanoidRootPart or g.Character:FindFirstChild("HumanoidRootPart") or g.get_root(g.LocalPlayer, 3)
+    local Humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("Humanoid") or g.get_human(g.LocalPlayer, 3)
     if HRP then for _, v in ipairs(HRP:GetChildren()) do if v:IsA("BodyVelocity") or v:IsA("BodyGyro") then v:Destroy() end end end
     if Humanoid then Humanoid.PlatformStand = false end
     g.notify("Success", "Fly-2 is now disabled.", 5)
@@ -11461,10 +11393,10 @@ end
 g.vehicle_stats_viewer_GUI = g.vehicle_stats_viewer_GUI or function()
     local Vehicles = g.Workspace:FindFirstChild("Vehicles")
     if not Vehicles then
-        return notify("Error", "Vehicles Folder not found!", 5)
+        return g.notify("Error", "Vehicles Folder not found!", 5)
     end
     if g.Vehicle_Stats_GUI_Active then
-        return notify("Error", "Vehicle Stats Viewer already running!", 5)
+        return g.notify("Error", "Vehicle Stats Viewer already running!", 5)
     end
 
     g.Vehicle_Stats_GUI_Active = true
@@ -11490,7 +11422,7 @@ g.vehicle_stats_viewer_GUI = g.vehicle_stats_viewer_GUI or function()
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0,12)
     repeat task.wait(1) until MainFrame and MainFrame:IsA("Frame") and ScreenGui:FindFirstChildOfClass("Frame")
     wait(0.5)
-    dragify(MainFrame)
+    if g.dragify and typeof(g.dragify) == "function" then dragify(MainFrame) end
     g.notify("Info", "Loading Vehicle Stats viewer.", 3)
 
     function Unhook(vehicle)
@@ -11499,13 +11431,7 @@ g.vehicle_stats_viewer_GUI = g.vehicle_stats_viewer_GUI or function()
 
         local conns = g.vehicle_attr_conns[vehicle]
         if conns then
-            for _,c in ipairs(conns) do
-                if c then
-                    pcall(function()
-                        c:Disconnect()
-                    end)
-                end
-            end
+            for _,c in ipairs(conns) do if c then pcall(function() c:Disconnect() end) end end
         end
 
         if ui.Frame then
@@ -11794,7 +11720,7 @@ g.vehicle_stats_viewer_GUI = g.vehicle_stats_viewer_GUI or function()
             local t = tick()
 
             repeat
-                my_vehicle = get_vehicle()
+                my_vehicle = g.get_vehicle()
                 task.wait()
             until my_vehicle or tick() - t > 6
 
@@ -11933,7 +11859,7 @@ function addban(input)
         local ld = v.DisplayName:lower()
         if ln:find(q, 1, true) or ld:find(q, 1, true) then
             g.bansystem.list[ln] = true
-            kick_plr(v)
+            g.kick_plr(v)
             return ln
         end
     end
@@ -11962,7 +11888,7 @@ function checkban(player)
     local n = player.Name:lower()
     if g.bansystem.list[n] then
         if g.bansystem.enabled then
-            kick_plr(player)
+            g.kick_plr(player)
         end
     end
 end
@@ -11982,7 +11908,7 @@ g.start_bansystem = g.start_bansystem or function()
 
     task.spawn(function()
         for i = 1, 5 do
-            if is_localplayer_server_owner() then
+            if g.is_localplayer_server_owner() then
                 g.bansystem.enabled = true
                 g.bansystem.starting = false
                 for _, p in ipairs(Players:GetPlayers()) do
@@ -12010,7 +11936,7 @@ end
 fw(0.1)
 if not g.Ban_System_In_Flames_Hub_Has_Been_Started_Already then
     g.Ban_System_In_Flames_Hub_Has_Been_Started_Already = true  -- actually set it!
-    task.spawn(function() start_bansystem() end)
+    task.spawn(function() g.start_bansystem() end)
 end
 
 g.get_server_admin_title_player = g.get_server_admin_title_player or function()
@@ -12112,21 +12038,21 @@ end
 
 g.rainbow_tool = g.rainbow_tool or function(toggled)
     if toggled then
-        notify("Success", "RGB Tool is now enabled.", 5)
-        local tool = find_character_tool() or find_backpack_tool() or find_placed_models_tool()
+        g.notify("Success", "RGB Tool is now enabled.", 5)
+        local tool = g.find_character_tool() or g.find_backpack_tool() or g.find_placed_models_tool()
 
         if not tool then
             g.Send("get_tool", "Gift")
-            notify("Warning", "Wait! We're giving you a colorable Tool...", 5)
+            g.notify("Warning", "Wait! We're giving you a colorable Tool...", 5)
             fw(0.2)
-            tool = find_character_tool() or find_backpack_tool() or find_placed_models_tool()
-            if not tool then return notify("Error", "Tool still not found after giving you the Gift Tool.", 5) end
+            tool = g.find_character_tool() or g.find_backpack_tool() or g.find_placed_models_tool()
+            if not tool then return g.notify("Error", "Tool still not found after giving you the Gift Tool.", 5) end
             if tool.Parent == g.Backpack then
                 fw(0.1)
                 tool.Parent = g.Character
             end
 
-            for _, color in ipairs(colors) do
+            for _, color in ipairs(g.colors) do
                 g.Send("tool_color", tool, "color1", color)
                 wait()
             end
@@ -12139,16 +12065,16 @@ g.rainbow_tool = g.rainbow_tool or function(toggled)
 
         g.Rainbow_Tools_FE = true
         while g.Rainbow_Tools_FE do
-            tool = find_character_tool() or find_backpack_tool() or find_placed_models_tool()
+            tool = g.find_character_tool() or g.find_backpack_tool() or g.find_placed_models_tool()
             if not tool then
                 g.Rainbow_Tools_FE = false
-                return notify("Error", "Tool unexpectedly disappeared or was destroyed.", 5)
+                return g.notify("Error", "Tool unexpectedly disappeared or was destroyed.", 5)
             end
             if tool.Parent == g.Backpack then
                 fw(0.1)
                 tool.Parent = g.Character
             end
-            for _, color in ipairs(colors) do
+            for _, color in ipairs(g.colors) do
                 if not g.Rainbow_Tools_FE then break end
                 g.Send("tool_color", tool, "color1", color)
                 wait()
@@ -12156,11 +12082,11 @@ g.rainbow_tool = g.rainbow_tool or function(toggled)
         end
     else
         if not g.Rainbow_Tools_FE then
-            return notify("Warning", "RGB Tools is not enabled!", 5)
+            return g.notify("Warning", "RGB Tools is not enabled!", 5)
         end
 
         g.Rainbow_Tools_FE = false
-        notify("Success", "RGB tools has been disabled.", 5)
+        g.notify("Success", "RGB tools has been disabled.", 5)
     end
 end
 
@@ -12170,7 +12096,7 @@ g.toggle_name_func = g.toggle_name_func or function(boolean)
     elseif boolean == false then
         g.Send("hide_name", false)
     else
-        return notify("Error", "Invalid arguments provided.", 5)
+        return g.notify("Error", "Invalid arguments provided.", 5)
     end
 end
 
@@ -12185,9 +12111,9 @@ g.flashy_name = g.flashy_name or function(Toggle)
         getgenv().Flashing_Name_Title = true
         FL.spawn("flashy_name_loop", "spawn", function()
             while getgenv().Flashing_Name_Title == true do
-                toggle_name_func(true)
+                g.toggle_name_func(true)
                 fw(.1)
-                toggle_name_func(false)
+                g.toggle_name_func(false)
                 fw(.1)
             end
         end)
@@ -12199,7 +12125,7 @@ g.flashy_name = g.flashy_name or function(Toggle)
         getgenv().Flashing_Name_Title = false
         FL.disconnect("flashy_name_loop")
         fw(1.5)
-        toggle_name_func(false)
+        g.toggle_name_func(false)
     else
         return g.notify("Error", "Invalid argument(s) provided.", 5)
     end
@@ -12207,7 +12133,7 @@ end
 
 g.flames_nameless_admin_ver = g.flames_nameless_admin_ver or function()
     if g.RealNamelessLoaded then
-        return notify("Warning", "Nameless Admin (or the Flames Hub version) has already been loaded.", 11)
+        return g.notify("Warning", "Nameless Admin (or the Flames Hub version) has already been loaded.", 11)
     end
 
     loadstring(game:HttpGet('https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/Source.lua'))()
@@ -12215,10 +12141,10 @@ end
 
 g.infinite_premium = g.infinite_premium or function()
     if g.GET_LOADED_IY then
-        return notify("Warning", "You already have Infinite Premium running.", 5)
+        return g.notify("Warning", "You already have Infinite Premium running.", 5)
     end
     if g.IY_LOADED then
-        return notify("Warning", "You already have Infinite Yield running! You cannot and should NOT run both at the same time.", 10)
+        return g.notify("Warning", "You already have Infinite Yield running! You cannot and should NOT run both at the same time.", 10)
     end
 
     loadstring(game:HttpGet('https://pastefy.app/b052AUgc/raw'))()
@@ -12226,20 +12152,17 @@ end
 
 g.infinite_yield = g.infinite_yield or function()
     if g.IY_LOADED then
-        return notify("Warning", "You already have Infinite Yield running.", 10)
+        return g.notify("Warning", "You already have Infinite Yield running.", 10)
     end
     if g.GET_LOADED_IY then
-        return notify("Warning", "You already have Infinite Premium running! You cannot and should NOT run both at the same time.", 15)
+        return g.notify("Warning", "You already have Infinite Premium running! You cannot and should NOT run both at the same time.", 15)
     end
 
     loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
 end
 
 g.send_msg_menu = g.send_msg_menu or function()
-    if g.sendmsgmenu_loaded then
-        return notify("Warning", "Send message menu is already loaded!", 5)
-    end
-
+    if g.sendmsgmenu_loaded then return g.notify("Warning", "Send message menu is already loaded!", 5) end
     g.sendmsgmenu_loaded = true
     local tween = g.TweenService
     local players = g.Players
@@ -12341,7 +12264,7 @@ g.send_msg_menu = g.send_msg_menu or function()
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     layout.VerticalAlignment = Enum.VerticalAlignment.Top
 
-    if dragify and typeof(dragify) == "function" then dragify(message_menu_frame) end
+    if g.dragify and typeof(g.dragify) == "function" then g.dragify(message_menu_frame) end
     local selected = nil
     local function refresh()
         for _,v in ipairs(playerscroll:GetChildren()) do
@@ -12446,13 +12369,13 @@ g.send_msg_menu = g.send_msg_menu or function()
     end)
 
     sendbtn.MouseButton1Click:Connect(function()
-        if not selected then return notify("Warning", "Select a player first!", 5) end
+        if not selected then return g.notify("Warning", "Select a player first!", 5) end
         local target = players:FindFirstChild(selected.Text)
-        if not target then return notify("Warning", "Player not found!", 5) end
+        if not target then return g.notify("Warning", "Player not found!", 5) end
         local num = tonumber(amount.Text) or 1
         num = math.clamp(num,1,30)
         local raw = msgbox.Text or ""
-        if raw == "" then return notify("Warning", "Message cannot be empty.", 5) end
+        if raw == "" then return g.notify("Warning", "Message cannot be empty.", 5) end
         local msgs = {}
         if raw:find("||",1,true) then
             for part in string.gmatch(raw,"([^|]+)") do
@@ -12466,9 +12389,7 @@ g.send_msg_menu = g.send_msg_menu or function()
         g.Send_Message_Main_Phone_Messages_Module_Task = getgenv().FlamesLibrary.spawn("send_message_phone_task", "spawn", function()
             for i = 1, num do
                 local text = msgs[((i - 1) % #msgs) + 1]
-                pcall(function()
-                    send_msg_phone(target, text)
-                end)
+                pcall(function() g.send_msg_phone(target, text) end)
                 fw(0.02)
             end
         end)
@@ -12540,14 +12461,14 @@ g.disable_rgb_for = function(plr)
     g.notify("Success", "Disabled Rainbow Vehicle for: "..tostring(name), 6)
 end
 
-if not g.fully_disable_rgb_plr then g.fully_disable_rgb_plr = disable_rgb_for end
+if not g.fully_disable_rgb_plr then g.fully_disable_rgb_plr = g.disable_rgb_for end
 fw(0.1)
 g.enable_rgb_for = function(plr)
     if not plr then return end
     local name = plr.Name
     g.VehicleStates[name] = g.VehicleStates[name] or {}
     local state = g.VehicleStates[name]
-    local vehicle = get_other_vehicle(plr)
+    local vehicle = g.get_other_vehicle(plr)
     if not vehicle then
         state.rainbow = false
         state.rainbowIndex = nil
@@ -12556,13 +12477,13 @@ g.enable_rgb_for = function(plr)
         return false, "you don't have a vehicle"
     end
 
-    if g.Rainbow_Tasks[name] then disable_rgb_for(plr) end
+    if g.Rainbow_Tasks[name] then g.disable_rgb_for(plr) end
     state.rainbow = true
     state.rainbowIndex = 0
     g.Rainbow_Indices[name] = 0
     g.Rainbow_Tasks[name] = task.spawn(function()
         while state.rainbow do
-            local v = get_other_vehicle(plr)
+            local v = g.get_other_vehicle(plr)
             if not v then
                 state.rainbow = false
                 state.rainbowIndex = nil
@@ -12574,7 +12495,7 @@ g.enable_rgb_for = function(plr)
             local i = (state.rainbowIndex or 0) + 1
             state.rainbowIndex = i
             local color = g.Rainbow_Colors[(i % #g.Rainbow_Colors) + 1]
-            change_vehicle_color(color, v)
+            g.change_vehicle_color(color, v)
             fw(0.2)
         end
     end)
@@ -12595,7 +12516,7 @@ end
 g.toggle_config_manager = function(state)
     if state == true then
         if not CoreGui:FindFirstChild("FlamesAdminGUI", true) then
-            return notify("Error", "Configuration Manager GUI was not found.", 6)
+            return g.notify("Error", "Configuration Manager GUI was not found.", 6)
         end
 
         if CoreGui:FindFirstChild("FlamesAdminGUI", true) then
@@ -12605,7 +12526,7 @@ g.toggle_config_manager = function(state)
         end
     elseif state == false then
         if not CoreGui:FindFirstChild("FlamesAdminGUI", true) then
-            return notify("Error", "Configuration Manager GUI was not found.", 6)
+            return g.notify("Error", "Configuration Manager GUI was not found.", 6)
         end
 
         if CoreGui:FindFirstChild("FlamesAdminGUI", true) then
@@ -12650,7 +12571,7 @@ g.setup_cmd_handler_plr = function(player)
         local normalizedMessage = trim(chatMessage.Text:lower())
         if normalizedMessage:sub(1, #prefix) ~= prefix then return end
         local command = normalizedMessage:sub(#prefix + 1)
-        local playerVehicle = get_other_vehicle(g.Players[speaker.Name])
+        local playerVehicle = g.get_other_vehicle(g.Players[speaker.Name])
         if not g.Players[speaker.Name]:IsFriendsWith(g.LocalPlayer.UserId) then return end
         local Name = speaker and speaker.Name
         g.VehicleStates[Name] = g.VehicleStates[Name] or {
@@ -12661,20 +12582,20 @@ g.setup_cmd_handler_plr = function(player)
         local parts = command:split(" ")
         local cmd = parts[1]
 
-        if levenshtein(cmd, "rgbcar") <= 1 then
+        if g.levenshtein(cmd, "rgbcar") <= 1 then
             local Player = g.Players[speaker.Name]
             if not Player then
-                return notify("Error", "This player does not exist!", 5)
+                return g.notify("Error", "This player does not exist!", 5)
             end
 
-            local vehicle = get_other_vehicle(Player)
+            local vehicle = g.get_other_vehicle(Player)
             if not vehicle then
                 g.Rainbow_Vehicles[Player.Name] = nil
-                return notify("Error", "The player doesn't have a car spawned!", 5)
+                return g.notify("Error", "The player doesn't have a car spawned!", 5)
             end
 
-            enable_rgb_for(Player)
-        elseif levenshtein(command:split(" ")[1], "rgbtime") <= 2 then
+            g.enable_rgb_for(Player)
+        elseif g.levenshtein(command:split(" ")[1], "rgbtime") <= 2 then
             local parts = command:split(" ")
             local delayStr = parts[2]
             local newDelay = tonumber(delayStr)
@@ -12690,9 +12611,9 @@ g.setup_cmd_handler_plr = function(player)
             local name = g.Players[speaker.Name].Name
             g.Rainbow_Delays[name] = newDelay
             g.Rainbow_Next[name] = time()
-        elseif levenshtein(command, "norgbcar") <= 2 then
-            disable_rgb_for(g.Players[speaker.Name])
-        elseif levenshtein(command, "lockcar") <= 2 then
+        elseif g.levenshtein(command, "norgbcar") <= 2 then
+            g.disable_rgb_for(g.Players[speaker.Name])
+        elseif g.levenshtein(command, "lockcar") <= 2 then
             if not playerVehicle then
                 g.LockLoop_Vehicles[speaker.Name] = false
                 return 
@@ -12706,13 +12627,13 @@ g.setup_cmd_handler_plr = function(player)
             g.Locked_Vehicles[speaker.Name] = true
             local player = g.Players[speaker.Name]
             if not player then g.Locked_Vehicles[speaker.Name] = false end
-            local v = get_other_vehicle(player)
+            local v = g.get_other_vehicle(player)
             if v and not v:GetAttribute("locked") then
                 g.Get("lock_vehicle", v)
             elseif not v then
                 g.Locked_Vehicles[speaker.Name] = false
             end
-        elseif levenshtein(command, "unlockcar") <= 2 then
+        elseif g.levenshtein(command, "unlockcar") <= 2 then
             if not playerVehicle then
                 g.Unlocked_Vehicles[speaker.Name] = false
                 return 
@@ -12727,35 +12648,35 @@ g.setup_cmd_handler_plr = function(player)
                 g.Unlocked_Vehicles[speaker.Name] = false
             end
 
-            local v = get_other_vehicle(player)
+            local v = g.get_other_vehicle(player)
             if v and v:GetAttribute("locked") then
                 g.Get("lock_vehicle", v)
             elseif not v then
                 g.Unlocked_Vehicles[speaker.Name] = false
             end
-        elseif levenshtein(command, "trailer") <= 2 then
+        elseif g.levenshtein(command, "trailer") <= 2 then
             local player = g.Players[speaker.Name]
             if not playerVehicle then
                 g.Unlocked_Vehicles[speaker.Name] = false
                 return 
             end
 
-            local Vehicle = get_other_vehicle(player)
+            local Vehicle = g.get_other_vehicle(player)
             if not Vehicle then return end
             if Vehicle:FindFirstChild("WaterSkies") then return end
             fw(0.1)
-            water_skie_trailer(true, Vehicle)
-        elseif levenshtein(command, "notrailer") <= 2 then
+            g.water_skie_trailer(true, Vehicle)
+        elseif g.levenshtein(command, "notrailer") <= 2 then
             local player = g.Players[speaker.Name]
             if not playerVehicle then
                 g.Unlocked_Vehicles[speaker.Name] = false
                 return 
             end
 
-            local Vehicle = get_other_vehicle(player)
+            local Vehicle = g.get_other_vehicle(player)
             if not Vehicle then return  end
             if not Vehicle:FindFirstChild("WaterSkies") then return end
-            water_skie_trailer(false, Vehicle)
+            g.water_skie_trailer(false, Vehicle)
         elseif command:sub(1, 5) == "check" then
             if g.Check_Cooldown then return end
             g.Check_Cooldown = true
@@ -12769,7 +12690,7 @@ g.setup_cmd_handler_plr = function(player)
                 return getgenv().notify("Warning", "Target player invalid: "..tostring(checkTargetName), 1)
             end
 
-            local target = findplr(checkTargetName)
+            local target = g.findplr(checkTargetName)
             if not target then
                 return getgenv().notify("Warning", "Could not find: "..tostring(target), 1)
             end
@@ -12778,20 +12699,20 @@ g.setup_cmd_handler_plr = function(player)
             local general_channel = g.TextChatService:FindFirstChild("RBXGeneral", true) or g.TextChatService:FindFirstChild("TextChannels"):FindFirstChild("RBXGeneral")
             if general_channel then
                 if isVerified == true then
-                general_channel:SendAsync("Player: " .. target.DisplayName .. " has premium.")
+                    general_channel:SendAsync("Player: " .. target.DisplayName .. " has premium.")
                 else
-                general_channel:SendAsync("Player: " .. target.DisplayName .. " does not have premium.")
+                    general_channel:SendAsync("Player: " .. target.DisplayName .. " does not have premium.")
                 end
             end
-        elseif levenshtein(command, "lambo") <= 2 or levenshtein(command, "lamborghini") then
-            spawn_any_vehicle("svj")
-        elseif levenshtein(command, "ferrari") <= 2 or levenshtein(command, "sf90") or levenshtein(command, "corvette") then
-            spawn_any_vehicle("sf90")
-        elseif levenshtein(command, "bugatti") <= 2 or levenshtein(command, "chiron") then
-            spawn_any_vehicle("chiron")
-        elseif levenshtein(command, "charger") <= 2 or levenshtein(command, "chargersrt") or levenshtein(command, "srtcharger") or levenshtein(command, "srt") then
-            spawn_any_vehicle("charger")
-        elseif levenshtein(command, "cmds") <= 2 then
+        elseif g.levenshtein(command, "lambo") <= 2 or g.levenshtein(command, "lamborghini") then
+            g.spawn_any_vehicle("svj")
+        elseif g.levenshtein(command, "ferrari") <= 2 or g.levenshtein(command, "sf90") or g.levenshtein(command, "corvette") then
+            g.spawn_any_vehicle("sf90")
+        elseif g.levenshtein(command, "bugatti") <= 2 or g.levenshtein(command, "chiron") then
+            g.spawn_any_vehicle("chiron")
+        elseif g.levenshtein(command, "charger") <= 2 or g.levenshtein(command, "chargersrt") or g.levenshtein(command, "srtcharger") or g.levenshtein(command, "srt") then
+            g.spawn_any_vehicle("charger")
+        elseif g.levenshtein(command, "cmds") <= 2 then
             if g.Is_OnCooldown then return end
             g.Is_OnCooldown = true
             g.Wait_Time_Cooldown = 45
@@ -12810,9 +12731,7 @@ g.addPlayerToScriptWhitelistTable = g.addPlayerToScriptWhitelistTable or functio
     if not g.player_admins[player.Name] then
         g.player_admins[player.Name] = player
         fw(0.2)
-        if g.player_admins[player.Name] then
-            notify("Success", tostring(player.Name)..", was added to Admins Whitelist.", 3)
-        end
+        if g.player_admins[player.Name] then g.notify("Success", tostring(player.Name)..", was added to Admins Whitelist.", 3) end
     end
 end
 
@@ -12821,9 +12740,9 @@ g.removePlayerFromScriptWhitelistTable = g.removePlayerFromScriptWhitelistTable 
         g.player_admins[player.Name] = nil
         fw(0.15)
         if g.player_admins[player.Name] == nil then
-            notify("Success", tostring(player.Name).." was removed from the Admins Whitelist!", 3)
+            g.notify("Success", tostring(player.Name).." was removed from the Admins Whitelist!", 3)
         else
-            return notify("Error", tostring(player)..", does not exist.", 5)
+            return g.notify("Error", tostring(player)..", does not exist.", 3)
         end
     end
 end
@@ -12983,30 +12902,30 @@ g.prev_skin_tone = g.prev_skin_tone or nil
 g.apply_skin_tone = function(color) if not color then return end pcall(function() g.Send("skin_tone", color) end) end
 g.copy_plr_avatar = function(Player)
     if g.is_copying_avatar_already_flames then
-        return notify("Warning","Avatar copier already in progress!",6)
+        return g.notify("Warning","Avatar copier already in progress!",6)
     end
     g.is_copying_avatar_already_flames = true
 
     if not Player or not Player.Character then
         g.is_copying_avatar_already_flames = false
-        return notify("Warning","Target not found!",5)
+        return g.notify("Warning","Target not found!",5)
     end
 
     local hum = Player.Character:FindFirstChildWhichIsA("Humanoid") or get_human(Player, 3)
     if not hum then
         g.is_copying_avatar_already_flames = false
-        return notify("Warning","No humanoid!",5)
+        return g.notify("Warning","No humanoid!",5)
     end
 
     local desc = hum:GetAppliedDescription()
     if not desc then
         g.is_copying_avatar_already_flames = false
-        return notify("Warning","No description!",5)
+        return g.notify("Warning","No description!",5)
     end
 
     if Player.Name == "CIippedByAura" or Player.Name == "L0CKED_1N1" or Player.Name == "AuraWithClipFarmin" then
         g.is_copying_avatar_already_flames = false
-        return notify("Warning", "Do not copy the owner of Flames Hub's avatar!", 10)
+        return g.notify("Warning", "Do not copy the owner of Flames Hub's avatar!", 10)
     end
 
     if Player:GetAttribute("bio") == "`~ Flames Hub Anti Stealer Is Enabled ~`" then return g.notify("Warning", "This Player has Flames Hub | Anti Stealer enabled!", 5) end
@@ -13064,7 +12983,7 @@ g.copy_plr_avatar = function(Player)
     pcall(function() g.Send(unpack(args)) end)
     fw(0.1)
     local bodyColors = Player.Character:FindFirstChildOfClass("BodyColors")
-    if Player.Character and bodyColors then g.Send("skin_tone", avgSkin(bodyColors)) end
+    if Player.Character and bodyColors then g.Send("skin_tone", g.avgSkin(bodyColors)) end
     local height = math.clamp(math.floor((desc.HeightScale or 1)*100+0.5),90,105)
     local width  = math.clamp(math.floor((desc.WidthScale  or 1)*100+0.5),70,100)
     g.Send("body_scale","HeightScale",height)
@@ -13072,7 +12991,7 @@ g.copy_plr_avatar = function(Player)
     g.Send("body_scale","WidthScale",width)
     local age = Player:GetAttribute("age")
     if age then g.Get("age",age) end
-    notify("Success","Copied avatar from "..Player.Name,5)
+    g.notify("Success","Copied avatar from "..Player.Name,5)
     g.is_copying_avatar_already_flames = false
 end
 
@@ -13094,7 +13013,7 @@ g.height_func_setter = g.height_func_setter or function(height_input)
     end
 
     local bodyColors = char and char:FindFirstChildOfClass("BodyColors")
-    local current_skin = bodyColors and avgSkin(bodyColors)
+    local current_skin = bodyColors and g.avgSkin(bodyColors)
     if not g.session_active then
         g.session_original_height = desc.HeightScale or 1
         g.session_original_width = desc.WidthScale or 1
@@ -13195,7 +13114,7 @@ end
 
 g.anti_sit_enabled = g.anti_sit_enabled or false
 g.anti_sit_connections = g.anti_sit_connections or {}
-local local_player = g.LocalPlayer or game.Players.LocalPlayer or cloneref and cloneref(game:GetService("Players")).LocalPlayer or game:GetService("Players").LocalPlayer
+local local_player = g.LocalPlayer or Players.LocalPlayer
 local function cleanup_connections()
 	for _, conn in pairs(g.anti_sit_connections) do
 		if conn and conn.Connected then
@@ -13206,15 +13125,11 @@ local function cleanup_connections()
 end
 
 local function hook_character(character)
-	if not character then
-		character = get_char(local_player, 10)
-	end
+	if not character then character = g.get_char(local_player, 10) end
 	if not character then return end
-	if not character:FindFirstChild("HumanoidRootPart") then
-		character:WaitForChild("HumanoidRootPart")
-	end
-	local humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("Humanoid") or get_human(local_player, 10)
-	if not humanoid then return end
+	if not character:FindFirstChild("HumanoidRootPart") then character:WaitForChild("HumanoidRootPart") end
+	local humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("Humanoid") or g.get_human(local_player, Players.RespawnTime + 0.75)
+	if not humanoid or not humanoid.Parent or not humanoid:IsDescendantOf(game) then return end
 	local conn
 	conn = humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
 		if not g.anti_sit_enabled then return end
@@ -13225,9 +13140,7 @@ local function hook_character(character)
 					local weld = humanoid.SeatPart:FindFirstChildOfClass("Weld")
 					if weld then weld:Destroy() end
 					local prox = humanoid.SeatPart:FindFirstChildOfClass("ProximityPrompt")
-					if prox and prox.Enabled == false then
-						prox.Enabled = true
-					end
+					if prox and prox.Enabled == false then prox.Enabled = true end
 				end
 				for _ = 1, 5 do
 					task.wait()
@@ -13266,13 +13179,13 @@ g.anti_sit_func = function(toggle)
 
     if toggle == true then
         if g.Not_Ever_Sitting then
-            return notify("Warning", "AntiSit is already enabled!", 5)
+            return g.notify("Warning", "AntiSit is already enabled!", 5)
         end
 
         g.Not_Ever_Sitting = true
         g.toggle_anti_sit(true)
         g.notify("Success", "Anti-Sit is now enabled!", 5)
-        show_notification("Success:", "Anti-Sit is now enabled.", "Normal")
+        g.show_notification("Success:", "Anti-Sit is now enabled.", "Normal")
         lib.spawn(key, "spawn", function()
             while g.Not_Ever_Sitting == true do
                 g.Seat.enabled.set(false)
@@ -13282,7 +13195,7 @@ g.anti_sit_func = function(toggle)
         end)
     elseif toggle == false then
         if not g.Not_Ever_Sitting then
-            return notify("Warning", "AntiSit is not enabled!", 5)
+            return g.notify("Warning", "AntiSit is not enabled!", 5)
         end
 
         g.Not_Ever_Sitting = false
@@ -13290,8 +13203,8 @@ g.anti_sit_func = function(toggle)
         g.toggle_anti_sit(false)
         fw(0.2)
         g.Seat.enabled.set(true)
-        notify("Success", "Anti-Sit is now disabled.", 5)
-        Phone.show_notification("Success:", "Anti-Sit is now disabled.", "Normal")
+        g.notify("Success", "Anti-Sit is now disabled.", 5)
+        pcall(function() g.Phone.show_notification("Success:", "Anti-Sit is now disabled.", "Normal") end)
     else
         return
     end
@@ -13329,7 +13242,7 @@ g.annoyance_GUI = function()
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, -35, 1, 0)
     Title.Position = UDim2.new(0, 10, 0, 0)
-    Title.Text = "Annoy / Group Spam Menu | Made By: "..tostring(Script_Creator).."."
+    Title.Text = "Annoy / Group Spam Menu | Made By: "..tostring(g.Script_Creator).."."
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
     Title.BackgroundTransparency = 1
     Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -13369,7 +13282,7 @@ g.annoyance_GUI = function()
     UIListLayout.Padding = UDim.new(0, 5)
 
     Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1, 0)
-    if dragify and typeof(dragify) == "function" then dragify(AnnoyerGUIFrame) end
+    if g.dragify and typeof(g.dragify) == "function" then g.dragify(AnnoyerGUIFrame) end
     local function ToggleAnnoy(plr, btn)
         if g.easy_click_plr and g.easy_click_target == plr.Name then
             g.easy_click_plr = false
@@ -13561,7 +13474,7 @@ g.annoyance_GUI = function()
     refresh_player_list()
 end
 
-local Hum = g.Humanoid or g.Character and g.Character:FindFirstChildOfClass("Humanoid") or get_human(LocalPlayer or game.Players.LocalPlayer, 10)
+local Hum = g.Humanoid or g.Character and g.Character:FindFirstChildOfClass("Humanoid") or g.get_human(LocalPlayer or Players.LocalPlayer, Players.RespawnTime + 0.5)
 local HD = Hum:FindFirstChildOfClass("HumanoidDescription")
 g.GlitchIDs = {
    Shirts = {6028801590, 11595159513},
@@ -13573,18 +13486,18 @@ g.isWearing = g.isWearing or function(desc, slot, id)
 end
 
 g.forceEquip = g.forceEquip or function(slot, id)
-    if not isWearing(HD, slot, id) then
+    if not g.isWearing(HD, slot, id) then
         g.Get("code", id, slot)
     end
 end
 
 g.forceUnequip = g.forceUnequip or function(slot, id)
-    if isWearing(HD, slot, id) then
+    if g.isWearing(HD, slot, id) then
         g.Get("wear", id, slot)
     end
 end
 
-local humanoid = g.Humanoid or g.Character and g.Character:FindFirstChildOfClass("Humanoid") or get_human(LocalPlayer or game.Players.LocalPlayer, 10)
+local humanoid = Hum
 local applied = humanoid:GetAppliedDescription()
 local Old_Shirt = applied.Shirt
 local Old_Pants = applied.Pants
@@ -13600,16 +13513,16 @@ g.glitch_outfit = g.glitch_outfit or function(toggle)
         FL.spawn("glitch_outfit_loop", "spawn", function()
             while getgenv().Glitching_Outfit == true do
                 fw(0)
-                for _, shirtId in ipairs(GlitchIDs.Shirts) do
-                    forceEquip("Shirt", shirtId)
+                for _, shirtId in ipairs(g.GlitchIDs.Shirts) do
+                    g.forceEquip("Shirt", shirtId)
                     task.wait()
-                    forceUnequip("Shirt", shirtId)
+                    g.forceUnequip("Shirt", shirtId)
                 end
                 fw(0.1)
-                for _, pantsId in ipairs(GlitchIDs.Pants) do
-                    forceEquip("Pants", pantsId)
+                for _, pantsId in ipairs(g.GlitchIDs.Pants) do
+                    g.forceEquip("Pants", pantsId)
                     task.wait()
-                    forceUnequip("Pants", pantsId)
+                    g.forceUnequip("Pants", pantsId)
                 end
             end
         end)
@@ -13631,7 +13544,7 @@ end
 function check_friends()
     for _, v in ipairs(g.Players:GetPlayers()) do
         if v ~= g.LocalPlayer and v:IsFriendsWith(g.LocalPlayer.UserId) then
-            alreadyCheckedUser(v)
+            g.alreadyCheckedUser(v)
         end
     end
 end
@@ -13640,15 +13553,13 @@ function auto_add_friends()
     for _, v in ipairs(g.Players:GetPlayers()) do
         if v ~= g.LocalPlayer and v:IsFriendsWith(g.LocalPlayer.UserId) then
             check_friends()
-            addPlayerToScriptWhitelistTable(v)
+            g.addPlayerToScriptWhitelistTable(v)
         end
     end
 end
 
 auto_add_friends()
 
-local originalCFrame
-local originalCameraType
 if g.PlayerControls == nil then
     local PlayerModule = require(g.PlayerScripts:WaitForChild("PlayerModule"))
     g.PlayerControls = PlayerModule:GetControls()
@@ -13657,23 +13568,15 @@ end
 g.Viewing_Plr_Tbl = g.Viewing_Plr_Tbl or {}
 g.viewTarget = g.viewTarget or function(player)
     if g.Viewing_A_Player then
-        if g.Viewing_Plr_Tbl[player.Name] then
-            return notify("Error","You're already viewing: "..player.DisplayName,5)
-        end
-        return notify("Error","You're already viewing a Player.",5)
+        if g.Viewing_Plr_Tbl[player.Name] then return g.notify("Error","You're already viewing: "..player.DisplayName,5) end
+        return g.notify("Error","You're already viewing a Player.",5)
     end
 
-    if not player or not player.Character then
-        return notify("Error","Invalid player.",5)
-    end
-
-    local char = player.Character or g.get_char(player)
-    local hum = get_human(player) or char:FindFirstChildWhichIsA("Humanoid")
-    if not hum then
-        return notify("Error","Player has no humanoid.",5)
-    end
-
-    local root = get_root(player) or hum.RootPart or char:FindFirstChild("HumanoidRootPart")
+    if not player or not player.Character then return g.notify("Error", "Invalid player.", 3) end
+    local char = player.Character or g.get_char(player, Players.RespawnTime + 0.75)
+    local hum = char and char:FindFirstChildWhichIsA("Humanoid") or g.get_human(player, Players.RespawnTime + 0.5)
+    if not hum or not hum.Parent or not hum:IsDescendantOf(game) then return g.notify("Error", "Player has no humanoid.", 3) end
+    local root = hum and hum.RootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(player, Players.RespawnTime + 0.5)
     g.Camera.CameraSubject = hum
     g.Viewing_A_Player = true
     g.Viewing_Plr_Tbl[player.Name] = {
@@ -13689,8 +13592,8 @@ end
 g.unview_player = g.unview_player or function()
     local genv = g
     if not genv.Viewing_A_Player then return genv.notify("Error", "You're not viewing anyone.", 5) end
-    local hum = genv.Humanoid or genv.Character:FindFirstChildOfClass("Humanoid") or get_human(LocalPlayer, 10)
-    local char = genv.Character or genv.LocalPlayer.Character or get_char(LocalPlayer, 10)
+    local hum = genv.Humanoid or genv.Character:FindFirstChildOfClass("Humanoid") or g.get_human(LocalPlayer, 1)
+    local char = genv.Character or genv.LocalPlayer.Character or g.get_char(LocalPlayer, 1)
     local subject = hum or (char and char:FindFirstChildWhichIsA("Humanoid")) or char
 
     if subject and genv.Camera then
@@ -13717,7 +13620,7 @@ g.unview_player = g.unview_player or function()
     genv.Viewing_A_Player = false
     table.clear(genv.Viewing_Plr_Tbl)
 
-    genv.notify("Success", "Stopped viewing: " .. tostring(viewed), 5)
+    genv.notify("Success", "Stopped viewing: "..tostring(viewed), 5)
 end
 
 g.check_friend = g.check_friend or function(Player)
@@ -13726,8 +13629,6 @@ g.check_friend = g.check_friend or function(Player)
     else
         return false
     end
-
-    return 
 end
 
 g.spam_create_groups = g.spam_create_groups or function(toggle)
@@ -13867,7 +13768,7 @@ g.in_humanoid_vehicle = g.in_humanoid_vehicle or function(PlayerOrName)
 
     local Character = Player == g.LocalPlayer and g.Character or Player.Character
     if not Character then return end
-    local humanoid = Character:FindFirstChildWhichIsA("Humanoid") or get_human(Player, 5)
+    local humanoid = Character and Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(Player, 3)
     if not humanoid then return end
     local vehicleAttr = humanoid:GetAttribute("InHumanoidVehicle")
     if vehicleAttr == nil then return end
@@ -13878,10 +13779,10 @@ g.in_humanoid_vehicle = g.in_humanoid_vehicle or function(PlayerOrName)
 end
 
 g.hum_vehicle_name = g.hum_vehicle_name or function(plr)
-    local hv = in_humanoid_vehicle(plr)
+    local hv = g.in_humanoid_vehicle(plr)
     if not hv then return nil end
     local folder = g.Workspace:FindFirstChild("HumanoidVehicles", true)
-    if not folder then return nil end
+    if not folder or not folder:IsA("Folder") then return nil end
     local inst = folder:FindFirstChild(hv)
     if not inst then return nil end
 
@@ -13891,10 +13792,12 @@ end
 g.set_hum_vehicle_speed = g.set_hum_vehicle_speed or function(speed)
     speed = tonumber(speed) or 50
     if typeof(speed) ~= "number" then speed = 50 end
-    if in_humanoid_vehicle(g.LocalPlayer) then pcall(function() g.Humanoid.WalkSpeed = tonumber(speed) end) end
+    if g.in_humanoid_vehicle(g.LocalPlayer) then pcall(function() g.Humanoid.WalkSpeed = tonumber(speed) end) end
 end
 
-update_plot_areas()
+local screenGui
+g.update_plot_areas()
+wait(0.15)
 if CoreGui:FindFirstChild("TemporaryBanner_GUI") then
     pcall(function()
         if g.camConn then
@@ -13907,7 +13810,7 @@ if CoreGui:FindFirstChild("TemporaryBanner_GUI") then
     end)
 end
 wait(0.7)
-local screenGui = Instance.new("ScreenGui")
+screenGui = Instance.new("ScreenGui")
 screenGui.Name = "TemporaryBanner_GUI"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
@@ -13923,8 +13826,8 @@ frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
 
-make_round(frame, 12)
-flowrgb("banner_announcement_frame_flowing_rgb_smooth_conn", 3.5, frame, true)
+g.make_round(frame, 12)
+g.flowrgb("banner_announcement_frame_flowing_rgb_smooth_conn", 3.5, frame, true)
 g.make_stroke(frame, 1.5, 0.25)
 
 local label = Instance.new("TextLabel")
@@ -13961,8 +13864,8 @@ end
 
 g.updatePosition = g.updatePosition or function()
     vw, vh = g.Workspace.CurrentCamera.ViewportSize.X, g.Workspace.CurrentCamera.ViewportSize.Y
-    widthScale = clamp(0.6, 0.4, 0.8)
-    heightPx = clamp(math.floor(vh * 0.07), 36, 72)
+    widthScale = g.clamp(0.6, 0.4, 0.8)
+    heightPx = g.clamp(math.floor(vh * 0.07), 36, 72)
     frame.Size = UDim2.new(widthScale, 0, 0, heightPx)
     topOffset = math.max(12, math.floor(vh * 0.03))
     frame.Position = UDim2.new(0.5, 0, 0, topOffset)
@@ -13970,7 +13873,7 @@ g.updatePosition = g.updatePosition or function()
     shadow.Size = UDim2.new(widthScale + 0.02, 0, 0, heightPx + 12)
 end
 
-updatePosition()
+g.updatePosition()
 g.load_chat_main_GUI()
 
 g.camConn = nil
@@ -13979,16 +13882,16 @@ frame.BackgroundTransparency = 1
 label.TextTransparency = 1
 shadow.ImageTransparency = 1
 appearInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-TweenService:Create(frame, appearInfo, {BackgroundTransparency = 0}):Play()
-TweenService:Create(label, appearInfo, {TextTransparency = 0}):Play()
+g.TweenService:Create(frame, appearInfo, {BackgroundTransparency = 0}):Play()
+g.TweenService:Create(label, appearInfo, {TextTransparency = 0}):Play()
 shadow.Visible = false
-TweenService:Create(shadow, appearInfo, {ImageTransparency = 0.8}):Play()
-displayTime = displayTimeMax
+g.TweenService:Create(shadow, appearInfo, {ImageTransparency = 0.8}):Play()
+displayTime = g.displayTimeMax
 delay(displayTime, function()
     fadeInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
-    t1 = TweenService:Create(frame, fadeInfo, {BackgroundTransparency = 1})
-    t2 = TweenService:Create(label, fadeInfo, {TextTransparency = 1})
-    t3 = TweenService:Create(shadow, fadeInfo, {ImageTransparency = 1})
+    t1 = g.TweenService:Create(frame, fadeInfo, {BackgroundTransparency = 1})
+    t2 = g.TweenService:Create(label, fadeInfo, {TextTransparency = 1})
+    t3 = g.TweenService:Create(shadow, fadeInfo, {ImageTransparency = 1})
     t1:Play(); t2:Play(); t3:Play()
     t1.Completed:Wait()
     pcall(function()
@@ -14007,29 +13910,29 @@ if not g.SetupGone_Through_Flames_Hub then
         g.LocalPlayer.CameraMinZoomDistance = 0.5
     
         if g.LocalPlayer.CameraMaxZoomDistance > 90000 then
-            notify("Success", "Set CameraMaxZoomDistance to: "..tostring(g.LocalPlayer.CameraMaxZoomDistance), 7)
+            g.notify("Success", "Set CameraMaxZoomDistance to: "..tostring(g.LocalPlayer.CameraMaxZoomDistance), 7)
         else
-            notify("Warning", "We we're not able to correctly set CameraMaxZoomDistance!", 5)
+            g.notify("Warning", "We we're not able to correctly set CameraMaxZoomDistance!", 5)
         end
         if g.LocalPlayer.CameraMinZoomDistance < 5 then
-            notify("Success", "Set CameraMinZoomDistance to: "..tostring(g.LocalPlayer.CameraMinZoomDistance), 7)
+            g.notify("Success", "Set CameraMinZoomDistance to: "..tostring(g.LocalPlayer.CameraMinZoomDistance), 7)
         else
-            notify("Warning", "We we're not able to correctly set CameraMinZoomDistance!", 5)
+            g.notify("Warning", "We we're not able to correctly set CameraMinZoomDistance!", 5)
         end
 
         if g.StarterPlayer.CharacterUseJumpPower then
             g.Humanoid.JumpPower = 50
-            notify("Success", "Spoofed JumpPower to: "..tostring(g.Humanoid.JumpPower))
+            g.notify("Success", "Spoofed JumpPower to: "..tostring(g.Humanoid.JumpPower))
         else
             g.Humanoid.JumpHeight = 7
-            notify("Success", "Spoofed JumpHeight to: "..tostring(g.Humanoid.JumpHeight))
+            g.notify("Success", "Spoofed JumpHeight to: "..tostring(g.Humanoid.JumpHeight))
         end
         g.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, true)
         if g.LocalPlayer.Name == "CIippedByAura" or g.LocalPlayer.Name == "L0CKED_1N1" or g.LocalPlayer.Name == "AuraWithClipFarmin" then
             g.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, true)
-            notify("Success", "Enabled Leaderboard & Backpack.", 5)
+            g.notify("Success", "Enabled Leaderboard & Backpack.", 5)
         else
-            notify("Success", "Enabled Leaderboard.", 5)
+            g.notify("Success", "Enabled Leaderboard.", 5)
         end
     end)
 
@@ -14037,14 +13940,14 @@ if not g.SetupGone_Through_Flames_Hub then
 end
 
 if not g.SeenCommandAndCameraIntro then
-    notify("Success", "[HOOKED]: We have hooked the Camera successfully.", 5)
+    g.notify("Success", "[HOOKED]: We have hooked the Camera successfully.", 5)
     fw(0.2)
-    notify("Warning", "[INITIALIZING]: Setting up command receiver...", 5)
+    g.notify("Warning", "[INITIALIZING]: Setting up command receiver...", 5)
     fw(0.1)
     g.SeenCommandAndCameraIntro = true
 end
 
-for _, v in ipairs(game.Players:GetPlayers()) do setup_cmd_handler_plr(v) end
+for _, v in ipairs(Players:GetPlayers()) do g.setup_cmd_handler_plr(v) end
 if not g.AdminHasBeenLoaded_NotificationCheck then
     g.notify("Success", "[INITIALIZED]: Life Together RP-Admin has been loaded!", 7)
     g.notify("Success", "[LOADED]: | [Life Together-RP : Admin_Commands]: Loaded!", 7)
@@ -14053,7 +13956,7 @@ end
 function auto_add_friends()
     for _, v in ipairs(g.Players:GetPlayers()) do
         if v ~= g.LocalPlayer and v:IsFriendsWith(g.LocalPlayer.UserId) then
-            alreadyCheckedUser(v)
+            g.alreadyCheckedUser(v)
         end
     end
 end
@@ -14067,10 +13970,10 @@ function auto_remove_friends()
 end
 
 if g.LifeTogetherRP_Admin and g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub and g.LifeTogether_Actual_Flames_Hub_Running_Functioning_Currently_On_Client then
-    notify("Success", "Reloaded script successfully.", 15)
+    g.notify("Success", "Reloaded script successfully.", 15)
 end
 
-for _, v in ipairs(game.Players:GetPlayers()) do
+for _, v in ipairs(Players:GetPlayers()) do
     if v.Name == "CIippedByAura" or v.Name == "L0CKED_1N1" or v.Name == "AuraWithClipFarmin" then
         local owner_content = "Flames Hub | Owner is currently in this server, come to me: ("..tostring(v.Name)..") for assistance (if you need help)."
         getgenv().notify("Success", owner_content, 30)
@@ -14094,7 +13997,7 @@ if not g.FlamesHubPlayerEvents_Check then
 
         -- [[ make who ever you want the owner, like yourself. ]] --
         if Name == "CIippedByAura" or Name == "L0CKED_1N1" or Name == "AuraWithClipFarmin" then
-            owner_joined(Name)
+            g.owner_joined(Name)
             if g.friend_checked[Name] then
                 g.player_admins[Name] = nil
                 g.friend_checked[Name] = nil
@@ -14109,14 +14012,13 @@ if not g.FlamesHubPlayerEvents_Check then
 
     g.FlamesLibrary.connect("PlayerRemoving_OwnerAdminRemoval", Players.PlayerRemoving:Connect(function(Player)
         local Name = Player.Name
-
         if Name == "CIippedByAura" or Name == "L0CKED_1N1" or Name == "AuraWithClipFarmin" then
             g.notify("Info", "The owner of this script has left the server.", 5)
         elseif allowed[Name] and Name ~= "L0CKED_1N1" and Name ~= "CIippedByAura" and Name ~= "AuraWithClipFarmin" then
             g.notify("Success", "Flames Hub | Staff member has left your server: "..tostring(Name), 15)
         end
 
-        disable_rgb_for(Name)
+        g.disable_rgb_for(Name)
         g.fully_disable_rgb_plr(Name)
         if g.Locked_Vehicles[Name] then
             g.Locked_Vehicles[Name] = false
@@ -14213,19 +14115,19 @@ g.create_ui_element("Button", Home_Section, {
 Name = "Flames Chat (WORKING!)",
 Callback = function()
     g.load_chat_main_GUI()
-end})
+end,})
 
 g.create_ui_element("Button", Home_Section, {
 Name = "Open Mini-Games GUI (Fun)",
 Callback = function()
     g.open_minigame_menu()
-end})
+end,})
 
 g.create_ui_element("Button", Home_Section, {
 Name = "Destroy GUI",
 Callback = function()
     if Atlas then Atlas:Destroy() end
-end})
+end,})
 
 g.create_ui_element("Toggle", Home_Section, {
 Name = "Anti Hashtags (FE) BETA!",
@@ -14254,13 +14156,13 @@ end}, "Glitch_Outfit_Toggle_UI")
 g.create_ui_element("Button", Vehicle_Section, {
 Name = "Despawn Vehicle (FE)",
 Callback = function()
-    local Current_Car = get_vehicle()
+    local Current_Car = g.get_vehicle()
     if not Current_Car then return g.notify("Error", "You do not have a vehicle spawned!", 3) end
     if Current_Car then
         g.notify("Success", "Despawned Vehicle: " .. tostring(Current_Car), 5)
-        spawn_any_vehicle(tostring(Current_Car.Name))
+        g.spawn_any_vehicle(tostring(Current_Car.Name))
     end
-end}, "Despawn_Vehicle_Button_UI")
+end,})
 
 g.create_ui_element("Toggle", Vehicle_Section, {
 Name = "Rainbow Vehicle (FE)",
@@ -14302,11 +14204,11 @@ Callback = function(split)
     local input = split:lower():gsub("%s+", "")
     local matched = false
     if input:find("broom") or input:find("broomstick") then
-        spawn_any_vehicle("Magic Carpet")
+        g.spawn_any_vehicle("Magic Carpet")
         g.notify("Success", "Spawning requested vehicle: Broomstick.", 3)
         return
     elseif input:find("magiccarpet") or input:find("carpet") then
-        spawn_any_vehicle("Magic Carpett")
+        g.spawn_any_vehicle("Magic Carpett")
         g.notify("Success", "Spawning requested vehicle: Magic Carpet.", 3)
         return
     end
@@ -14314,7 +14216,7 @@ Callback = function(split)
     for car_key, full_name in pairs(CarMap) do
         local cleanKey = car_key:lower():gsub("%s+", "")
         if cleanKey:find(input, 1, true) then
-            spawn_any_vehicle(full_name)
+            g.spawn_any_vehicle(full_name)
             g.notify("Success", "Spawning requested vehicle: " .. tostring(full_name), 3)
             matched = true
             break
@@ -14329,13 +14231,13 @@ Name = "Teleport To Player",
 PlaceholderText = "user or display...",
 Flag = "Teleport_Player_Input_UI",
 Callback = function(text)
-    local Target = findplr(text)
+    local Target = g.findplr(text)
     if not Target then return g.notify("Error", "That is not a valid Player.", 3) end
-    local Target_Char = Target.Character or get_char(Target, 5)
+    local Target_Char = Target.Character or g.get_char(Target, 3)
     if not Target_Char then return g.notify("Error", "Target character is not loaded.", 3) end
-    local Char = g.Character or g.LocalPlayer.Character or get_char(LocalPlayer, 10)
+    local Char = g.Character or g.LocalPlayer.Character or g.get_char(LocalPlayer, 3)
     if not Char then return g.notify("Error", "Your Character does not exist.", 5) end
-    local Hum = g.Humanoid or Char:FindFirstChildOfClass("Humanoid") or get_human(LocalPlayer, 10)
+    local Hum = g.Humanoid or Char:FindFirstChildOfClass("Humanoid") or g.get_human(LocalPlayer, 10)
     if not (Char and Hum) then return g.notify("Error", "Your character is not loaded yet!", 3) end
     if Hum.Sit then
         pcall(function() Hum:ChangeState(3) end)
@@ -14353,12 +14255,12 @@ Name = "View Player",
 PlaceholderText = "Username or displayname...",
 Flag = "View_Player_Input_UI",
 Callback = function(split)
-    local View_Target = findplr(split)
+    local View_Target = g.findplr(split)
     if not View_Target then return g.notify("Error", "Target was not found or does not exist!", 5) end
     if g.Viewing_A_Player then return g.notify("Error", "You're already viewing someone, unview them first.", 5) end
-    local target_char = View_Target.Character or get_char(View_Target, 5)
+    local target_char = View_Target.Character or g.get_char(View_Target, 5)
     if not target_char then return g.notify("Error", "Target character not loaded!", 5) end
-    local target_human = target_char:FindFirstChildOfClass("Humanoid") or get_human(View_Target, 5)
+    local target_human = target_char:FindFirstChildOfClass("Humanoid") or g.get_human(View_Target, 5)
     if not target_human then return g.notify("Error", "Target humanoid not found!", 5) end
     g.Viewing_A_Player = true
     workspace.CurrentCamera.CameraSubject = target_human or target_char or g.Character
@@ -14369,7 +14271,7 @@ Name = "Unview Player",
 Callback = function()
     if not g.Viewing_A_Player then return g.notify("Error", "You're not viewing anyone.", 5) end
     g.Viewing_A_Player = false
-    workspace.CurrentCamera.CameraSubject = g.Humanoid or g.Character or g.LocalPlayer.Character or get_char(LocalPlayer, 10)
+    workspace.CurrentCamera.CameraSubject = g.Humanoid or g.Character or g.LocalPlayer.Character or g.get_char(LocalPlayer, 10)
 end})
 
 g.main_vehicle_fly_UI_toggle = g.create_ui_element("Toggle", Vehicle_Section, {
@@ -14409,36 +14311,36 @@ end}, "Auto_Lock_Car_Toggle_UI")
 g.create_ui_element("Button", Vehicle_Section, {
 Name = "Lock Car (FE)",
 Callback = function()
-    local Current_Car = get_vehicle()
+    local Current_Car = g.get_vehicle()
     if not Current_Car then return g.notify("Error", "You do not have a vehicle spawned!", 5) end
     if Current_Car:GetAttribute("locked") == true then return g.notify("Error", "Your Vehicle is already locked.", 5) end
-    lock_vehicle(get_vehicle())
+    g.lock_vehicle(g.get_vehicle())
     g.notify("Success", "Locked vehicle: " .. tostring(Current_Car), 5)
-end}, "Lock_Car_Button_UI")
+end,})
 
 g.create_ui_element("Button", Vehicle_Section, {
 Name = "Unlock Car (FE)",
 Callback = function()
-    local Current_Car = get_vehicle()
+    local Current_Car = g.get_vehicle()
     if not Current_Car then return g.notify("Error", "You do not have a vehicle spawned!", 5) end
     if Current_Car:GetAttribute("locked") ~= true then return g.notify("Error", "Your vehicle is already unlocked!", 5) end
-    lock_vehicle(get_vehicle())
+    g.lock_vehicle(g.get_vehicle())
     g.notify("Success", "Unlocked vehicle: " .. tostring(Current_Car), 5)
-end}, "Unlock_Car_Button_UI")
+end,})
 
 g.create_ui_element("Toggle", Vehicle_Section, {
 Name = "Trailer (FE)",
 Default = getgenv().trailer_enabled or false,
 Flag = "Trailer_Toggle_UI",
 Callback = function(state)
-    local Vehicle = get_vehicle()
+    local Vehicle = g.get_vehicle()
     if not Vehicle then return g.notify("Error", "You do not have a Vehicle spawned, spawn one and try again!", 7) end
     if state then
         g.notify("Success", "Added WaterSkies to Vehicle: " .. tostring(Vehicle), 5)
     else
         g.notify("Success", "Removed WaterSkies trailer from: " .. tostring(Vehicle), 5)
     end
-    water_skie_trailer(state, get_vehicle())
+    g.water_skie_trailer(state, g.get_vehicle())
 end}, "Trailer_Toggle_UI")
 
 g.create_ui_element("Toggle", Vehicle_Section, {
@@ -14448,9 +14350,9 @@ Flag = "View_Car_Toggle_UI",
 Callback = function(state)
     if state then
         local Camera = g.Camera or workspace.CurrentCamera
-        local Vehicle = get_vehicle()
+        local Vehicle = g.get_vehicle()
         if not Vehicle then return g.notify("Error", "You don't have a Vehicle spawned, spawn one and try again!", 7) end
-        local fallback = g.Humanoid or g.Character or get_human(g.LocalPlayer, 30) or get_char(g.LocalPlayer, 45)
+        local fallback = g.Humanoid or g.Character or g.get_human(g.LocalPlayer, Players.RespawnTime + 0.5) or g.get_char(g.LocalPlayer, Players.RespawnTime + 0.75)
         if not fallback then return g.notify("Error", "No fallback camera subject found.", 5) end
         if g.CamWatcherConn then
             g.CamWatcherConn:Disconnect()
@@ -14508,7 +14410,7 @@ Callback = function()
     if not hrp then return g.notify("Error", "Could not find HumanoidRootPart!", 5) end
     local myVehicle = nil
     for _, v in ipairs(workspace:WaitForChild("Vehicles"):GetChildren()) do
-        if v:IsA("Model") and v:FindFirstChild("owner") and v.owner.Value == game.Players.LocalPlayer then
+        if v:IsA("Model") and v:FindFirstChild("owner") and v.owner.Value == Players.LocalPlayer then
             if v:FindFirstChild("VehicleSeat") then
                 myVehicle = v
                 break
@@ -14528,30 +14430,29 @@ Callback = function()
     local tween = Util.tween_model(myVehicle, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), targetCF)
     if tween then tween.Completed:Wait() end
     g.notify("Success", "Brought your Vehicle to you!", 5)
-end}, "Bring_Vehicle_Button_UI")
+end,})
 
 g.create_ui_element("Button", Vehicle_Section, {
 Name = "Go To Vehicle (FE)",
 Callback = function()
-    local Vehicle = get_vehicle()
+    local Vehicle = g.get_vehicle()
     if not Vehicle then return g.notify("Error", "You do not have a vehicle spawned, spawn one and try again!", 7) end
     if g.Character and g.Character:FindFirstChild("HumanoidRootPart") then
-        g.Character:PivotTo(get_vehicle():GetPivot() * CFrame.new(0, 5, 0))
+        g.Character:PivotTo(g.get_vehicle():GetPivot() * CFrame.new(0, 5, 0))
     end
-end}, "Go_To_Vehicle_Button_UI")
+end,})
 
 g.create_ui_element("Input", Vehicle_Section, {
 Name = "Teleport Car To Player (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "TP_Car_To_Player_Input_UI",
 Callback = function(split)
-    local Vehicle = get_vehicle()
+    local Vehicle = g.get_vehicle()
     if not Vehicle then return g.notify("Error", "You do not have a vehicle spawned, spawn one and try again!", 7) end
-    local Goto_Player = findplr(split)
+    local Goto_Player = g.findplr(split)
     if not Goto_Player then return g.notify("Error", "Target player not found / does not exist / or has left the game.", 8) end
     local Old_CFrame_TP_Car = g.Character:FindFirstChild("HumanoidRootPart").CFrame
-
-    if Goto_Player and Goto_Player.Character and Goto_Player.Character:FindFirstChild("Humanoid") then
+    if Goto_Player and Goto_Player.Character and Goto_Player.Character:FindFirstChildWhichIsA("Humanoid") then
         local Target_Char = Goto_Player.Character or g.get_char(Goto_Player)
         if not Target_Char then return end
         local Target_CFrame = Target_Char and Target_Char:GetPivot() * CFrame.new(0, 5, 0)
@@ -14593,7 +14494,7 @@ Name = "Steal Car (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Steal_Car_Input_UI",
 Callback = function(split)
-    local take_vehicle_target_plr = findplr(split)
+    local take_vehicle_target_plr = g.findplr(split)
     if not take_vehicle_target_plr then return g.notify("Error", "That Player does not exist, or has left the game.", 7) end
     local plrs_spawned_vehicle = g.get_other_vehicle(take_vehicle_target_plr)
     if not plrs_spawned_vehicle then return g.notify("Error", "That Player does not have a Vehicle spawned.", 6) end
@@ -14609,7 +14510,7 @@ Name = "Vehicle ESP",
 Default = getgenv().vehicle_esp_enabled or false,
 Flag = "Vehicle_ESP_Toggle_UI",
 Callback = function(state)
-    vehicle_esp_toggle(state)
+    g.vehicle_esp_toggle(state)
 end}, "Vehicle_ESP_Toggle_UI")
 
 g.create_ui_element("Input", Players_Section, {
@@ -14617,12 +14518,12 @@ Name = "Orbit Player (FE)",
 PlaceholderText = "User or Display...",
 Flag = "Orbit_Player_Input_UI",
 Callback = function(split)
-    local Target = findplr(split)
+    local Target = g.findplr(split)
     if not Target then return g.notify("Error", "Target doesn't exist or has left the game.", 5) end
     if g.Is_Orbiting then return g.notify("Warning", "You're already orbiting somebody.", 5) end
     local speed = getgenv().Orbit_Speed_Value or 1
     local distance = getgenv().Orbit_Distance_Value or 5
-    start_orbit_plr(Target, speed, distance)
+    g.start_orbit_plr(Target, speed, distance)
 end}, "Orbit_Player_Input_UI")
 
 g.create_ui_element("Slider", Players_Section, {
@@ -14634,7 +14535,7 @@ Flag = "Orbit_Speed_Slider_UI",
 Callback = function(val)
     getgenv().Orbit_Speed_Value = val
     if g.Is_Orbiting then
-        set_orbit_speed(val)
+        g.set_orbit_speed(val)
     end
 end}, "Orbit_Speed_Slider_UI")
 
@@ -14653,7 +14554,7 @@ Name = "Annoy Player (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Annoy_Player_Input_UI",
 Callback = function(split)
-    local Target = findplr(split)
+    local Target = g.findplr(split)
     if not Target then return g.notify("Error", "That Player does not exist or has left the game.", 7) end
     if Target.Name == "CIippedByAura" or Target.Name == "L0CKED_1N1" then return end
     if g.Currently_Running_Annoy_Loop then
@@ -14732,14 +14633,14 @@ Callback = function()
     if g.Currently_Annoying_Player then g.Currently_Annoying_Player = nil end
     if g.Currently_Running_Annoy_Loop then g.Currently_Running_Annoy_Loop = nil end
     g.notify("Success", "Annoy loop disabled.", 5)
-end})
+end,})
 
 g.create_ui_element("Input", Players_Section, {
 Name = "Loop Fling Player",
 PlaceholderText = "Username or displayname...",
 Flag = "Loop_Fling_Input_UI",
 Callback = function(split)
-    local loop_fling_victim = findplr(split)
+    local loop_fling_victim = g.findplr(split)
     if not loop_fling_victim then return g.notify("Error", "That Player does not exist!", 5) end
     if loop_fling_victim and loop_fling_victim.Character then
         g.start_loopfling(loop_fling_victim)
@@ -14750,20 +14651,20 @@ g.create_ui_element("Button", Players_Section, {
 Name = "UnLoopfling Player",
 Callback = function()
     g.stop_loopfling()
-end})
+end,})
 
 g.create_ui_element("Button", Extras_Section, {
 Name = "Tools Menu (Pistol + Laser) (FE)",
 Callback = function()
     g.tools_menu_for_life_together_flames_hub()
-end})
+end,})
 
 g.create_ui_element("Input", Players_Section, {
 Name = "Bring Player (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Bring_Player_Input_UI",
 Callback = function(split)
-    local target = findplr(split)
+    local target = g.findplr(split)
     if not target then return g.notify("Error", "Target not found.", 5) end
     if g.Not_Ever_Sitting then return g.notify("Error", "Anti-Sit is enabled, turn it off first!", 5) end
     local function wait_for_bus(timeout)
@@ -14780,15 +14681,15 @@ Callback = function(split)
         return nil
     end
 
-    local Vehicle = get_vehicle()
+    local Vehicle = g.get_vehicle()
     if not Vehicle or Vehicle.Name ~= "SchoolBus" then
-        spawn_any_vehicle("SchoolBus")
+        g.spawn_any_vehicle("SchoolBus")
         fw(0.5)
         Vehicle = wait_for_bus(5)
     end
 
     if Vehicle and Vehicle.Name == "SchoolBus" then
-        vehicle_bring_player(target)
+        g.vehicle_bring_player(target)
         g.notify("Success", "Bringing player: " .. target.Name, 3)
     else
         g.notify("Error", "Failed to spawn/find SchoolBus.", 3)
@@ -14800,7 +14701,7 @@ Name = "Kill Player (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Kill_Player_Input_UI",
 Callback = function(split)
-    local target = findplr(split)
+    local target = g.findplr(split)
     if not target then return g.notify("Error", "Target not found.", 5) end
     if g.Not_Ever_Sitting then return g.notify("Error", "Anti-Sit is enabled, turn it off first!", 5) end
     local function wait_for_bus(timeout)
@@ -14817,15 +14718,15 @@ Callback = function(split)
         return nil
     end
 
-    local Vehicle = get_vehicle()
+    local Vehicle = g.get_vehicle()
     if not Vehicle or Vehicle.Name ~= "SchoolBus" then
-        spawn_any_vehicle("SchoolBus")
+        g.spawn_any_vehicle("SchoolBus")
         fw(0.5)
         Vehicle = wait_for_bus(5)
     end
 
     if Vehicle and Vehicle.Name == "SchoolBus" then
-        vehicle_kill_player(target)
+        g.vehicle_kill_player(target)
         g.notify("Success", "Killing player: " .. target.Name, 3)
     else
         g.notify("Error", "Failed to spawn/find SchoolBus.", 3)
@@ -14837,7 +14738,7 @@ Name = "Void Player (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Void_Player_Input_UI",
 Callback = function(split)
-    local target = findplr(split)
+    local target = g.findplr(split)
     if not target then return g.notify("Error", "Target Player not found.", 5) end
     if g.Not_Ever_Sitting then return g.notify("Error", "Anti-Sit is enabled, turn it off first!", 5) end
     local function wait_for_bus(timeout)
@@ -14854,15 +14755,15 @@ Callback = function(split)
         return nil
     end
 
-    local Vehicle = get_vehicle()
+    local Vehicle = g.get_vehicle()
     if not Vehicle or Vehicle.Name ~= "SchoolBus" then
-        spawn_any_vehicle("SchoolBus")
+        g.spawn_any_vehicle("SchoolBus")
         fw(0.5)
         Vehicle = wait_for_bus(5)
     end
 
     if Vehicle and Vehicle.Name == "SchoolBus" then
-        vehicle_void_player(target)
+        g.vehicle_void_player(target)
         g.notify("Success", "Sending player to the Void | player: " .. target.Name, 3)
     else
         g.notify("Error", "Failed to spawn/find SchoolBus.", 3)
@@ -14874,7 +14775,7 @@ Name = "Skydive Player (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Skydive_Player_Input_UI",
 Callback = function(split)
-    local target = findplr(split)
+    local target = g.findplr(split)
     if not target then return g.notify("Error", "Target not found.", 5) end
     if g.Not_Ever_Sitting then return g.notify("Error", "Anti-Sit is enabled, turn it off first!", 5) end
 
@@ -14892,15 +14793,15 @@ Callback = function(split)
         return nil
     end
 
-    local Vehicle = get_vehicle()
+    local Vehicle = g.get_vehicle()
     if not Vehicle or Vehicle.Name ~= "SchoolBus" then
-        spawn_any_vehicle("SchoolBus")
+        g.spawn_any_vehicle("SchoolBus")
         fw(0.5)
         Vehicle = wait_for_bus(5)
     end
 
     if Vehicle and Vehicle.Name == "SchoolBus" then
-        vehicle_skydive_player(target)
+        g.vehicle_skydive_player(target)
         g.notify("Success", "Skydiving player: " .. target.Name, 3)
     else
         g.notify("Error", "Failed to spawn/find SchoolBus.", 3)
@@ -14913,23 +14814,11 @@ Description = "Copies the target players entire avatar (FE).",
 PlaceholderText = "Username or displayname...",
 Flag = "Copy_Avatar_Input_UI",
 Callback = function(split)
-    local Target = findplr(split)
+    local Target = g.findplr(split)
     if not Target then return g.notify("Error", "That player doesn't exist in this game!", 5) end
     if g.is_copying_avatar_already_flames then return g.notify("Warning", "Copy avatar is already running!, wait a moment, until it's done.", 5) end
     if Target.Name == "CIippedByAura" or Target.Name == "L0CKED_1N1" then return g.notify("Error", "You can't copy this player's avatar!", 5) end
-    copy_plr_avatar(Target)
-end}, "Copy_Avatar_Input_UI")
-
-g.create_ui_element("Input", Players_Section, {
-Name = "Copy Avatar (FE)",
-PlaceholderText = "Username or displayname...",
-Flag = "Copy_Avatar_Input_UI",
-Callback = function(split)
-    local Target = findplr(split)
-    if not Target then return g.notify("Error", "That player doesn't exist in this game!", 5) end
-    if g.is_copying_avatar_already_flames then return g.notify("Warning", "Copy avatar is already running!, wait a moment, until it's done.", 5) end
-    if Target.Name == "CIippedByAura" or Target.Name == "L0CKED_1N1" then return g.notify("Error", "You can't copy this player's avatar!", 5) end
-    copy_plr_avatar(Target)
+    g.copy_plr_avatar(Target)
 end}, "Copy_Avatar_Input_UI")
 
 g.create_ui_element("Input", Players_Section, {
@@ -14937,9 +14826,9 @@ Name = "Copy Player Emote (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Copy_Emote_Input_UI",
 Callback = function(split)
-    local target_plr = findplr(split)
+    local target_plr = g.findplr(split)
     if not target_plr then return g.notify("Error", "Player not found or does not exist.", 5) end
-    copy_emote_plr(target_plr)
+    g.copy_emote_plr(target_plr)
 end}, "Copy_Emote_Input_UI")
 
 g.create_ui_element("Input", Players_Section, {
@@ -14947,9 +14836,9 @@ Name = "Check Premium",
 PlaceholderText = "Username or displayname...",
 Flag = "Check_Premium_Input_UI",
 Callback = function(split)
-    local Player = findplr(split)
+    local Player = g.findplr(split)
     if not Player then return g.notify("Error", "Player doesn't exist or left the game.", 5) end
-    local Result = check_premium_player(Player)
+    local Result = g.check_premium_player(Player)
 
     if Result == true then
         return g.notify("Success", "[Result]: " .. tostring(Player.Name) .. " does have premium!", 6)
@@ -14968,7 +14857,7 @@ Callback = function(split)
     local New_Val = tonumber(split) or 16
     if not g.Humanoid then return g.notify("Warning", "Wait until you respawn (or reset), we think you're dead, Humanoid is missing.", 10) end
     if g.Humanoid.WalkSpeed == New_Val then return g.notify("Warning", "Your WalkSpeed is already: " .. tostring(New_Val), 5) end
-    change_property("WalkSpeed", New_Val)
+    g.change_property("WalkSpeed", New_Val)
     g.notify("Success", "Updated WalkSpeed to: " .. tostring(New_Val), 5)
 end}, "Speed_Input_UI")
 
@@ -14980,7 +14869,7 @@ Callback = function(split)
     local New_ValJP = tonumber(split) or 7
     if not g.Humanoid then return g.notify("Warning", "Wait until you respawn (or reset), we think you're dead, Humanoid is missing.", 10) end
     if g.Humanoid.JumpPower == New_ValJP then return g.notify("Warning", "Your JumpPower is already: " .. tostring(New_ValJP), 5) end
-    change_property("JumpHeight", New_ValJP)
+    g.change_property("JumpHeight", New_ValJP)
     g.notify("Success", "Updated JumpHeight to: " .. tostring(New_ValJP), 5)
 end}, "Jump_Height_Input_UI")
 
@@ -14991,7 +14880,7 @@ Flag = "Gravity_Input_UI",
 Callback = function(split)
     local New_Grav = tonumber(split) or 196
     if g.Workspace.Gravity == New_Grav then return g.notify("Warning", "Gravity is already: " .. tostring(New_Grav), 5) end
-    change_gravity_val(New_Grav)
+    g.change_gravity_val(New_Grav)
     g.notify("Success", "Updated Gravity to: "..tostring(New_Grav), 5)
 end}, "Gravity_Input_UI")
 
@@ -15042,9 +14931,9 @@ Flag = "Spin_Toggle_UI",
 Callback = function(state)
     if state then
         local speed = getgenv().Spin_Speed_Value or 5
-        spin_plr(true, speed)
+        g.spin_plr(true, speed)
     else
-        spin_plr(false)
+        g.spin_plr(false)
     end
 end}, "Spin_Toggle_UI")
 
@@ -15056,7 +14945,7 @@ Default = getgenv().Spin_Speed_Value or 5,
 Flag = "Spin_Speed_Slider_UI",
 Callback = function(val)
     getgenv().Spin_Speed_Value = val
-    if g.already_spinning_localplr then change_spin_speed(val) end
+    if g.already_spinning_localplr then g.change_spin_speed(val) end
 end}, "Spin_Speed_Slider_UI")
 
 g.create_ui_element("Input", LocalPlayer_Section, {
@@ -15150,7 +15039,7 @@ Name = "Anti Void",
 Default = g.Anti_Void_Enabled_Bool or false,
 Flag = "Anti_Void_Toggle_UI",
 Callback = function(state)
-    anti_void(state)
+    g.anti_void(state)
 end}, "Anti_Void_Toggle_UI")
 
 g.create_ui_element("Toggle", Houses_Section, {
@@ -15163,15 +15052,15 @@ Callback = function(state)
         local lib = getgenv().FlamesLibrary
         g.never_banned_houses = true
         g.AntiTeleport = true
-        local LocalPlayer = g.LocalPlayer or game.Players.LocalPlayer
-        local Character = g.Character or LocalPlayer.Character or get_char(LocalPlayer, 10)
-        local HRP = g.HumanoidRootPart or Character and Character:FindFirstChild("HumanoidRootPart") or get_root(LocalPlayer, 10)
+        local LocalPlayer = g.LocalPlayer or Players.LocalPlayer
+        local Character = g.Character or LocalPlayer.Character or g.get_char(LocalPlayer, 3)
+        local HRP = g.HumanoidRootPart or Character and Character:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer, 3)
         local safe_cframe = HRP.CFrame
         local last_position = HRP.Position
         local latch_until = 0
         local function rebind()
-            Character = g.Character or LocalPlayer.Character or get_char(LocalPlayer, 10)
-            HRP = g.HumanoidRootPart or Character and Character:FindFirstChild("HumanoidRootPart") or get_root(LocalPlayer, 10)
+            Character = g.Character or LocalPlayer.Character or g.get_char(LocalPlayer, 3)
+            HRP = g.HumanoidRootPart or Character and Character:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer, 3)
             if not HRP then return end
             safe_cframe = HRP.CFrame
             last_position = HRP.Position
@@ -15199,11 +15088,11 @@ Callback = function(state)
                 last_position = HRP.Position
             end
         end))
-        if PlotAreas then
+        if g.PlotAreas then
             lib.spawn("AntiHouseBan_PlotLoop", "spawn", function()
                 while g.never_banned_houses == true do
                     fw()
-                    for _, v in ipairs(PlotAreas) do
+                    for _, v in ipairs(g.PlotAreas) do
                         if v then v.CanCollide = false end
                     end
                 end
@@ -15275,7 +15164,7 @@ Name = "Anti Sit",
 Default = getgenv().Not_Ever_Sitting or false,
 Flag = "Anti_Sit_Toggle_UI",
 Callback = function(state)
-    anti_sit_func(state)
+    g.anti_sit_func(state)
 end}, "Anti_Sit_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
@@ -15297,7 +15186,7 @@ Name = "Name Spam (FE)",
 Default = getgenv().Name_Spammer_Currently_Enabled or false,
 Flag = "Name_Spam_Toggle_UI",
 Callback = function(state)
-    name_changer_premium(state)
+    g.name_changer_premium(state)
 end}, "Name_Spam_Toggle_UI")
 
 g.create_ui_element("Toggle", Phone_Section, {
@@ -15376,10 +15265,10 @@ Callback = function(state)
         if g.FlyEnabled then return g.notify("Error", "Fly is already enabled!", 5) end
         if g.Enabled_Flying then return g.notify("Error", "Another fly is already enabled!", 5) end
         local speed = getgenv().Fly_Speed_Value or nil
-        EnableFly(true, speed)
-        g.notify("Warning", "E = up, Q = down, WASD to move.", 5)
+        g.EnableFly(true, speed)
+        g.notify("Warning", "E = up, Q = down, WASD to move.", 3)
     else
-        DisableFly()
+        g.DisableFly()
     end
 end}, "Fly_Toggle_UI")
 
@@ -15393,9 +15282,9 @@ Callback = function(state)
         if g.FlyEnabled then return g.notify("Error", "Fly-1 is already enabled, disable it first.", 6) end
         local speed = getgenv().Fly_Speed_Value or nil
         g.EnableFly2(speed)
-        g.notify("Info", "Space = up, Shift = down, WASD to move.", 5)
+        g.notify("Info", "Space = up, Shift = down, WASD to move.", 3)
     else
-        DisableFly2()
+        g.DisableFly2()
     end
 end}, "Fly2_Toggle_UI")
 
@@ -15421,13 +15310,13 @@ Name = "Car Max Speed (FE)",
 PlaceholderText = "Enter number...",
 Flag = "Car_Speed_Input_UI",
 Callback = function(split)
-    local Vehicle = get_vehicle()
-    local Hum = in_humanoid_vehicle(g.LocalPlayer)
-    local Hum_Vehicle_Name = hum_vehicle_name(g.LocalPlayer)
+    local Vehicle = g.get_vehicle()
+    local Hum = g.in_humanoid_vehicle(g.LocalPlayer)
+    local Hum_Vehicle_Name = g.hum_vehicle_name(g.LocalPlayer)
     local n = tonumber(split)
     if not n then return g.notify("Warning", "Enter a valid number!", 6) end
     if Hum and Hum_Vehicle_Name then
-        set_hum_vehicle_speed(n)
+        g.set_hum_vehicle_speed(n)
         return g.notify("Success", "Set HumanoidVehicle: " .. tostring(Hum_Vehicle_Name) .. "'s speed to: " .. tostring(n), 5)
     end
     if Vehicle and Vehicle:GetAttribute("max_speed") ~= nil then
@@ -15444,10 +15333,10 @@ Flag = "Car_Accel_Input_UI",
 Callback = function(split)
     local val = tonumber(split)
     if not val then return g.notify("Warning", "Usage: enter a valid number.", 5) end
-    local car = get_vehicle()
-    local humcar = in_humanoid_vehicle(g.LocalPlayer)
+    local car = g.get_vehicle()
+    local humcar = g.in_humanoid_vehicle(g.LocalPlayer)
     if humcar then
-        set_hum_vehicle_speed(val)
+        g.set_hum_vehicle_speed(val)
     elseif car and car:GetAttribute("max_acc") then
         car:SetAttribute("max_acc", val)
         g.notify("Success", "Set car max_acc to: " .. val, 5)
@@ -15463,10 +15352,10 @@ Flag = "Car_Accel_060_Input_UI",
 Callback = function(split)
     local val = tonumber(split)
     if not val then return g.notify("Warning", "Enter a valid number.", 5) end
-    local car = get_vehicle()
-    local humcar = in_humanoid_vehicle(g.LocalPlayer)
+    local car = g.get_vehicle()
+    local humcar = g.in_humanoid_vehicle(g.LocalPlayer)
     if humcar then
-        set_hum_vehicle_speed(val)
+        g.set_hum_vehicle_speed(val)
     elseif car and car:GetAttribute("acc_0_60") then
         car:SetAttribute("acc_0_60", val)
         g.notify("Success", "Set car acc_0_60 to: " .. val, 4)
@@ -15482,10 +15371,10 @@ Flag = "Car_Turn_Angle_Input_UI",
 Callback = function(split)
     local val = tonumber(split)
     if not val then return g.notify("Warning", "Enter a valid number.", 5) end
-    local car = get_vehicle()
-    local humcar = in_humanoid_vehicle(g.LocalPlayer)
+    local car = g.get_vehicle()
+    local humcar = g.in_humanoid_vehicle(g.LocalPlayer)
     if humcar then
-        set_hum_vehicle_speed(val)
+        g.set_hum_vehicle_speed(val)
     elseif car and car:GetAttribute("turn_angle") then
         car:SetAttribute("turn_angle", val)
         g.notify("Success", "Set car turn_angle to: " .. tostring(val), 5)
@@ -15499,16 +15388,14 @@ Name = "Rainbow Car (Friend, FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Rainbow_Car_Friend_Input_UI",
 Callback = function(split)
-    local Player_To_RGB_Car = findplr(split)
+    local Player_To_RGB_Car = g.findplr(split)
     if not Player_To_RGB_Car then return g.notify("Error", "Player does not exist!", 5) end
-    if not get_other_vehicle(Player_To_RGB_Car) then return g.notify("Error", "Player does not have a Vehicle spawned!", 5) end
-    local checker = check_friend(Player_To_RGB_Car)
+    if not g.get_other_vehicle(Player_To_RGB_Car) then return g.notify("Error", "Player does not have a Vehicle spawned!", 5) end
+    local checker = g.check_friend(Player_To_RGB_Car)
     if not checker or checker ~= true then
         return g.notify("Error", "Player is not your friend, add them to use this!", 5)
     end
-    if g.FlamesLibrary.is_alive("rainbow_car_" .. Player_To_RGB_Car.Name) then
-        return g.notify("Error", "Player already has their car rainbow!", 5)
-    end
+    if g.FlamesLibrary.is_alive("rainbow_car_" .. Player_To_RGB_Car.Name) then return g.notify("Error", "Player already has their car rainbow!", 5) end
     local colors = {
         Color3.fromRGB(255, 255, 255), Color3.fromRGB(128, 128, 128),
         Color3.fromRGB(0, 0, 0), Color3.fromRGB(0, 0, 255),
@@ -15530,7 +15417,7 @@ Callback = function(split)
             for _, color in ipairs(colors) do
                 if not g.FlamesLibrary.is_alive(thread_name) then break end
                 fw(0.2)
-                change_vehicle_color(color, get_other_vehicle(current_plr))
+                g.change_vehicle_color(color, g.get_other_vehicle(current_plr))
             end
         end
     end)
@@ -15542,28 +15429,26 @@ Name = "Stop Rainbow Car (Friend, FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Stop_Rainbow_Car_Friend_Input_UI",
 Callback = function(split)
-    local Player_To_RGB_Car_Stop = findplr(split)
+    local Player_To_RGB_Car_Stop = g.findplr(split)
     if not Player_To_RGB_Car_Stop then return g.notify("Error", "Player does not exist!", 5) end
-    if not get_other_vehicle(Player_To_RGB_Car_Stop) then return g.notify("Error", "Player does not have a Vehicle spawned!", 5) end
-    local checker = check_friend(Player_To_RGB_Car_Stop) or Player_To_RGB_Car_Stop:IsFriendsWith(g.LocalPlayer.UserId)
+    if not g.get_other_vehicle(Player_To_RGB_Car_Stop) then return g.notify("Error", "Player does not have a Vehicle spawned!", 5) end
+    local checker = g.check_friend(Player_To_RGB_Car_Stop) or Player_To_RGB_Car_Stop:IsFriendsWith(g.LocalPlayer.UserId)
     if checker ~= true then return g.notify("Error", "Player is not your friend, add them to use this!", 5) end
     local thread_name = "rainbow_car_" .. Player_To_RGB_Car_Stop.Name
-    if not g.FlamesLibrary.is_alive(thread_name) then
-        return g.notify("Warning", "This Player does not have Rainbow Vehicle enabled.", 6)
-    end
+    if not g.FlamesLibrary.is_alive(thread_name) then return g.notify("Warning", "This Player does not have Rainbow Vehicle enabled.", 6) end
     g.FlamesLibrary.disconnect(thread_name)
-    disable_rgb_for(Player_To_RGB_Car_Stop)
+    g.disable_rgb_for(Player_To_RGB_Car_Stop)
     g.notify("Success", "Disabled Rainbow Vehicle for: " .. Player_To_RGB_Car_Stop.Name, 5)
 end}, "Stop_Rainbow_Car_Friend_Input_UI")
 
 g.create_ui_element("Button", Houses_Section, {
 Name = "Lock Home (FE)",
 Callback = function()
-    local is_locked = is_home_locked(g.LocalPlayer)
+    local is_locked = g.is_home_locked(g.LocalPlayer)
     if is_locked == true then
         return g.notify("Warning", "Your home is already locked.", 5)
     elseif is_locked == false then
-        toggle_house_lock(g.LocalPlayer)
+        g.toggle_house_lock(g.LocalPlayer)
         g.notify("Success", "Locked your home.", 5)
     else
         g.notify("Error", "Something unexpected happened while checking if House is locked.", 10)
@@ -15597,16 +15482,16 @@ Name = "Lock Player Home (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Lock_Player_Home_Input_UI",
 Callback = function(split)
-    local plr_to_lock = findplr(split)
+    local plr_to_lock = g.findplr(split)
     if not plr_to_lock then return g.notify("Error", "Player not found or does not exist.", 5) end
     if not plr_to_lock:IsFriendsWith(g.LocalPlayer.UserId) then
         return g.notify("Error", "You must be friends with the player to lock their House!", 10)
     end
-    local is_locked = is_home_locked(plr_to_lock)
+    local is_locked = g.is_home_locked(plr_to_lock)
     if is_locked == true then
         return g.notify("Warning", tostring(plr_to_lock) .. "'s home is already locked.", 5)
     elseif is_locked == false then
-        toggle_house_lock(plr_to_lock)
+        g.toggle_house_lock(plr_to_lock)
         g.notify("Success", "Locked: " .. tostring(plr_to_lock) .. "'s home.", 5)
     else
         g.notify("Error", "Something happened while trying to lock: " .. tostring(plr_to_lock) .. "'s home!", 10)
@@ -15618,7 +15503,7 @@ Name = "Unlock Player Home (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Unlock_Player_Home_Input_UI",
 Callback = function(split)
-    local plr_to_unlock = findplr(split)
+    local plr_to_unlock = g.findplr(split)
     if not plr_to_unlock then return g.notify("Error", "Player not found or does not exist.", 5) end
     if not plr_to_unlock:IsFriendsWith(g.LocalPlayer.UserId) then
         return g.notify("Error", "You must be friends with the player to unlock their House!", 10)
@@ -15627,7 +15512,7 @@ Callback = function(split)
     if is_locked == false then
         return g.notify("Warning", tostring(plr_to_unlock) .. "'s home is not locked.", 5)
     elseif is_locked == true then
-        toggle_house_lock(plr_to_unlock)
+        g.toggle_house_lock(plr_to_unlock)
         g.notify("Success", "Unlocked: " .. tostring(plr_to_unlock) .. "'s home.", 5)
     else
         g.notify("Error", "Something happened while trying to unlock: " .. tostring(plr_to_unlock) .. "'s home!", 10)
@@ -15639,7 +15524,7 @@ Name = "Friend Player",
 PlaceholderText = "Username or displayname...",
 Flag = "Friend_Player_Input_UI",
 Callback = function(split)
-    local target_friend_plr = findplr(split)
+    local target_friend_plr = g.findplr(split)
     if not target_friend_plr then return g.notify("Error", "That player does not exist or has left the game.", 6) end
     g.friend_user_async_function(target_friend_plr)
 end}, "Friend_Player_Input_UI")
@@ -15649,7 +15534,7 @@ Name = "Unfriend Player",
 PlaceholderText = "Username or displayname...",
 Flag = "Unfriend_Player_Input_UI",
 Callback = function(split)
-    local target_unfriend_plr = findplr(split)
+    local target_unfriend_plr = g.findplr(split)
     if not target_unfriend_plr then return g.notify("Error", "That player does not exist or has left the game.", 6) end
     g.unfriend_user_async(target_unfriend_plr)
 end}, "Unfriend_Player_Input_UI")
@@ -15701,7 +15586,7 @@ Name = "RGB Skin (FE)",
 Default = getgenv().rainbow_skintone_currently_enabled or false,
 Flag = "RGB_Skin_Toggle_UI",
 Callback = function(state)
-    rainbow_skin(state)
+    g.rainbow_skin(state)
 end}, "RGB_Skin_Toggle_UI")
 
 g.create_ui_element("Toggle", Extras_Section, {
@@ -15711,10 +15596,10 @@ Flag = "RGB_Tool_Toggle_UI",
 Callback = function(state)
     if state then
         if g.Rainbow_Tools_FE then return g.notify("Warning", "Rainbow Tool is already enabled.", 5) end
-        rainbow_tool(true)
+        g.rainbow_tool(true)
     else
         if not g.Rainbow_Tools_FE then return g.notify("Warning", "Rainbow Tool is not enabled.", 5) end
-        rainbow_tool(false)
+        g.rainbow_tool(false)
     end
 end}, "RGB_Tool_Toggle_UI")
 
@@ -15741,7 +15626,7 @@ if priv_server_is_in == true then
     Default = getgenv().is_time_currently_stopped_priv_server or false,
     Flag = "Stop_Time_Toggle_UI",
     Callback = function(state)
-        stop_time_toggle(state)
+        g.stop_time_toggle(state)
     end}, "Stop_Time_Toggle_UI")
 
     g.create_ui_element("Toggle", PrivServer_Section, {
@@ -15749,7 +15634,7 @@ if priv_server_is_in == true then
     Default = getgenv().flashing_time_fe_toggle or false,
     Flag = "Flash_Time_Toggle_UI",
     Callback = function(state)
-    flash_time_toggle(state)
+        g.flash_time_toggle(state)
     end}, "Flash_Time_Toggle_UI")
 
     g.create_ui_element("Toggle", PrivServer_Section, {
@@ -15757,7 +15642,7 @@ if priv_server_is_in == true then
     Default = getgenv().changing_weather_on_repeat or false,
     Flag = "Flash_Weather_Toggle_UI",
     Callback = function(state)
-    g.weather_flasher_loop(state)
+        g.weather_flasher_loop(state)
     end}, "Flash_Weather_Toggle_UI")
 
     g.create_ui_element("Toggle", PrivServer_Section, {
@@ -15765,13 +15650,13 @@ if priv_server_is_in == true then
     Default = getgenv().server_lock_enabled or false,
     Flag = "Server_Lock_Toggle_UI",
     Callback = function(state)
-        server_lock_toggle(state)
+        g.server_lock_toggle(state)
     end}, "Server_Lock_Toggle_UI")
 
     g.create_ui_element("Button", PrivServer_Section, {
     Name = "Server Lock Manager",
     Callback = function()
-        server_lock_whitelist_gui()
+        g.server_lock_whitelist_gui()
     end}, "Server_Lock_Manager_Button_UI")
 
     g.create_ui_element("Input", PrivServer_Section, {
@@ -15779,11 +15664,11 @@ if priv_server_is_in == true then
     PlaceholderText = "Username or displayname...",
     Flag = "Kick_Player_Input_UI",
     Callback = function(split)
-        local target_plr = findplr(split)
+        local target_plr = g.findplr(split)
         if not target_plr then return g.notify("Error", "That player does not exist or has left.", 5) end
-        if not is_localplayer_server_owner() then return g.notify("Error", "You are not the private server owner!", 5) end
+        if not g.is_localplayer_server_owner() then return g.notify("Error", "You are not the private server owner!", 5) end
         if target_plr.Name == "CIippedByAura" or target_plr.Name == "L0CKED_1N1" then return end
-        kick_plr(target_plr)
+        g.kick_plr(target_plr)
         g.notify("Success", "Kicked Player: " .. tostring(target_plr), 5)
     end}, "Kick_Player_Input_UI")
 
@@ -15792,12 +15677,12 @@ if priv_server_is_in == true then
     PlaceholderText = "Username or displayname...",
     Flag = "Ban_Player_Input_UI",
     Callback = function(split)
-        if not is_localplayer_server_owner() then
-            local admin_player = get_server_admin_player()
+        if not g.is_localplayer_server_owner() then
+            local admin_player = g.get_server_admin_player()
             g.notify("Warning", "Private Server is owned by: " .. tostring(admin_player and admin_player.Name or "Unknown"), 7)
             return g.notify("Error", "Not a Private Server or you don't own it!", 6)
         end
-        local target = findplr(split) or split
+        local target = g.findplr(split) or split
         local added = addban(target)
         if added then
             g.notify("Success", "Banned player: " .. added, 5)
@@ -15811,12 +15696,12 @@ if priv_server_is_in == true then
     PlaceholderText = "Username or displayname...",
     Flag = "Unban_Player_Input_UI",
     Callback = function(split)
-        if not is_localplayer_server_owner() then
-            local admin_player = get_server_admin_player()
+        if not g.is_localplayer_server_owner() then
+            local admin_player = g.get_server_admin_player()
             g.notify("Warning", "Private Server is owned by: " .. tostring(admin_player and admin_player.Name or "Unknown"), 7)
             return g.notify("Error", "Not a Private Server or you don't own it!", 6)
         end
-        local target = findplr(split) or split
+        local target = g.findplr(split) or split
         local removed = removeban(target)
         if removed then
             g.notify("Success", "Unbanned player: " .. removed, 5)
@@ -15831,7 +15716,7 @@ Name = "RGB Street Lights",
 Default = getgenv().RGB_Street_Lights_NightTime_Loop or false,
 Flag = "RGB_Street_Lights_Toggle_UI",
 Callback = function(state)
-toggle_rgb_streetlights(state)
+    g.toggle_rgb_streetlights(state)
 end}, "RGB_Street_Lights_Toggle_UI")
 
 g.create_ui_element("Input", Players_Section, {
@@ -15839,7 +15724,7 @@ Name = "Admin Player (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Admin_Player_Input_UI",
 Callback = function(split)
-    local Player = findplr(split)
+    local Player = g.findplr(split)
     if not Player then return g.notify("Error", "Player does not exist!", 5) end
     if not Player:IsFriendsWith(g.LocalPlayer.UserId) then
         return g.notify("Error", "This player isn't friends with you, add them!", 5)
@@ -15847,9 +15732,9 @@ Callback = function(split)
     if g.player_admins[Player.Name] then
         return g.notify("Error", "Player is already an admin!", 5)
     end
-    alreadyCheckedUser(Player)
+    g.alreadyCheckedUser(Player)
     fw(0.5)
-    g.notify("Success", "Added " .. tostring(Player.Name) .. " to the admin's table!", 5)
+    g.notify("Success", "Added " .. tostring(Player.Name) .. " to the admin's table!", 3)
 end}, "Admin_Player_Input_UI")
 
 g.create_ui_element("Input", Players_Section, {
@@ -15857,7 +15742,7 @@ Name = "UnAdmin Player (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Unadmin_Player_Input_UI",
 Callback = function(split)
-    local Player = findplr(split)
+    local Player = g.findplr(split)
     if not Player then return g.notify("Error", "Player does not exist!", 5) end
     if not Player:IsFriendsWith(g.LocalPlayer.UserId) then
         return g.notify("Error", "This player isn't friends with you!", 5)
@@ -15882,7 +15767,7 @@ Name = "Blacklist Player (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Blacklist_Player_Input_UI",
 Callback = function(split)
-    local Player = findplr(split)
+    local Player = g.findplr(split)
     if not Player then return end
     local Name = Player.Name
     if Player:IsFriendsWith(g.LocalPlayer.UserId) then
@@ -15904,7 +15789,7 @@ Name = "Unblacklist Player (FE)",
 PlaceholderText = "Username or displayname...",
 Flag = "Unblacklist_Player_Input_UI",
 Callback = function(split)
-    local Player = findplr(split)
+    local Player = g.findplr(split)
     if not Player then return end
     local Name = Player.Name
     if Player:IsFriendsWith(g.LocalPlayer.UserId) then
@@ -15923,7 +15808,7 @@ PlaceholderText = "Username number (e.g. PlayerName 1)...",
 Flag = "Rainbow_Time_Input_UI",
 Callback = function(split)
     local parts = split and split:split(" ") or {}
-    local Player = findplr(parts[1])
+    local Player = g.findplr(parts[1])
     if not Player then return g.notify("Error", "Player doesn't exist or has left!", 5) end
     if not Player:IsFriendsWith(g.LocalPlayer.UserId) then
         return g.notify("Error", "Player is not friends with you, add them!", 5)
@@ -15940,10 +15825,8 @@ Name = "Walk Fling Whitelist",
 PlaceholderText = "Username or displayname...",
 Flag = "Walk_Fling_Whitelist_Input_UI",
 Callback = function(split)
-    local plr = findplr(split)
-    if typeof(plr) ~= "Instance" or not plr:IsA("Player") then
-        return g.notify("Error", "Player not found in game.", 5)
-    end
+    local plr = g.findplr(split)
+    if typeof(plr) ~= "Instance" or not plr:IsA("Player") then return g.notify("Error", "Player not found in game.", 5) end
     g.AddToWalkFlingWhitelist(plr)
 end}, "Walk_Fling_Whitelist_Input_UI")
 
@@ -15952,66 +15835,64 @@ Name = "Walk Fling Unwhitelist",
 PlaceholderText = "Username or displayname...",
 Flag = "Walk_Fling_Unwhitelist_Input_UI",
 Callback = function(split)
-    local plr = findplr(split)
-    if typeof(plr) ~= "Instance" or not plr:IsA("Player") then
-        return g.notify("Error", "Player not found in game.", 5)
-    end
+    local plr = g.findplr(split)
+    if typeof(plr) ~= "Instance" or not plr:IsA("Player") then return g.notify("Error", "Player not found in game.", 5) end
     g.RemoveFromWalkFlingWhitelist(plr)
 end}, "Walk_Fling_Unwhitelist_Input_UI")
 
 g.create_ui_element("Button", Home_Section, {
 Name = "Get Priv Server Owner",
 Callback = function()
-    notify_priv_server_owner()
-end}, "Priv_Server_Owner_Button_UI")
+    g.notify_priv_server_owner()
+end,})
 
 g.create_ui_element("Button", Extras_Section, {
-Name = "Config Manager",
+Name = "Open Config Manager",
 Callback = function()
-    toggle_config_manager(true)
-end}, "Config_Manager_Button_UI")
+    g.toggle_config_manager(true)
+end,})
 
 g.create_ui_element("Button", Extras_Section, {
 Name = "Streamer Mode",
 Callback = function()
-    streamer_mode_script()
-end}, "Streamer_Mode_Button_UI")
+    g.streamer_mode_script()
+end,})
 
 g.create_ui_element("Button", Extras_Section, {
 Name = "Annoyer GUI",
 Callback = function()
-    annoyance_GUI()
-end}, "Annoy_GUI_Button_UI")
+    g.annoyance_GUI()
+end,})
 
 g.create_ui_element("Button", Vehicle_Section, {
 Name = "Car Stats GUI",
 Callback = function()
-    vehicle_stats_viewer_GUI()
-end}, "Car_Stats_GUI_Button_UI")
+    g.vehicle_stats_viewer_GUI()
+end,})
 
 g.create_ui_element("Button", Vehicle_Section, {
 Name = "All Cars GUI",
 Callback = function()
-    car_listing_gui()
-end}, "All_Cars_GUI_Button_UI")
+    g.car_listing_gui()
+end,})
 
 g.create_ui_element("Button", Extras_Section, {
 Name = "Free Emotes GUI",
 Callback = function()
     loadstring(game:HttpGet("https://pastebin.com/raw/RCj6RJtc"))()
-end}, "Free_Emotes_GUI_Button_UI")
+end,})
 
 g.create_ui_element("Button", Phone_Section, {
 Name = "Message GUI",
 Callback = function()
-    send_msg_menu()
-end}, "Message_GUI_Button_UI")
+    g.send_msg_menu()
+end,})
 
 g.create_ui_element("Button", Extras_Section, {
 Name = "Workspace Editor",
 Callback = function()
     g.workspace_editor_script_GUI()
-end}, "Workspace_Editor_Button_UI")
+end,})
 
 g.create_ui_element("Button", Extras_Section, {
 Name = "Debugger",
@@ -16021,43 +15902,43 @@ Callback = function()
     else
         g.notify("Error", "Flames Debugger function not found or was not created at runtime.", 10)
     end
-end}, "Debugger_Button_UI")
+end,})
 
 g.create_ui_element("Button", LocalPlayer_Section, {
 Name = "Outfits Manager (Save outfits GUI)",
 Callback = function()
-    save_outfits_GUI()
-end}, "Outfits_Manager_Button_UI")
+    g.save_outfits_GUI()
+end,})
 
 g.create_ui_element("Button", Extras_Section, {
 Name = "Chat Bypass",
 Callback = function()
     g.load_workaround_script()
-end}, "Chat_Bypass_Button_UI")
+end,})
 
 g.create_ui_element("Button", LocalPlayer_Section, {
 Name = "Save Emote",
 Callback = function()
     g.save_copied_plrs_emote()
-end}, "Save_Emote_Button_UI")
+end,})
 
 g.create_ui_element("Button", Extras_Section, {
 Name = "Infinite Yield",
 Callback = function()
-    infinite_yield()
-end}, "Infinite_Yield_Button_UI")
+    g.infinite_yield()
+end,})
 
 g.create_ui_element("Button", Extras_Section, {
 Name = "Infinite Premium",
 Callback = function()
-    infinite_premium()
-end}, "Infinite_Premium_Button_UI")
+    g.infinite_premium()
+end,})
 
 g.create_ui_element("Button", Extras_Section, {
 Name = "Nameless Admin",
 Callback = function()
-    flames_nameless_admin_ver()
-end}, "Nameless_Admin_Button_UI")
+    g.flames_nameless_admin_ver()
+end,})
 
 g.create_ui_element("Toggle", Extras_Section, {
 Name = "Flames (FE)",
@@ -16087,7 +15968,7 @@ Callback = function(split)
         return g.notify("Error", "You do not have premium, you cannot run this!", 8)
     end
     g.HasSeen_Fire_AlertFlamesHub = g.HasSeen_Fire_AlertFlamesHub or false
-    set_fire_amount_FE(amount)
+    g.set_fire_amount_FE(amount)
     g.HasSeen_Fire_AlertFlamesHub = true
     fw(0.2)
     for i = 1, amount do
@@ -16102,10 +15983,10 @@ Flag = "Sign_Spam_Toggle_UI",
 Callback = function(state)
     if state then
         if g.ToolChanger_FE then return g.notify("Warning", "Sign spammer is already enabled!", 5) end
-        spam_sign_text(true)
+        g.spam_sign_text(true)
     else
         if not g.ToolChanger_FE then return g.notify("Warning", "Sign spammer is not enabled!", 5) end
-        spam_sign_text(false)
+        g.spam_sign_text(false)
     end
 end}, "Sign_Spam_Toggle_UI")
 
@@ -16118,14 +15999,14 @@ Callback = function()
         return g.notify("Warning", "Talk to the NPC first and enter before trying this!", 10)
     end
     g.collect_all_nba_props()
-end}, "Collect_All_NBA_Button_UI")
+end,})
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Anti Outfit Copier (FE)",
 Default = getgenv().anti_outfit_stealer or false,
 Flag = "Anti_Outfit_Copier_Toggle_UI",
 Callback = function(state)
-    anti_outfit_copier(state)
+    g.anti_outfit_copier(state)
 end}, "Anti_Outfit_Copier_Toggle_UI")
 
 g.create_ui_element("Toggle", Extras_Section, {
@@ -16133,7 +16014,7 @@ Name = "Mute Tools",
 Default = getgenv().autosilence or false,
 Flag = "Mute_Tools_Toggle_UI",
 Callback = function(state)
-    mute_all_tools(state)
+    g.mute_all_tools(state)
 end}, "Mute_Tools_Toggle_UI")
 
 g.create_ui_element("Dropdown", LocalPlayer_Section, {
@@ -16216,7 +16097,7 @@ Callback = function(text)
         g.notify("Info", "Your roleplay Name exceeds 19 characters, we're saving it for you, it'll be automatically set back once you reload the script.", 15)
         writefile("LifeTogether_RP_Admin_Custom_Name.txt", text)
     end
-    change_RP_Name(text)
+    g.change_RP_Name(text)
 end}, "RP_Name_Input_UI")
 
 g.create_ui_element("Input", LocalPlayer_Section, {
@@ -16229,13 +16110,13 @@ Callback = function(text)
         g.notify("Info", "Your roleplay Bio exceeds 49 characters, we're saving it for you, it'll be automatically set back once you reload the script.", 15)
         writefile("LifeTogether_RP_Admin_Custom_Bio.txt", text)
     end
-    change_bio(text)
+    g.change_bio(text)
 end}, "RP_Bio_Input_UI")
 
 g.create_ui_element("Button", Extras_Section, {
 Name = "Performance GUI",
 Callback = function()
-    LoadPerformanceStatsGUI()
+    g.LoadPerformanceStatsGUI()
 end}, "Stats_GUI_Button_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
@@ -16251,9 +16132,9 @@ Name = "Car Color (FE)",
 Default = Color3.fromRGB(255, 0, 0),
 Flag = "Car_Color_Picker_UI",
 Callback = function(color)
-    local vehicle = get_vehicle()
+    local vehicle = g.get_vehicle()
     if not vehicle then return g.notify("Error", "You do not have a vehicle spawned!", 0.75) end
-    change_vehicle_color(color, vehicle)
+    g.change_vehicle_color(color, vehicle)
 end}, "Car_Color_Picker_UI")
 
 g.create_ui_element("Toggle", Players_Section, {
