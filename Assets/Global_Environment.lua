@@ -39,6 +39,8 @@ g.wait_until = function(condition, interval, max_tries)
     return condition() and true or false
 end
 
+local http_game = (getgenv()["game"] or game)["HttpGet"]
+getgenv().http_get = function(url) return http_game(game, url) end
 getgenv().Encode_To_Lua_Escapes = function(Text)
 	local Result = {}
 	for i = 1, #Text do table.insert(Result, "\\" .. string.byte(Text, i)) end
@@ -218,7 +220,6 @@ g.colors_color_three = {
 	Color3.new(0.5019607843137255, 0, 0.5019607843137255),
 }
 
-local http_service = HttpService
 g._rgb_conns = g._rgb_conns or {}
 g._rgb_global_conn = g._rgb_global_conn or nil
 g.rgb_color_map = g.rgb_color_map or {
@@ -471,7 +472,7 @@ local function fetch_value(name)
     if not resolved then return nil end
     local ok, svc = pcall(function() return game:GetService(resolved) end)
     if not ok or not svc then return nil end
-    if cloneref then local success, cloned = pcall(function() return cloneref(svc) end) if success and cloned then svc = cloned end end
+    if cloneref then local success, cloned = pcall(function() return cloneref(svc) end); if success and cloned then svc = cloned end end
     return resolved, svc
 end
 
@@ -640,56 +641,58 @@ end
 -- [[ safer wait functionality. ]] --
 getgenv().FlamesLibrary.wait = function(t)
     local r_s = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
-    if not t or t <= 0 then r_s.Heartbeat:Wait() return end
+    if not t or t <= 0 then r_s.Heartbeat:Wait(); return end
     local ok = pcall(task.wait, t)
     if not ok then r_s.Heartbeat:Wait() end
 end
 
 getgenv().FlamesLibrary.cleanup_all = function() for name in pairs(getgenv().FlamesLibrary._connections) do getgenv().FlamesLibrary.disconnect(name) end end
 getgenv().FlamesLibrary.modules.chat_filter_override = {
-    enabled = false,
-    start = function(self)
-        if self.enabled then return end
-        self.enabled = true
-        local text_chat_service = cloneref and cloneref(game:GetService("TextChatService")) or game:GetService("TextChatService")
-        local players = cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
-        local chat = cloneref and cloneref(game:GetService("Chat")) or game:GetService("Chat")
-        local function will_tag(text)
-            local filtered
-            local success, response = pcall(function() filtered = chat:FilterStringForBroadcast(text, players.LocalPlayer) end)
-            if not success then return true end
-            return filtered ~= text
-        end
+	enabled = false,
+	start = function(self)
+		if self.enabled then return end
+		self.enabled = true
+		local text_chat_service = cloneref and cloneref(game:GetService("TextChatService")) or game:GetService("TextChatService")
+		local players = cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
+		local chat = cloneref and cloneref(game:GetService("Chat")) or game:GetService("Chat")
+		local function will_tag(text)
+			local filtered = nil
+			local success = pcall(function() filtered = chat:FilterStringForBroadcast(text, players.LocalPlayer) end)
+			if not success or filtered == nil then return true end
+			if #filtered ~= #text then return true end
+			for i = 1, #text do
+				local o = text:sub(i, i)
+				local f = filtered:sub(i, i)
+				if o ~= f and f ~= "#" then return true end
+			end
+			return false
+		end
 
-        text_chat_service.OnIncomingMessage = function(v) -- actually stops your messages from going through if they're hashtagged.
-            local prop = Instance.new("TextChatMessageProperties")
-            if v.TextSource and v.TextSource.UserId == players.LocalPlayer.UserId and will_tag(v.Text) then
-                prop.Text = "."
-                prop.PrefixText = "."
-                getgenv().FlamesLibrary.wait(0.25)
-                prop.Text = nil
-                if getgenv().notify then getgenv().notify("Warning", "That message seems to have been filtered! We have stopped you from getting banned from it.", 3) end
-                return prop
-            end
-            return prop
-        end
-    end,
+		text_chat_service.OnIncomingMessage = function(v)
+			local prop = Instance.new("TextChatMessageProperties")
+			if v.TextSource and v.TextSource.UserId == players.LocalPlayer.UserId and will_tag(v.Text) then
+				prop.Text = "."
+				prop.PrefixText = "."
+				getgenv().FlamesLibrary.wait(0.25)
+				prop.Text = nil
+				if getgenv().notify then getgenv().notify("Warning", "That message seems to have been filtered! We have stopped you from getting banned from it.", 3) end
+				return prop
+			end
+			return prop
+		end
+	end,
 
-    stop = function(self)
-        if not self.enabled then return end
-        self.enabled = false
-        local text_chat_service = cloneref and cloneref(game:GetService("TextChatService")) or game:GetService("TextChatService")
-        text_chat_service.OnIncomingMessage = nil
-    end,
+	stop = function(self)
+		if not self.enabled then return end
+		self.enabled = false
+		local text_chat_service = cloneref and cloneref(game:GetService("TextChatService")) or game:GetService("TextChatService")
+		text_chat_service.OnIncomingMessage = nil
+	end,
 
-    toggle = function(self, state)
-        if state == nil then state = not self.enabled end
-        if state then
-            self:start()
-        else
-            self:stop()
-        end
-    end
+	toggle = function(self, state)
+		if state == nil then state = not self.enabled end
+		if state then self:start() else self:stop() end
+	end
 }
 
 getgenv().FlamesLibrary.modules.disable_all = function()
@@ -833,10 +836,10 @@ local function retrieve_executor()
     return { Name = tostring(f or "Unknown Executor") }
 end
 
-local function hb() FlamesLibrary.wait() end
+local function hb() getgenv().FlamesLibrary.wait() end
 local function identify_executor_clean() return tostring(retrieve_executor().Name) end
 local executor_string = identify_executor_clean()
-local function executor_contains(substr) if type(executor_string) ~= "string" then return false end return string.find(executor_string:lower(), substr:lower(), 1, true) ~= nil end
+local function executor_contains(substr) if type(executor_string) ~= "string" then return false end; return string.find(executor_string:lower(), substr:lower(), 1, true) ~= nil end
 executor_contains = g.get_or_set and g.get_or_set("executor_contains", executor_contains)
 local Executor_Name = identify_executor_clean()
 g.blank = g.blank or function(...) return ... end
@@ -899,11 +902,11 @@ g.AllClipboards = g.AllClipboards or getgenv().FlamesLibrary.safe_func(setclipbo
 g.httprequest_Init = g.httprequest_Init or getgenv().FlamesLibrary.safe_func(syn and syn.request, http and http.request, http_request, fluxus and fluxus.request, request)
 g.get_http = g.httprequest_Init
 g.queueteleport = g.queueteleport or getgenv().FlamesLibrary.safe_func(syn and syn.queue_on_teleport, queue_on_teleport, fluxus and fluxus.queue_on_teleport)
-queueteleport = g.queueteleport
-
 local uis = g.UserInputService or cloneref and cloneref(game:GetService("UserInputService")) or game:GetService("UserInputService")
 local ts = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
-local rs  = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService") or safe_wrapper("RunService")
+local rs  = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService") or g.safe_wrapper("RunService")
+local RunService = rs
+local TextService = g.TextService or cloneref and cloneref(game:GetService("TextService")) or game:GetService("TextService")
 
 do
     local active_frame     = nil
@@ -993,21 +996,19 @@ do
     end
 end
 
-local fps = setfpscap or setfps or blank
+local fps = setfpscap or setfps or g.blank
 SetFPSCap = g.get_or_set("SetFPSCap", fps)
-local function blankfunction(...) return ... end
 local LibraryName = "Notification Library"
 g.NotificationLibrary = {}
-local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
 local TweenService = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
 local CoreGui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
-local LocalPlayer = g.LocalPlayer or Players.LocalPlayer or game.Players.LocalPlayer
+local LocalPlayer = g.LocalPlayer or Players.LocalPlayer
 local PlayerGui = g.PlayerGui or LocalPlayer:FindFirstChildWhichIsA("PlayerGui") or LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 3)
 local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui or PlayerGui
 local library
 local Template_Folder
 local canvas
-function NotificationLibrary:Load()
+g.NotificationLibrary.Load = function()
     local objects = game:GetObjects("rbxassetid://15133757123")
     if not objects or #objects == 0 then
         warn("[NotificationLibrary]: Asset failed to load — rbxassetid://15133757123 returned nil or empty.")
@@ -1041,11 +1042,11 @@ function NotificationLibrary:Load()
     return true
 end
 
-function NotificationLibrary:SendNotification(Mode, Text, Duration)
+g.NotificationLibrary.SendNotification = function(Mode, Text, Duration)
     local library_core = parent_gui:FindFirstChild(LibraryName)
 
     if not library_core then
-        local loaded = NotificationLibrary:Load()
+        local loaded = g.NotificationLibrary:Load()
         if not loaded then
             warn("[NotificationLibrary]: SendNotification aborted — library failed to initialize.")
             return
@@ -1061,7 +1062,7 @@ function NotificationLibrary:SendNotification(Mode, Text, Duration)
             library = nil
             Template_Folder = nil
             canvas = nil
-            local loaded = NotificationLibrary:Load()
+            local loaded = g.NotificationLibrary:Load()
             if not loaded then
                 warn("[NotificationLibrary]: Re-initialization failed.")
                 return
@@ -1109,14 +1110,8 @@ function NotificationLibrary:SendNotification(Mode, Text, Duration)
     end)
 end
 
-local Players = g.Players or safe_wrapper("Players")
-local TweenService = g.TweenService or safe_wrapper("TweenService")
-local CoreGui = g.CoreGui or safe_wrapper("CoreGui")
-local StarterGui = g.StarterGui or safe_wrapper("StarterGui")
-local GuiService = g.GuiService or safe_wrapper("GuiService")
-local Workspace = g.Workspace or safe_wrapper("Workspace")
-local UserInputService = g.UserInputService or safe_wrapper("UserInputService")
-local NotificationLibrary_External = NotificationLibrary
+local UserInputService = g.UserInputService or g.safe_wrapper("UserInputService")
+local NotificationLibrary_External = getgenv().NotificationLibrary
 local Sound_ID_Windows = "rbxassetid://8183296024"
 local Sound_ID_iPhone = "rbxassetid://73722479618078"
 local Sound_ID_Android = "rbxassetid://17582299860"
@@ -1218,7 +1213,7 @@ if not getgenv().Initialized_Flames_All_Characters_Global_System then
         local ok = pcall(function() inst = resolver() end)
         if ok and inst then return inst end
         local conn
-        local success, err = pcall(function() conn = parent.ChildAdded:Connect(function() pcall(function() inst = resolver() end) end) end)
+        local success, _ = pcall(function() conn = parent.ChildAdded:Connect(function() pcall(function() inst = resolver() end) end) end)
         if not success then return nil end
         while not inst and os.clock() - start_time < timeout do
             if not parent or not parent:IsDescendantOf(game) then break end
@@ -1236,15 +1231,15 @@ if not getgenv().Initialized_Flames_All_Characters_Global_System then
         local ok, err = pcall(function()
             local entry = g.Characters[player] or {}
             entry.character = character
-            entry.humanoid = wait_instance(character, function()
+            entry.humanoid = g.wait_instance(character, function()
                 if not character.Parent then return nil end
                 return character:FindFirstChildWhichIsA("Humanoid")
             end)
-            entry.root = wait_instance(character, function()
+            entry.root = g.wait_instance(character, function()
                 if not character.Parent then return nil end
                 return character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
             end)
-            entry.head = wait_instance(character, function()
+            entry.head = g.wait_instance(character, function()
                 if not character.Parent then return nil end
                 return character:FindFirstChild("Head")
             end)
@@ -1266,7 +1261,7 @@ if not getgenv().Initialized_Flames_All_Characters_Global_System then
         end)
     end
 
-    for _, player in ipairs(game.Players:GetPlayers()) do hook_player(player) end
+    for _, player in ipairs(Players:GetPlayers()) do hook_player(player) end
     Players.PlayerAdded:Connect(hook_player)
     Players.PlayerRemoving:Connect(function(player)
         if g.Characters and g.Characters[player] then g.Characters[player] = nil end
@@ -1288,7 +1283,7 @@ local function wait_for_datamodel(inst)
     return false
 end
 wait(0.1)
-get_or_set("wait_for_datamodel", wait_for_datamodel)
+g.get_or_set("wait_for_datamodel", wait_for_datamodel)
 local function wait_for_child(parent, name, timeout)
     if not parent or not parent:IsDescendantOf(game) then return nil end
     local existing = parent:FindFirstChild(name)
@@ -1308,7 +1303,7 @@ local function wait_for_child(parent, name, timeout)
     return result
 end
 wait(0.1)
-get_or_set("wait_for_child", wait_for_child)
+g.get_or_set("wait_for_child", wait_for_child)
 local function wait_for_descendant(parent, name, timeout)
     if not parent or not parent:IsDescendantOf(game) then return nil end
     local found = parent:FindFirstChild(name, true)
@@ -1337,7 +1332,7 @@ local function wait_for_descendant(parent, name, timeout)
     return result
 end
 wait(0.1)
-get_or_set("wait_for_descendant", wait_for_descendant)
+g.get_or_set("wait_for_descendant", wait_for_descendant)
 local function wait_for_child_safe(parent, name, timeout)
     if not parent or not parent:IsDescendantOf(game) then return nil end
     local existing = parent:FindFirstChild(name)
@@ -1352,17 +1347,17 @@ local function wait_for_child_safe(parent, name, timeout)
     end
     return nil
 end
-get_or_set("wait_for_child_safe", wait_for_child_safe)
+g.get_or_set("wait_for_child_safe", wait_for_child_safe)
 
 local function retry_find(func, retries, delay)
     for _ = 1, retries do
         local ok, result = pcall(func)
         if ok and result then return result end
-        FlamesLibrary.wait(delay)
+        getgenv().FlamesLibrary.wait(delay)
     end
     return nil
 end
-get_or_set("retry_find", retry_find)
+g.get_or_set("retry_find", retry_find)
 
 getgenv().return_char = function(player, timeout)
     if not player or not player:IsA("Player") then return nil end
@@ -1395,14 +1390,14 @@ g.get_human = function(player, time_out)
     time_out = tonumber(time_out) or Players.RespawnTime + 0.75
     local char = g.get_char(player, time_out)
     if not char then return nil end
-    return wait_instance(char, function() return char:FindFirstChildOfClass("Humanoid") end, time_out)
+    return g.wait_instance(char, function() return char:FindFirstChildOfClass("Humanoid") end, time_out)
 end
 
 g.get_root = function(player, time_out)
     time_out = tonumber(time_out) or Players.RespawnTime + 0.75
     local char = g.get_char(player, time_out)
     if not char then return nil end
-    return wait_instance(char, function()
+    return g.wait_instance(char, function()
         return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
     end, time_out)
 end
@@ -1411,14 +1406,14 @@ g.get_head = function(player, time_out)
     time_out = tonumber(time_out) or Players.RespawnTime + 0.75
     local char = g.get_char(player, time_out)
     if not char then return nil end
-    return wait_instance(char, function() return char:FindFirstChild("Head") end, time_out)
+    return g.wait_instance(char, function() return char:FindFirstChild("Head") end, time_out)
 end
 wait(0.1)
 getgenv().service_cache = getgenv().service_cache or {}
 g.Service_Wrap = g.Service_Wrap or function(name)
     local cache = getgenv().service_cache
     if cache[name] then return cache[name] end
-    local ok, svc = pcall(function() local s = game:GetService(name) return cloneref and cloneref(s) or s end)
+    local ok, svc = pcall(function() local s = game:GetService(name); return cloneref and cloneref(s) or s end)
     if not ok or not svc then return nil end
     if rawset then rawset(cache, name, svc) else cache[name] = svc end
     return svc
@@ -1453,19 +1448,19 @@ local function init_services()
     end
 
     local players = getgenv().Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
-    if players then while not players.LocalPlayer do task.wait() end getgenv().LocalPlayer = players.LocalPlayer end
+    if players then while not players.LocalPlayer do task.wait() end; getgenv().LocalPlayer = players.LocalPlayer end
     local sp = getgenv().StarterPlayer or cloneref and cloneref(game:GetService("StarterPlayer")) or game:GetService("StarterPlayer")
-    if sp then getgenv().StarterPlayerScripts = sp:FindFirstChildOfClass("StarterPlayerScripts") task.wait() getgenv().StarterCharacterScripts = sp:FindFirstChildOfClass("StarterCharacterScripts") end
+    if sp then getgenv().StarterPlayerScripts = sp:FindFirstChildOfClass("StarterPlayerScripts"); task.wait(); getgenv().StarterCharacterScripts = sp:FindFirstChildOfClass("StarterCharacterScripts") end
 end
 wait(0.1)
 init_services()
 
 local cmdp = cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
 local cmdlp = cmdp.LocalPlayer
-getgenv().Character = getgenv().LocalPlayer.Character or game.Players.LocalPlayer.Character
-getgenv().Humanoid = Character and (Character:FindFirstChild("Humanoid") or Character:FindFirstChildOfClass("Humanoid")) or Character and Character:WaitForChild("Humanoid", 10)
-getgenv().HumanoidRootPart = Character and (Character:FindFirstChild("HumanoidRootPart") or Character and Character:WaitForChild("HumanoidRootPart", 10))
-getgenv().Head = Character and (Character:FindFirstChild("Head") or Character and Character:WaitForChild("Head", 10))
+getgenv().Character = g.get_char(LocalPlayer, Players.RespawnTime + 0.75) or getgenv().LocalPlayer.Character or Players.LocalPlayer.Character
+getgenv().Humanoid = g.get_human(LocalPlayer, Players.RespawnTime + 0.75) or g.Character and (g.Character:FindFirstChild("Humanoid") or g.Character:FindFirstChildOfClass("Humanoid")) or g.Character and g.Character:WaitForChild("Humanoid", Players.RespawnTime + 0.75)
+getgenv().HumanoidRootPart = g.get_root(LocalPlayer, Players.RespawnTime + 0.75) or g.Character and (g.Character:FindFirstChild("HumanoidRootPart") or g.Character and g.Character:WaitForChild("HumanoidRootPart", Players.RespawnTime + 0.75))
+getgenv().Head = g.get_head(LocalPlayer, Players.RespawnTime + 0.75) or g.Character and (g.Character:FindFirstChild("Head") or g.Character and g.Character:WaitForChild("Head", Players.RespawnTime + 0.5))
 
 g.findplr = function(args)
     local tbl = cmdp:GetPlayers()
@@ -1502,7 +1497,7 @@ g.findplr = function(args)
     if args == "bacon" then
         local vAges = {}
         for _, v in pairs(tbl) do
-            if v ~= cmdlp and get_char(v) and (get_char(v):FindFirstChild("Pal Hair") or get_char(v):FindFirstChild("Kate Hair")) then
+            if v ~= cmdlp and g.get_char(v, 1) and (g.get_char(v, 1):FindFirstChild("Pal Hair") or g.get_char(v, 1):FindFirstChild("Kate Hair")) then
                 table.insert(vAges, v)
             end
         end
@@ -1553,8 +1548,8 @@ g.findplr = function(args)
         local vAges = {}
         for _, v in pairs(tbl) do
             if v ~= cmdlp then
-                local vRootPart = get_root(v)
-                local cmdlpRootPart = get_root(cmdlp)
+                local vRootPart = g.get_root(v, 1)
+                local cmdlpRootPart = g.get_root(cmdlp, Players.RespawnTime + 0.5)
                 if vRootPart and cmdlpRootPart then
                     local distance = (vRootPart.Position - cmdlpRootPart.Position).magnitude
                     if distance < 30 then
@@ -1570,8 +1565,8 @@ g.findplr = function(args)
         local vAges = {}
         for _, v in pairs(tbl) do
             if v ~= cmdlp then
-                local vRootPart = get_root(v)
-                local cmdlpRootPart = get_root(cmdlp)
+                local vRootPart = g.get_root(v, 1)
+                local cmdlpRootPart = g.get_root(cmdlp, Players.RespawnTime + 0.5)
                 if vRootPart and cmdlpRootPart then
                     local distance = (vRootPart.Position - cmdlpRootPart.Position).magnitude
                     if distance > 30 then
@@ -1583,14 +1578,19 @@ g.findplr = function(args)
         return #vAges > 0 and vAges[math.random(1, #vAges)] or nil
     end
 
-    if typeof(args) ~= "string" or args == "" then return nil end
-    for _, v in pairs(tbl) do
-        local name, display = v.Name:lower(), v.DisplayName:lower()
-        if name:find(args:lower()) or display:find(args:lower()) then
-            if v == cmdlp then return g.notify("Error", "You cannot target yourself!", 1) end
-            return v
-        end
-    end
+	if typeof(args) ~= "string" or args == "" then return nil end
+	for _, v in pairs(tbl) do
+		local name, display = v.Name:lower(), v.DisplayName:lower()
+		if name:find(args:lower()) or display:find(args:lower()) then
+			if v == cmdlp then
+				g.notify("Error", "You cannot target yourself!", 1)
+				return nil
+			end
+			return v
+		end
+	end
+
+	return nil
 end
 
 g.Noclip_Enabled = g.Noclip_Enabled or false
@@ -1598,7 +1598,7 @@ g.Noclip_Connection = g.Noclip_Connection or nil
 g.noclip_parts = g.noclip_parts or {}
 local function refresh_parts()
     table.clear(g.noclip_parts)
-    local Character = g.Character or LocalPlayer.Character or get_char(LocalPlayer, 10)
+    local Character = g.Character or LocalPlayer.Character or g.get_char(LocalPlayer, Players.RespawnTime + 0.75)
     if not Character then return end
     for _, inst in ipairs(Character:GetDescendants()) do if inst:IsA("BasePart") then table.insert(g.noclip_parts, inst) end end
 end
@@ -1612,37 +1612,41 @@ local function noclip_step()
 end
 
 g.ToggleNoclip = function(state)
-    local lib = getgenv().FlamesLibrary
-    local key = "noclip_stepped"
-    if state == true then
-        if g.Noclip_Enabled then
-            if g.notify then return g.notify("Warning", "Noclip is already enabled!", 5) end
-            return
-        end
+	local lib = getgenv().FlamesLibrary
+	local key = "noclip_stepped"
 
-        if lib.is_alive(key) then lib.disconnect(key) end
-        refresh_parts()
-        lib.connect(key, RunService.Stepped:Connect(noclip_step))
-        g.Noclip_Enabled = true
-        if g.notify then g.notify("Success", "Noclip has been enabled.", 5) end
-    elseif state == false then
-        if not g.Noclip_Enabled then
-            if g.notify then return g.notify("Error", "Noclip is not enabled!", 5) end
-            return
-        end
+	if state == true then
+		if g.Noclip_Enabled then
+			g.notify("Warning", "Noclip is already enabled!", 5)
+			return nil
+		end
 
-        lib.disconnect(key)
-        for i = 1, #g.noclip_parts do
-            local part = g.noclip_parts[i]
-            if part and part.Parent then part.CanCollide = true end
-        end
+		if lib.is_alive(key) then lib.disconnect(key) end
+		refresh_parts()
+		lib.connect(key, RunService.Stepped:Connect(noclip_step))
+		g.Noclip_Enabled = true
+		g.notify("Success", "Noclip has been enabled.", 5)
+		return nil
+	elseif state == false then
+		if not g.Noclip_Enabled then
+			g.notify("Error", "Noclip is not enabled!", 5)
+			return nil
+		end
 
-        table.clear(g.noclip_parts)
-        g.Noclip_Enabled = false
-        if g.notify then g.notify("Success", "Noclip has been disabled.", 5) end
-    else
-        if g.notify then return g.notify("Error", "Invalid arg, expected true/false", 5) end
-    end
+		lib.disconnect(key)
+		for i = 1, #g.noclip_parts do
+			local part = g.noclip_parts[i]
+			if part and part.Parent then part.CanCollide = true end
+		end
+
+		table.clear(g.noclip_parts)
+		g.Noclip_Enabled = false
+		g.notify("Success", "Noclip has been disabled.", 5)
+		return nil
+	else
+		g.notify("Error", "Invalid arg, expected true/false", 5)
+		return nil
+	end
 end
 
 g.randomString = g.randomString or function()
@@ -1786,7 +1790,6 @@ local function get_preset(game_key)
 end
 
 g.Memory_Mini_Game_GUI = function()
-    local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
     local preset = get_preset("memory")
     local GRID_SIZE = 5
     local TILE_COUNT = GRID_SIZE * GRID_SIZE
@@ -1862,7 +1865,7 @@ g.Memory_Mini_Game_GUI = function()
     local found = {}
     local mistakes = 0
     local input_locked = true
-    local function cleanup() getgenv().Keybind_Input_Disabled_For_Mini_Game = false if gui then gui:Destroy() end end
+    local function cleanup() getgenv().Keybind_Input_Disabled_For_Mini_Game = false; if gui then gui:Destroy() end end
     cancel.MouseButton1Click:Connect(function()
         if g.notify then g.notify("Info", "Mini-game cancelled.", 3) end
         cleanup()
@@ -2206,7 +2209,7 @@ g.keypad_minigame = function()
     cancel.TextColor3 = WHITE
     cancel.Parent = frame
     Instance.new("UICorner", cancel).CornerRadius = UDim.new(0, 6)
-    local function cleanup() getgenv().Keybind_Input_Disabled_For_Mini_Game = false if gui then gui:Destroy() end end
+    local function cleanup() getgenv().Keybind_Input_Disabled_For_Mini_Game = false; if gui then gui:Destroy() end end
     local function update_display()
         local parts = {}
         for i = 1, CODE_LENGTH do
@@ -2669,7 +2672,6 @@ g.safe_cracker_minigame = function()
     local dial_speed = preset.dial_speed
     local spin_dir = 1
     local game_over = false
-    local elapsed = 0
     local timer_conn = nil
     local render_conn = nil
     if CoreGui:FindFirstChild("SafeCrackerGUI") then CoreGui.SafeCrackerGUI:Destroy() end
@@ -2949,7 +2951,6 @@ g.wire_cutter_minigame = function()
         end
     end
 
-    local clues = {}
     local safe_wire = math.random(1, WIRE_COUNT)
     local positions = {"first", "second", "third", "fourth", "fifth", "sixth"}
     local clue_types = {}
@@ -3180,11 +3181,9 @@ g.simon_says_minigame = function()
         return
     end
     local preset = get_preset("simon")
-    local TweenService = cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
     local DARK = Color3.fromRGB(14, 14, 18)
     local WHITE = Color3.fromRGB(240, 240, 240)
     local MUTED = Color3.fromRGB(100, 100, 110)
-    local RED = Color3.fromRGB(220, 60, 60)
     local ROUNDS_TO_WIN = preset.rounds_to_win
     local BUTTONS = {
         {name = "Red",    color = Color3.fromRGB(200, 50, 50),   dim = Color3.fromRGB(60, 15, 15)},
@@ -3274,7 +3273,7 @@ g.simon_says_minigame = function()
         UDim2.new(0, 0, 0, 136),
         UDim2.new(0, 136, 0, 136),
     }
-    local function cleanup() getgenv().Keybind_Input_Disabled_For_Mini_Game = false if gui then gui:Destroy() end end
+    local function cleanup() getgenv().Keybind_Input_Disabled_For_Mini_Game = false; if gui then gui:Destroy() end end
     local function win()
         game_over = true
         g.simon_says_cooldown = tick()
@@ -3290,7 +3289,7 @@ g.simon_says_minigame = function()
 
     local function flash_button(index, duration, callback)
         local b = btn_refs[index]
-        if not b then if callback then callback() end return end
+        if not b then if callback then callback() end; return end
         b.BackgroundColor3 = BUTTONS[index].color
         task.delay(duration, function()
             b.BackgroundColor3 = BUTTONS[index].dim
@@ -3458,7 +3457,7 @@ g.open_difficulty_editor = function()
     Instance.new("UICorner", close_btn).CornerRadius = UDim.new(0, 6)
     close_btn.MouseButton1Click:Connect(function() outer.Visible = false end)
 
-    if dragify then dragify(outer) end
+    if g.dragify and typeof(g.dragify) == "function" then g.dragify(outer) end
     local list_frame = Instance.new("ScrollingFrame")
     list_frame.Size = UDim2.new(1, 0, 1, -92)
     list_frame.Position = UDim2.new(0, 0, 0, 42)
@@ -4106,7 +4105,6 @@ g.signal_triangulation_minigame = function()
     local preset = get_preset("signal")
     local DARK = Color3.fromRGB(10, 12, 16)
     local CYAN = Color3.fromRGB(60, 200, 220)
-    local MUTED = Color3.fromRGB(90, 100, 110)
     local WHITE = Color3.fromRGB(240, 240, 240)
     local RED = Color3.fromRGB(200, 60, 60)
     local GREEN = Color3.fromRGB(60, 200, 100)
@@ -4798,7 +4796,6 @@ g.rhythm_splice_minigame = function()
     local DARK = Color3.fromRGB(12, 12, 18)
     local PINK = Color3.fromRGB(230, 80, 160)
     local WHITE = Color3.fromRGB(240, 240, 240)
-    local MUTED = Color3.fromRGB(90, 90, 100)
     local NOTE_COUNT = preset.note_count
     local NOTE_SPEED = preset.note_speed
     local HIT_WINDOW = preset.hit_window
@@ -5098,7 +5095,7 @@ g.card_recall_minigame = function()
         card_buttons[i] = btn
     end
 
-    local function cleanup() getgenv().Keybind_Input_Disabled_For_Mini_Game = false if gui then gui:Destroy() end end
+    local function cleanup() getgenv().Keybind_Input_Disabled_For_Mini_Game = false; if gui then gui:Destroy() end end
     local function win()
         game_over = true
         g.card_recall_cooldown = tick()
@@ -5158,16 +5155,12 @@ g.card_recall_minigame = function()
 end
 
 g.open_minigame_menu = function()
-    if CoreGui:FindFirstChild("MinigameMenuGUI") and CoreGui:FindFirstChild("MinigameMenuGUI"):IsA("ScreenGui") then CoreGui.MinigameMenuGUI.Enabled = true return end
+    if CoreGui:FindFirstChild("MinigameMenuGUI") and CoreGui:FindFirstChild("MinigameMenuGUI"):IsA("ScreenGui") then CoreGui.MinigameMenuGUI.Enabled = true; return end
     local DARK        = Color3.fromRGB(18, 18, 18)
     local SURFACE     = Color3.fromRGB(26, 26, 26)
     local BORDER      = Color3.fromRGB(50, 50, 50)
     local WHITE       = Color3.fromRGB(240, 240, 240)
     local MUTED       = Color3.fromRGB(140, 140, 140)
-    local GOLD        = Color3.fromRGB(255, 200, 50)
-    local GREEN_C     = Color3.fromRGB(60, 180, 100)
-    local RED_C       = Color3.fromRGB(200, 70, 70)
-    local YELLOW_C    = Color3.fromRGB(220, 160, 30)
     local GAMES = {
         {
             key         = "memory",
@@ -5307,7 +5300,7 @@ g.open_minigame_menu = function()
     title_lbl.TextXAlignment = Enum.TextXAlignment.Left
     title_lbl.Parent = header
 
-    if dragify then dragify(outer) end
+    if g.dragify and typeof(g.dragify) == "function" then g.dragify(outer) end
     local minimized = false
     local content_frame
     local function make_header_btn(text, x_offset)
@@ -5486,9 +5479,8 @@ g.open_minigame_menu = function()
         end
     end)
 
-    if getgenv().Keybind_Toggle_Initialized then pcall(function() getgenv().Keybind_Toggle_Initialized:Disconnect() end) task.wait() getgenv().Keybind_Toggle_Initialized = nil end
+    if getgenv().Keybind_Toggle_Initialized then pcall(function() getgenv().Keybind_Toggle_Initialized:Disconnect() end); task.wait(); getgenv().Keybind_Toggle_Initialized = nil end
     wait(0.25)
-    local Is_Mobile = UserInputService.TouchEnabled
     if not Is_Mobile then
         getgenv().Keybind_Toggle_Initialized = UserInputService.InputBegan:Connect(function(Input, Game_Processed_Event)
             if Game_Processed_Event then return end
@@ -5497,21 +5489,21 @@ g.open_minigame_menu = function()
     end
 end
 
-local ok = pcall(function() get_or_set("Terrain", findinstance("Terrain")) end)
+local ok = pcall(function() g.get_or_set("Terrain", g.findinstance("Terrain")) end)
 if not ok and g.notify then g.notify("Warning", "Failed to resolve Terrain, some features may not work.", 5) end
-get_or_set("Camera", workspace.CurrentCamera)
-local lp = game.Players.LocalPlayer
-get_or_set("LocalPlayer", lp)
-get_or_set("Backpack", findplayerchild(lp, "Backpack"))
-get_or_set("PlayerGui", findplayerchild(lp, "PlayerGui"))
-get_or_set("PlayerScripts", findplayerchild(lp, "PlayerScripts"))
-get_or_set("Character", nil)
-get_or_set("get_player_gui", PlayerGui)
-get_or_set("get_player_scripts", PlayerScripts)
-get_or_set("get_player_backpack", Backpack)
+g.get_or_set("Camera", workspace.CurrentCamera)
+local lp = g.LocalPlayer or Players.LocalPlayer
+g.get_or_set("LocalPlayer", lp)
+g.get_or_set("Backpack", g.findplayerchild(lp, "Backpack"))
+g.get_or_set("PlayerGui", g.findplayerchild(lp, "PlayerGui"))
+g.get_or_set("PlayerScripts", g.findplayerchild(lp, "PlayerScripts"))
+g.get_or_set("Character", nil)
+g.get_or_set("get_player_gui", PlayerGui)
+g.get_or_set("get_player_scripts", g.PlayerScripts)
+g.get_or_set("get_player_backpack", g.Backpack or lp:FindFirstChildWhichIsA("Backpack"))
 if not getgenv().Anti_Idle_Controller_Loaded then
     getgenv().Anti_Idle_Controller_Loaded = true
-    if getconnections or get_signal_cons typeof(getconnections) == "function" and typeof(get_signal_cons) == "function" then
+    if getconnections or get_signal_cons and typeof(getconnections) == "function" and typeof(get_signal_cons) == "function" then
         local gc = getconnections or get_signal_cons
         local idle = lp.Idled
         if gc and typeof(gc) == "function" and idle then
@@ -5529,23 +5521,65 @@ if not getgenv().Anti_Idle_Controller_Loaded then
     end
 end
 
-getgenv().getRoot = getgenv().getRoot or function(char)
-    local name_of_char = tostring(char.Name)
-	local hum = char and char:FindFirstChildOfClass("Humanoid")
-	if hum and hum.RootPart then return hum.RootPart end
-	return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or get_root(Players:FindFirstChild(name_of_char), 5)
+getgenv().getRoot = function(char)
+	if not char or typeof(char) ~= "Instance" then return nil end
+	if not char.Parent then return nil end
+	local ok_name, name_of_char = pcall(function() return tostring(char.Name) end)
+	if not ok_name or not name_of_char then return nil end
+	local ok_hum, hum = pcall(function() return char:FindFirstChildOfClass("Humanoid") end)
+	if ok_hum and hum and typeof(hum) == "Instance" then
+		local ok_root, root_part = pcall(function() return hum:FindFirstChild("RootPart") end)
+		if ok_root and root_part and typeof(root_part) == "Instance" and root_part.Parent == char then return root_part end
+	end
+
+	local ok_hrp, hrp = pcall(function() return char:FindFirstChild("HumanoidRootPart") end)
+	if ok_hrp and hrp and hrp.Parent == char then return hrp end
+	local ok_ut, ut = pcall(function() return char:FindFirstChild("UpperTorso") end)
+	if ok_ut and ut and ut.Parent == char then return ut end
+	local ok_t, t = pcall(function() return char:FindFirstChild("Torso") end)
+	if ok_t and t and t.Parent == char then return t end
+	local player = Players:FindFirstChild(name_of_char)
+	if player and typeof(player) == "Instance" then
+		local ok_gr, gr = pcall(function() return g.get_root(player, Players.RespawnTime + 0.5) end)
+		if ok_gr and gr then return gr end
+	end
+
+	return nil
 end
 
 getgenv().resolve_character = function(character, timeout)
-	local start = tick()
-	while tick() - start < timeout do
+	local function now()
+		if typeof(tick) == "function" then
+			return tick()
+		else
+			return os.clock()
+		end
+	end
+
+	timeout = timeout or (Players.RespawnTime + 0.75)
+	local start = now()
+	local deadline = start + timeout
+	while now() < deadline do
 		if not character or not character.Parent then return nil end
+		local elapsed = now() - start
+		local remaining = deadline - now()
+		if remaining <= 0 then break end
+		local get_player = Players:GetPlayerFromCharacter(character)
 		local humanoid = character:FindFirstChildOfClass("Humanoid")
 		local head = character:FindFirstChild("Head")
-		local root = getRoot(character)
+		local root_timeout = math.min(Players.RespawnTime + 0.5, remaining)
+		local root = g.get_root(get_player, root_timeout) or g.getRoot(character)
 		if root and root.Parent ~= character then root = nil end
-		if humanoid and head and root then return {character = character, humanoid = humanoid, head = head, root = root} end
-		task.wait(0.03)
+		if humanoid and humanoid.Health > 0 and head and root then
+			return {
+				character = character,
+				humanoid  = humanoid,
+				head      = head,
+				root      = root,
+				elapsed   = elapsed,
+			}
+		end
+		task.wait(math.min(0.03, remaining))
 	end
 
 	return nil
@@ -5553,7 +5587,7 @@ end
 
 getgenv().register_character = function(character)
 	local timeout = Players.RespawnTime + Random.new():NextNumber(0.5, 3)
-	local data = resolve_character(character, timeout)
+	local data = g.resolve_character(character, timeout)
 	if not data then return end
 	getgenv().Character = data.character
 	getgenv().Humanoid = data.humanoid
