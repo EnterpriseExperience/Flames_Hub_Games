@@ -4337,9 +4337,9 @@ g.string_contains_plain = g.string_contains_plain or function(source, needle)
 end
 
 g.load_youtube_music_player_func = g.load_youtube_music_player_func or function()
-    if g.You_Tube_Music_Player_Loaded then return getgenv().notify("Warning", "YouTube Music Player is already loaded.", 5) end
+    if g.You_Tube_Music_Player_Loaded then return g.notify("Warning", "YouTube Music Player is already loaded.", 5) end
     g.You_Tube_Music_Player_Loaded = true
-    loadstring(game:HttpGet(('https://raw.githubusercontent.com/Dan41/Roblox-Scripts/refs/heads/main/Youtube%20Music%20Player/YoutubeMusicPlayer.lua'), true))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Dan41/Roblox-Scripts/refs/heads/main/Youtube%20Music%20Player/YoutubeMusicPlayer.lua"))()
     local asset_id = "76673896881913"
     local target_image = "rbxassetid://" .. asset_id
     task.spawn(function()
@@ -4369,6 +4369,7 @@ g.load_youtube_music_player_func = g.load_youtube_music_player_func or function(
         end
 
         if not target_button then return end
+
         local target_frame
         for _, child in ipairs(screen_gui:GetDescendants()) do
             if child:IsA("Frame") then
@@ -4383,7 +4384,9 @@ g.load_youtube_music_player_func = g.load_youtube_music_player_func or function(
         if target_frame then
             target_frame.Draggable = true
         end
+        return
     end)
+    return
 end
 
 if g.notify then g.notify("Info", "One moment, we're initializing basic services...", 5) end
@@ -4602,7 +4605,7 @@ end
 -- [[ you can use these, or you can modify the source code from each one and upload it to your own GitHub. ]] --
 local github_urls = {
     GlobalEnv_Framework = {
-        "https://gitlab.com/flames2431233/Starter/-/raw/main/Life_Together_Framework/Global_Environment.lua?ref_type=heads"
+        "https://gitlab.com/flames2431233/Starter/-/raw/main/Assets/Global_Environment.lua?ref_type=heads"
     },
     Functions_API_LifeTogether = {
         "https://gitlab.com/flames2431233/Starter/-/raw/main/Life_Together_Framework/Life_Together_Functions_API.lua?ref_type=heads"
@@ -8999,38 +9002,38 @@ g.spectate_plr_without_distance_limits = g.spectate_plr_without_distance_limits 
         if not target_player then return end
         spectate_target = target_player
         spectate_subject = nil
-        originalIO.disconnectSpectateConns()
+        g.originalIO.disconnectSpectateConns()
         local function setCamToCharacter(character)
             if spectate_target ~= target_player or not character then return end
             local hum = g.getPlrHum(character) or g.getHum(character, 5)
             local subj = hum or g.getRoot(character)
             if not subj then return end
             spectate_subject = subj
-            originalIO.ensureCam()
-            originalIO.hookCameraGuard()
+            g.originalIO.ensureCam()
+            g.originalIO.hookCameraGuard()
         end
 
         setCamToCharacter(target_player.Character)
-        spectateConns.char = g.FlamesLibrary.connect("spectate_char", target_player.CharacterAdded:Connect(function(character)
+        g.spectateConns.char = g.FlamesLibrary.connect("spectate_char", target_player.CharacterAdded:Connect(function(character)
             if spectate_target ~= target_player then return end
             setCamToCharacter(character)
         end))
 
-        spectateConns.leave = NAlib.connect("spectate_leave", Players.PlayerRemoving:Connect(function(player)
+        g.spectateConns.leave = NAlib.connect("spectate_leave", Players.PlayerRemoving:Connect(function(player)
             if player == target_player and spectate_target == target_player then
                 g.cleanup(true)
                 --g.DebugNotif("Player left - camera reset")
             end
         end))
 
-        spectateConns.loop = NAlib.connect("spectate_loop", RunService.RenderStepped:Connect(function()
+        g.spectateConns.loop = NAlib.connect("spectate_loop", RunService.RenderStepped:Connect(function()
             if spectate_target ~= target_player then return end
             local char = target_player.Character
             if not char or not char.Parent then return end
             if not spectate_subject or spectate_subject.Parent ~= char then
                 setCamToCharacter(char)
             else
-                originalIO.ensureCam()
+                g.originalIO.ensureCam()
             end
         end))
     end
