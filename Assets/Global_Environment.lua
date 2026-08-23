@@ -1188,7 +1188,18 @@ end
 
 getgenv().notify = getgenv().notify or function(title, msg, dur)
     if getgenv().Notifications_Disabled_In_Flames_Hub then return end
-    local fixed_title = format_title(title)
+
+    local resolved_title
+
+    if typeof(title) == "table" then
+        resolved_title = tostring(title.type or title.title or title.mode or title[1] or "Info")
+    elseif typeof(title) == "string" then
+        resolved_title = title
+    else
+        resolved_title = "Info"
+    end
+
+    local fixed_title = format_title(resolved_title)
     NotifyLib:External_Notification(fixed_title, tostring(msg), tonumber(dur) or 5)
 end
 
