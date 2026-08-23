@@ -1104,7 +1104,7 @@ g.NotificationLibrary.SendNotification = function(Mode, Text, Duration)
         end)
 
         if not success then
-            warn("[NotificationLibrary] Error during notification render:")
+            warn("[NotificationLibrary]: Error during notification render:")
             warn(err)
         end
     end)
@@ -1172,7 +1172,7 @@ function Notification_Wrapper:External_Notification(Type, Content, Time)
     if not Time then Time = 5 end
     wait()
     Play_Notification_Sound()
-    NotificationLibrary_External:SendNotification(tostring(Type), tostring(Content), tonumber(Time))
+    NotificationLibrary_External.SendNotification(tostring(Type), tostring(Content), tonumber(Time))
 end
 
 local NotifyLib = Notification_Wrapper
@@ -1186,21 +1186,11 @@ local function format_title(str)
     return valid_titles[str:lower()] or "Info"
 end
 
-getgenv().notify = getgenv().notify or function(title, msg, dur)
-    if getgenv().Notifications_Disabled_In_Flames_Hub then return end
-
-    local resolved_title
-
-    if typeof(title) == "table" then
-        resolved_title = tostring(title.type or title.title or title.mode or title[1] or "Info")
-    elseif typeof(title) == "string" then
-        resolved_title = title
-    else
-        resolved_title = "Info"
+getgenv().notify = function(title, msg, dur)
+    if not getgenv().Notifications_Disabled_In_Flames_Hub then
+        local fixed_title = format_title(typeof(title) == "string" and title or "Info")
+        NotifyLib:External_Notification(fixed_title, tostring(msg), tonumber(dur) or 5)
     end
-
-    local fixed_title = format_title(resolved_title)
-    NotifyLib:External_Notification(fixed_title, tostring(msg), tonumber(dur) or 5)
 end
 
 g.Characters = g.Characters or {}
