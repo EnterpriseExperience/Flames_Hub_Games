@@ -373,10 +373,12 @@ for i,v in pairs(plrs:GetPlayers()) do if v ~= plr then PlayerAdded(v) end end
 ESP:AddLocalPlayer()
 FlamesLibrary.connect("ESP_RenderStepped", RunService.RenderStepped:Connect(function()
 	cam = workspace.CurrentCamera
-	for i,v in (ESP.Enabled and ipairs)(ESP.Objects) do
-		if v.Update then
-			local s,e = pcall(v.Update, v)
-			if not s then warn("[EU]", e, v.Object:GetFullName()) end
+	if ESP.Enabled then
+		for i,v in pairs(ESP.Objects) do
+			if v.Update then
+				local s,e = pcall(v.Update, v)
+				if not s then warn("[EU]", e, v.Object:GetFullName()) end
+			end
 		end
 	end
 end))
