@@ -1,6 +1,10 @@
+if not game:IsLoaded() then game.Loaded:Wait() end
 local g = getgenv()
+local http_game = (getgenv()["game"] or game)["HttpGet"]
+g.http_get = function(url) return http_game(game, url) end
+wait(0.1)
 if not g.GlobalEnvironmentFramework_Initialized then
-   loadstring(game:HttpGet("https://pastebin.com/raw/T25mDhBZ"))()
+   loadstring(g.http_get("https://pastebin.com/raw/T25mDhBZ"))()
    wait(0.1)
    g.GlobalEnvironmentFramework_Initialized = true
 end
