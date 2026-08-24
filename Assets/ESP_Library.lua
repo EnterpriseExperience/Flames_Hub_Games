@@ -336,8 +336,6 @@ local function CharAdded(char)
 end
 
 function ESP:AddLocalPlayer()
-	print("Character:", plrs.LocalPlayer.Character)
-	print("Box exists:", ESP:GetBox(plrs.LocalPlayer.Character))
 	local function LocalCharAdded(char)
 		if not char:FindFirstChild("HumanoidRootPart") then
 			local ev
@@ -360,8 +358,10 @@ function ESP:AddLocalPlayer()
 		end
 	end
 
+	print("Character:", plrs.LocalPlayer.Character)
+	print("Box exists:", ESP:GetBox(plrs.LocalPlayer.Character))
 	FlamesLibrary.connect("ESP_LocalPlayer_CharacterAdded", plr.CharacterAdded:Connect(LocalCharAdded))
-	if plr.Character and plr.Character:FindFirstChild("Humanoid") then coroutine.wrap(LocalCharAdded)(plr.Character) end
+	if plr.Character then coroutine.wrap(LocalCharAdded)(plr.Character) end
 end
 
 local function PlayerAdded(p)
