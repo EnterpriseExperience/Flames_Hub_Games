@@ -336,6 +336,8 @@ local function CharAdded(char)
 end
 
 function ESP:AddLocalPlayer()
+	print("Character:", plrs.LocalPlayer.Character)
+	print("Box exists:", ESP:GetBox(plrs.LocalPlayer.Character))
 	local function LocalCharAdded(char)
 		if not char:FindFirstChild("HumanoidRootPart") then
 			local ev
