@@ -16,7 +16,6 @@ local MPS = game:GetService("MarketplaceService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = Core or game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
-local UIS = UserInputService
 local Is_Mobile = UserInputService.TouchEnabled
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
@@ -1958,7 +1957,7 @@ do
         if info.ConfigFolder then
             local cf = info.ConfigFolder
             local config = cf.."/config.json"
-            if not isfolder("Flames_Hub_Menu") then makefolder("Flames_Hub_Menu") end
+            if isfolder and typeof(isfolder) == "function" and makefolder and typeof(makefolder) == "function" and (not isfolder("Flames_Hub_Menu")) then makefolder("Flames_Hub_Menu") end
             wait(0.25)
             if not isfolder(cf) then makefolder(cf) end
             if not isfile(config) then writefile(config,"") end
@@ -1968,7 +1967,19 @@ do
                 savedKey = readfile(key)
                 if savedKey == "" then savedKey = nil end
             end
-            flags = readfile(config)=="" and {} or HttpService:JSONDecode(readfile(config))
+            local raw_config = readfile(config)
+            if raw_config == "" then
+                flags = {}
+            else
+                local decode_ok, decoded = pcall(function() return HttpService:JSONDecode(raw_config) end)
+                if decode_ok and type(decoded) == "table" then
+                    flags = decoded
+                else
+                    warn("[ATLAS]: Corrupt config detected, wiping and resetting -> " .. tostring(decoded))
+                    if writefile and typeof(writefile) == "function" then writefile(config, "") end
+                    flags = {}
+                end
+            end
             for i,v in pairs(flags) do
                 if type(v)=="string" then
                     if string.sub(v,1,9)=="?special|" then
