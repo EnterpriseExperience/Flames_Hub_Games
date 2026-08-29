@@ -557,7 +557,7 @@ getgenv().FlamesLibrary.spawn = function(name, mode, ...)
 	if not name or not mode then return end
 	if getgenv().FlamesLibrary._connections[name] then getgenv().FlamesLibrary.disconnect(name) end
 	getgenv().FlamesLibrary._connections[name] = {}
-
+    wait(0.1)
 	local thread
 	local args = {...}
 	if mode == "spawn" then
@@ -873,7 +873,7 @@ g.check_function = function(func) -- might get rid of this.
             return v
         end
     end
-
+    
     local env = getfenv(0)
     for k, v in pairs(env) do
         if typeof(v) == "function" and tostring(k):lower() == name then
@@ -1256,8 +1256,8 @@ if not getgenv().Initialized_Flames_All_Characters_Global_System then
         if player.Character and player.Character.Parent then task.spawn(function() build_entry(player, player.Character) end) end
         player.CharacterAdded:Connect(function(char)
             task.spawn(function()
-                task.wait(g.Players.RespawnTime + 0.75)
-                if char and char.Parent then build_entry(player, char) end
+                task.wait(Players.RespawnTime + 0.75)
+                if char and char.Parent and char:IsDescendantOf(game or workspace) then build_entry(player, char) end
             end)
         end)
     end
@@ -5527,11 +5527,12 @@ getgenv().getRoot = function(char)
 	if not char.Parent then return nil end
 	local ok_name, name_of_char = pcall(function() return tostring(char.Name) end)
 	if not ok_name or not name_of_char then return nil end
-	local ok_hum, hum = pcall(function() return char:FindFirstChildOfClass("Humanoid") end)
-	if ok_hum and hum and typeof(hum) == "Instance" then
-		local ok_root, root_part = pcall(function() return hum:FindFirstChild("RootPart") end)
-		if ok_root and root_part and typeof(root_part) == "Instance" and root_part.Parent == char then return root_part end
-	end
+    local ok_hum, hum = pcall(function() return char:FindFirstChildOfClass("Humanoid") end)
+    if ok_hum and hum and typeof(hum) == "Instance" then
+        local humanoid = hum
+        local ok_root, root_part = pcall(function() return humanoid.RootPart end)
+        if ok_root and root_part and typeof(root_part) == "Instance" and root_part.Parent == char then return root_part end
+    end
 
 	local ok_hrp, hrp = pcall(function() return char:FindFirstChild("HumanoidRootPart") end)
 	if ok_hrp and hrp and hrp.Parent == char then return hrp end
@@ -5549,37 +5550,29 @@ getgenv().getRoot = function(char)
 end
 
 getgenv().resolve_character = function(character, timeout)
-	local function now()
-		if typeof(tick) == "function" then
-			return tick()
-		else
-			return os.clock()
-		end
-	end
-
 	timeout = timeout or (Players.RespawnTime + 0.75)
-	local start = now()
+	local start = os.clock()
 	local deadline = start + timeout
-	while now() < deadline do
+	local get_player, humanoid, head, root
+	while os.clock() < deadline do
 		if not character or not character.Parent then return nil end
-		local elapsed = now() - start
-		local remaining = deadline - now()
+		local remaining = deadline - os.clock()
 		if remaining <= 0 then break end
-		local get_player = Players:GetPlayerFromCharacter(character)
-		local humanoid = character:FindFirstChildOfClass("Humanoid")
-		local head = character:FindFirstChild("Head")
-		local root_timeout = math.min(Players.RespawnTime + 0.5, remaining)
-		local root = g.get_root(get_player, root_timeout) or g.getRoot(character)
+		get_player = get_player or Players:GetPlayerFromCharacter(character)
+		humanoid = humanoid or character:FindFirstChildWhichIsA("Humanoid") or g.get_human(get_player, Players.RespawnTime + 0.75)
+		head = head or character:FindFirstChild("Head") or g.get_head(get_player, Players.RespawnTime + 0.75)
+		root = root or character:FindFirstChild("HumanoidRootPart") or g.get_root(get_player, math.min(Players.RespawnTime + 0.5, remaining)) or g.getRoot(character)
 		if root and root.Parent ~= character then root = nil end
-		if humanoid and humanoid.Health > 0 and head and root then
+		if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) and humanoid.Health > 0 and head and head.Parent and head:IsDescendantOf(game) and root and root:IsDescendantOf(game) then
 			return {
 				character = character,
 				humanoid  = humanoid,
 				head      = head,
 				root      = root,
-				elapsed   = elapsed,
+				elapsed   = os.clock() - start,
 			}
 		end
+
 		task.wait(math.min(0.03, remaining))
 	end
 
