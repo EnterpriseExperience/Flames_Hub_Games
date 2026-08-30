@@ -6,12 +6,129 @@ if getgenv().GlobalEnvironmentFramework_Initialized then return end
 getgenv().GlobalEnvironmentFramework_Initialized = true
 local g = getgenv()
 local game_ref = game
-local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
-if not getgenv().Players then getgenv().Players = Players end
-local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
-if not getgenv().Workspace then getgenv().Workspace = Workspace end
-local HttpService = g.HttpService or cloneref and cloneref(game:GetService("HttpService")) or game:GetService("HttpService")
-if not getgenv().HttpService then getgenv().HttpService = HttpService end
+local function easy_wrapper(s)
+    local service_map = {
+        ["runservice"]           = "RunService",
+        ["players"]              = "Players",
+        ["userinputservice"]     = "UserInputService",
+        ["tweenservice"]         = "TweenService",
+        ["httpservice"]          = "HttpService",
+        ["marketplaceservice"]   = "MarketplaceService",
+        ["coregui"]              = "CoreGui",
+        ["starterplayer"]        = "StarterPlayer",
+        ["startergui"]           = "StarterGui",
+        ["starterpack"]          = "StarterPack",
+        ["workspace"]            = "Workspace",
+        ["replicatedstorage"]    = "ReplicatedStorage",
+        ["serverstorage"]        = "ServerStorage",
+        ["serverscriptservice"]  = "ServerScriptService",
+        ["chat"]                 = "Chat",
+        ["teams"]                = "Teams",
+        ["soundservice"]         = "SoundService",
+        ["pathfindingservice"]   = "PathfindingService",
+        ["physicsservice"]       = "PhysicsService",
+        ["textservice"]          = "TextService",
+        ["textchatservice"]      = "TextChatService",
+        ["virtualuser"]          = "VirtualUser",
+        ["guiservice"]           = "GuiService",
+        ["contextactionservice"] = "ContextActionService",
+        ["contentprovider"]      = "ContentProvider",
+        ["badgeservice"]         = "BadgeService",
+        ["datastoreservice"]     = "DataStoreService",
+        ["groupservice"]         = "GroupService",
+        ["insertservice"]        = "InsertService",
+        ["localizationservice"]  = "LocalizationService",
+        ["logservice"]           = "LogService",
+        ["memorystoreservice"]   = "MemoryStoreService",
+        ["messagingservice"]     = "MessagingService",
+        ["notificationservice"]  = "NotificationService",
+        ["policyservice"]        = "PolicyService",
+        ["socialservice"]        = "SocialService",
+        ["stats"]                = "Stats",
+        ["teleportservice"]      = "TeleportService",
+        ["vrservice"]            = "VRService",
+        ["scriptcontext"]        = "ScriptContext",
+        ["rendersettings"]       = "RenderSettings",
+        ["selection"]            = "Selection",
+        ["testservice"]          = "TestService",
+        ["lighting"]             = "Lighting",
+        ["collectionservice"]    = "CollectionService",
+        ["debris"]               = "Debris",
+        ["geometryservice"]      = "GeometryService",
+    }
+
+    local instance
+    local service_name
+
+    if typeof(s) == "Instance" then
+        instance = s
+    elseif type(s) == "string" then
+        local normalized = s:lower():gsub("%s+", "")
+        service_name = service_map[normalized]
+        if not service_name then
+            warn("[easy_wrapper]: unknown service -> " .. tostring(s))
+            return nil
+        end
+        if getgenv()[service_name] then return getgenv()[service_name] end
+        local ok, result = pcall(function() return game:GetService(service_name) end)
+        if not ok or not result then
+            warn("[easy_wrapper]: GetService failed -> " .. tostring(service_name))
+            return nil
+        end
+        instance = result
+    else
+        warn("[easy_wrapper]: invalid argument type -> " .. tostring(typeof(s)))
+        return nil
+    end
+
+    if cloneref and typeof(cloneref) == "function" then
+        local ok, cloned = pcall(cloneref, instance)
+        if ok and cloned then instance = cloned end
+    end
+
+    if service_name and not getgenv()[service_name] then
+        getgenv()[service_name] = instance
+    end
+
+    return instance
+end
+wait(0.1)
+easy_wrapper("Players")
+easy_wrapper("Workspace")
+easy_wrapper("HttpService")
+easy_wrapper("CoreGui")
+easy_wrapper("RunService")
+easy_wrapper("UserInputService")
+easy_wrapper("TweenService")
+easy_wrapper("MarketplaceService")
+easy_wrapper("TeleportService")
+easy_wrapper("ReplicatedStorage")
+easy_wrapper("StarterPlayer")
+easy_wrapper("StarterGui")
+easy_wrapper("Lighting")
+easy_wrapper("CollectionService")
+easy_wrapper("TextChatService")
+easy_wrapper("SoundService")
+easy_wrapper("PathfindingService")
+easy_wrapper("GuiService")
+easy_wrapper("ContextActionService")
+easy_wrapper("Debris")
+easy_wrapper("Chat")
+easy_wrapper("VRService")
+print("[GLOBAL ENVIRONMENT]: Loading services...")
+wait(0.25)
+local Players              = getgenv().Players
+local Workspace            = getgenv().Workspace
+local CoreGui              = getgenv().CoreGui
+local RunService           = getgenv().RunService
+local UserInputService     = getgenv().UserInputService
+local TweenService         = getgenv().TweenService
+local MarketplaceService   = getgenv().MarketplaceService
+local TextChatService      = getgenv().TextChatService
+local Chat                 = getgenv().Chat
+local LocalPlayer          = g.LocalPlayer or Players.LocalPlayer
+local TextService          = getgenv().TextService
+print("[GLOBAL ENVIRONMENT]: Loaded services successfully.")
 g.wait_until = function(condition, interval, max_tries)
     interval = tonumber(interval) or 0.05
     if typeof(max_tries) == "string" then
@@ -60,6 +177,20 @@ g.words_tbl = {
     "init_stealth","spoof_id","kernel_hook","bruteforce",
     "sys_reboot","net_breach","ghost_mode","backdoor_init"
 }
+
+g.get_game_name = function(place_id)
+    if not place_id then return end
+    local conv_str = MarketplaceService:GetProductInfo(place_id)
+    if conv_str and conv_str.Name then
+        return conv_str.Name
+    else
+        if g.notify and typeof(g.notify) == "function" then
+            return g.notify("Error", "The game either does not exist anymore or did not return anything from Roblox's API!", 5)
+        else
+            return warn("Game Name is not a string or was returned as nil!")
+        end
+    end
+end
 
 g.FuzzyFindChild = function(parent, query, timeout)
     if not parent or typeof(parent) ~= "Instance" then return nil end
@@ -266,8 +397,7 @@ end
 
 local function ensure_global_loop()
     if g._rgb_global_conn then return end
-    local rs = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
-    local conn = rs.RenderStepped:Connect(function(dt)
+    local conn = RunService.RenderStepped:Connect(function(dt)
         local conns = g._rgb_conns
         local any = false
         for _, data in pairs(conns) do
@@ -640,10 +770,9 @@ end
 
 -- [[ safer wait functionality. ]] --
 getgenv().FlamesLibrary.wait = function(t)
-    local r_s = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
-    if not t or t <= 0 then r_s.Heartbeat:Wait(); return end
+    if not t or t <= 0 then RunService.Heartbeat:Wait(); return end
     local ok = pcall(task.wait, t)
-    if not ok then r_s.Heartbeat:Wait() end
+    if not ok then RunService.Heartbeat:Wait() end
 end
 
 getgenv().FlamesLibrary.cleanup_all = function() for name in pairs(getgenv().FlamesLibrary._connections) do getgenv().FlamesLibrary.disconnect(name) end end
@@ -652,12 +781,9 @@ getgenv().FlamesLibrary.modules.chat_filter_override = {
 	start = function(self)
 		if self.enabled then return end
 		self.enabled = true
-		local text_chat_service = cloneref and cloneref(game:GetService("TextChatService")) or game:GetService("TextChatService")
-		local players = cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
-		local chat = cloneref and cloneref(game:GetService("Chat")) or game:GetService("Chat")
 		local function will_tag(text)
 			local filtered = nil
-			local success = pcall(function() filtered = chat:FilterStringForBroadcast(text, players.LocalPlayer) end)
+			local success = pcall(function() filtered = Chat:FilterStringForBroadcast(text, Players.LocalPlayer) end)
 			if not success or filtered == nil then return true end
 			if #filtered ~= #text then return true end
 			for i = 1, #text do
@@ -668,9 +794,9 @@ getgenv().FlamesLibrary.modules.chat_filter_override = {
 			return false
 		end
 
-		text_chat_service.OnIncomingMessage = function(v)
+		TextChatService.OnIncomingMessage = function(v)
 			local prop = Instance.new("TextChatMessageProperties")
-			if v.TextSource and v.TextSource.UserId == players.LocalPlayer.UserId and will_tag(v.Text) then
+			if v.TextSource and v.TextSource.UserId == Players.LocalPlayer.UserId and will_tag(v.Text) then
 				prop.Text = "."
 				prop.PrefixText = "."
 				getgenv().FlamesLibrary.wait(0.25)
@@ -829,6 +955,139 @@ getgenv().FlamesLibrary.set_starter_player_property = function(property, value)
     if not success then return false, "failed to set " .. resolved .. ": " .. tostring(err) end
     return true, resolved
 end
+wait(0.1)
+local FL = getgenv().FlamesLibrary
+
+g.create_ui = g.create_ui or function(config, global_name, atlas_chain)
+    config = config or {}
+    local default_chain = {
+        "https://gitlab.com/flames2431233/Starter/-/raw/main/UIs/Atlas.lua",
+        "https://codeberg.org/talkinboutlol/FlamesHub/raw/branch/main/UIs/Atlas.lua",
+        "https://pastebin.com/raw/9Vs0Pq8k",
+        "https://pastefy.app/gTPqx1DG/raw",
+    }
+    local chain = atlas_chain or default_chain
+    local defaults = {
+        Name         = "Flames Hub",
+        ConfigFolder = "FlamesHub_Configuration",
+        Color        = Color3.fromRGB(21, 103, 251),
+        Credit       = "Flames Hub",
+        Bind         = "RightShift",
+    }
+
+    local resolved = {}
+    for k, v in next, defaults do resolved[k] = v end
+    for k, v in next, config   do resolved[k] = v end
+    local function validate_body(body) return type(body) == "string" and #body > 10 end
+    local function try_request(url)
+        local http_fn = request or http_request or (syn    and syn.request) or (http   and http.request) or (fluxus and fluxus.request)
+        if http_fn and type(http_fn) == "function" then
+            local ok, res = pcall(http_fn, { Url = url, Method = "GET" })
+            if ok and type(res) == "table" then
+                local status = res.StatusCode or res.statusCode or res.status or res.Status
+                local body   = res.Body or res.body or res.Response or res.response
+                if (status == 200 or status == nil) and validate_body(body) then return body end
+            end
+        end
+
+        if getgenv().http_get and type(getgenv().http_get) == "function" then
+            local ok, body = pcall(getgenv().http_get, url)
+            if ok and validate_body(body) then return body end
+        end
+        return nil
+    end
+
+    local function try_load_chain()
+        for _, url in ipairs(chain) do
+            local src = try_request(url)
+            if not src then
+                warn("[create_ui]: fetch failed -> " .. url)
+                continue
+            end
+
+            local fn, compile_err = loadstring(src)
+            if not fn then
+                warn("[create_ui]: compile error from " .. url .. " -> " .. tostring(compile_err))
+                continue
+            end
+
+            local run_ok, result = pcall(fn)
+            if not run_ok then warn("[create_ui]: runtime error from " .. url .. " -> " .. tostring(result)); continue end
+            if type(result) == "table" and type(result.new) == "function" then return result end
+            warn("[create_ui]: invalid Atlas return from " .. url .. ", trying next")
+        end
+        return nil
+    end
+
+    local ui, err
+    local done = false
+    FL.spawn("create_ui_load", "defer", function()
+        local ok, result = pcall(function()
+            local cached = getgenv().__AtlasLib
+            local cache_valid = type(cached) == "table" and type(cached.new) == "function"
+            if not cache_valid then
+                getgenv().__AtlasLib = nil
+                local lib = try_load_chain()
+                if not lib then warn("[create_ui]: all Atlas sources exhausted.") end
+                getgenv().__AtlasLib = lib
+            else
+                local existing = CoreGui:FindFirstChild("Atlas")
+                if existing and existing:IsA("ScreenGui") then
+                    existing:Destroy()
+                    local timeout = tick() + 5
+                    repeat FL.wait()
+                    until not CoreGui:FindFirstChild("Atlas") or tick() > timeout
+                end
+            end
+            return getgenv().__AtlasLib.new(resolved)
+        end)
+
+        if ok then
+            ui = result
+        else
+            err = result
+            getgenv().__AtlasLib = nil
+        end
+        done = true
+    end)
+
+    while not done do FL.wait() end
+    if err then
+        local msg = "create_ui failed: " .. tostring(err)
+        if g.notify then g.notify("Error", msg, 10) else warn(msg) end
+        return nil
+    end
+
+    if global_name then getgenv()[global_name] = ui end
+    return ui
+end
+FL.wait(0.25)
+g.create_ui_element = g.create_ui_element or function(element_type, parent, config, global_name, flag)
+    local creators = {
+        Tab         = function() return parent:CreatePage(config) end,
+        Section     = function() return parent:CreateSection(config) end,
+        Toggle      = function() return parent:CreateToggle(config, flag) end,
+        Slider      = function() return parent:CreateSlider(config, flag) end,
+        Button      = function() return parent:CreateButton(config, flag) end,
+        ColorPicker = function() return parent:CreateColorPicker(config, flag) end,
+        Input       = function() return parent:CreateTextBox(config, flag) end,
+        Dropdown    = function() return parent:CreateDropdown(config, flag) end,
+        Label       = function() return parent:CreateLabel(config, flag) end,
+    }
+
+    local creator = creators[element_type]
+    if not creator then return g.notify("Error", "Unknown element type: "..tostring(element_type), 10) end
+    local element
+    local done = false
+    FL.spawn("create_ui_element_load", "defer", function()
+        element = creator()
+        done = true
+    end)
+
+    while not done do task.wait() end
+    if global_name then getgenv()[global_name] = element end
+    return element
+end
 
 local function retrieve_executor()
     local f = identifyexecutor
@@ -873,8 +1132,8 @@ g.check_function = function(func) -- might get rid of this.
             return v
         end
     end
-    
-    local env = getfenv(0)
+
+    local env = (getfenv :: any)(0)
     for k, v in pairs(env) do
         if typeof(v) == "function" and tostring(k):lower() == name then
             g._function_cache[name] = v
@@ -902,11 +1161,6 @@ g.AllClipboards = g.AllClipboards or getgenv().FlamesLibrary.safe_func(setclipbo
 g.httprequest_Init = g.httprequest_Init or getgenv().FlamesLibrary.safe_func(syn and syn.request, http and http.request, http_request, fluxus and fluxus.request, request)
 g.get_http = g.httprequest_Init
 g.queueteleport = g.queueteleport or getgenv().FlamesLibrary.safe_func(syn and syn.queue_on_teleport, queue_on_teleport, fluxus and fluxus.queue_on_teleport)
-local uis = g.UserInputService or cloneref and cloneref(game:GetService("UserInputService")) or game:GetService("UserInputService")
-local ts = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
-local rs  = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService") or g.safe_wrapper("RunService")
-local RunService = rs
-local TextService = g.TextService or cloneref and cloneref(game:GetService("TextService")) or game:GetService("TextService")
 
 do
     local active_frame     = nil
@@ -939,7 +1193,7 @@ do
         return ok and res
     end
 
-    getgenv().FlamesLibrary.connect(GLOBAL_KEY .. "_heartbeat", rs.Heartbeat:Connect(function()
+    getgenv().FlamesLibrary.connect(GLOBAL_KEY .. "_heartbeat", RunService.Heartbeat:Connect(function()
         if not active_frame or not last_input_pos then return end
         if not frame_valid(active_frame) then
             stop_drag()
@@ -957,16 +1211,16 @@ do
         )
 
         cancel_tween()
-        active_tween = ts:Create(active_frame, TWEEN_INFO, { Position = pos })
+        active_tween = TweenService:Create(active_frame, TWEEN_INFO, { Position = pos })
         active_tween:Play()
     end))
 
-    getgenv().FlamesLibrary.connect(GLOBAL_KEY .. "_changed", uis.InputChanged:Connect(function(input)
+    getgenv().FlamesLibrary.connect(GLOBAL_KEY .. "_changed", UserInputService.InputChanged:Connect(function(input)
         if not active_frame then return end
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then last_input_pos = input.Position end
     end))
 
-    getgenv().FlamesLibrary.connect(GLOBAL_KEY .. "_ended", uis.InputEnded:Connect(function(input)
+    getgenv().FlamesLibrary.connect(GLOBAL_KEY .. "_ended", UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then stop_drag() end
     end))
 
@@ -976,7 +1230,7 @@ do
         local frame_key = "dragify_" .. tostring(frame) .. "_" .. tostring(frame:GetDebugId())
         getgenv().FlamesLibrary.connect(frame_key .. "_began", frame.InputBegan:Connect(function(input)
             if not frame_valid(frame) then return end
-            if uis:GetFocusedTextBox() then return end
+            if UserInputService:GetFocusedTextBox() then return end
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 if active_frame and active_frame ~= frame then stop_drag() end
                 active_frame      = frame
@@ -996,13 +1250,10 @@ do
     end
 end
 
-local fps = setfpscap or setfps or g.blank
+local fps = setfpscap or setfps or set_fps_cap or set_fps or g.blank
 SetFPSCap = g.get_or_set("SetFPSCap", fps)
 local LibraryName = "Notification Library"
 g.NotificationLibrary = {}
-local TweenService = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
-local CoreGui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
-local LocalPlayer = g.LocalPlayer or Players.LocalPlayer
 local PlayerGui = g.PlayerGui or LocalPlayer:FindFirstChildWhichIsA("PlayerGui") or LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 3)
 local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui or PlayerGui
 local library
@@ -1110,7 +1361,6 @@ g.NotificationLibrary.SendNotification = function(Mode, Text, Duration)
     end)
 end
 
-local UserInputService = g.UserInputService or g.safe_wrapper("UserInputService")
 local NotificationLibrary_External = getgenv().NotificationLibrary
 local Sound_ID_Windows = "rbxassetid://8183296024"
 local Sound_ID_iPhone = "rbxassetid://73722479618078"
@@ -1119,7 +1369,7 @@ local Sound_ID_Universal = "rbxassetid://18595195017"
 local Notification_Wrapper = {}
 local function Device_Detector()
     local platform = UserInputService:GetPlatform()
-    local platformMap = {
+    local platform_map = {
         [Enum.Platform.Windows] = "Windows",
         [Enum.Platform.OSX] = "OSX",
         [Enum.Platform.IOS] = "iOS",
@@ -1142,7 +1392,7 @@ local function Device_Detector()
         [Enum.Platform.MetaOS] = "MetaOS",
         [Enum.Platform.None] = "Unknown Device"
     }
-    return platformMap[platform] or "Unknown Device"
+    return platform_map[platform] or "Unknown Device"
 end
 
 local device_platform = Device_Detector()
@@ -1162,7 +1412,6 @@ function Play_Notification_Sound()
     end
     task.wait()
     Notification_Sound:Play()
-
     Notification_Sound.Ended:Connect(function()
         Notification_Sound:Destroy()
     end)
@@ -1362,7 +1611,7 @@ g.get_or_set("retry_find", retry_find)
 
 getgenv().return_char = function(player, timeout)
     if not player or not player:IsA("Player") then return nil end
-    timeout = tonumber(timeout) or Players.RespawnTime + 0.75
+    timeout = tonumber(timeout) or Players.RespawnTime + 1
     local start = os.clock()
     while os.clock() - start < timeout do
         local char = player.Character
@@ -1376,38 +1625,46 @@ getgenv().return_char = function(player, timeout)
 end
 
 g.get_char = function(player, time_out)
-    time_out = tonumber(time_out) or Players.RespawnTime + 0.75
+    time_out = tonumber(time_out) or Players.RespawnTime + 1
     if not player or not player:IsA("Player") then return nil end
+    local char = player.Character
+    if char and char:IsDescendantOf(workspace) and char:IsDescendantOf(game) then return char end
     local start = os.clock()
     while os.clock() - start < time_out do
-        local char = player.Character
-        if char and char:IsDescendantOf(workspace) and char:IsDescendantOf(game) then return char end
+        char = player.Character
+        if char and wait_for_datamodel(char) then return char end
         hb()
     end
     return nil
 end
 
 g.get_human = function(player, time_out)
-    time_out = tonumber(time_out) or Players.RespawnTime + 0.75
+    time_out = tonumber(time_out) or Players.RespawnTime + 1
     local char = g.get_char(player, time_out)
     if not char then return nil end
-    return g.wait_instance(char, function() return char:FindFirstChildOfClass("Humanoid") end, time_out)
+    local existing = char:FindFirstChildOfClass("Humanoid")
+    if existing then return existing end
+    return wait_for_child_safe(char, "Humanoid", time_out)
 end
 
 g.get_root = function(player, time_out)
-    time_out = tonumber(time_out) or Players.RespawnTime + 0.75
+    time_out = tonumber(time_out) or Players.RespawnTime + 1
     local char = g.get_char(player, time_out)
     if not char then return nil end
-    return g.wait_instance(char, function()
-        return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
-    end, time_out)
+    local existing = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+    if existing then return existing end
+    return wait_for_child_safe(char, "HumanoidRootPart", time_out)
+        or wait_for_child_safe(char, "UpperTorso", time_out)
+        or wait_for_child_safe(char, "Torso", time_out)
 end
 
 g.get_head = function(player, time_out)
-    time_out = tonumber(time_out) or Players.RespawnTime + 0.75
+    time_out = tonumber(time_out) or Players.RespawnTime + 1
     local char = g.get_char(player, time_out)
     if not char then return nil end
-    return g.wait_instance(char, function() return char:FindFirstChild("Head") end, time_out)
+    local existing = char:FindFirstChild("Head")
+    if existing then return existing end
+    return wait_for_child_safe(char, "Head", time_out)
 end
 wait(0.1)
 getgenv().service_cache = getgenv().service_cache or {}
@@ -1448,27 +1705,23 @@ local function init_services()
         end
     end
 
-    local players = getgenv().Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
-    if players then while not players.LocalPlayer do task.wait() end; getgenv().LocalPlayer = players.LocalPlayer end
+    if Players and Players:IsA("Players") and Players:IsDescendantOf(game) then while not Players.LocalPlayer do task.wait() end; getgenv().LocalPlayer = Players.LocalPlayer end
     local sp = getgenv().StarterPlayer or cloneref and cloneref(game:GetService("StarterPlayer")) or game:GetService("StarterPlayer")
     if sp then getgenv().StarterPlayerScripts = sp:FindFirstChildOfClass("StarterPlayerScripts"); task.wait(); getgenv().StarterCharacterScripts = sp:FindFirstChildOfClass("StarterCharacterScripts") end
 end
 wait(0.1)
 init_services()
-
-local cmdp = cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
-local cmdlp = cmdp.LocalPlayer
 getgenv().Character = g.get_char(LocalPlayer, Players.RespawnTime + 0.75) or getgenv().LocalPlayer.Character or Players.LocalPlayer.Character
 getgenv().Humanoid = g.get_human(LocalPlayer, Players.RespawnTime + 0.75) or g.Character and (g.Character:FindFirstChild("Humanoid") or g.Character:FindFirstChildOfClass("Humanoid")) or g.Character and g.Character:WaitForChild("Humanoid", Players.RespawnTime + 0.75)
 getgenv().HumanoidRootPart = g.get_root(LocalPlayer, Players.RespawnTime + 0.75) or g.Character and (g.Character:FindFirstChild("HumanoidRootPart") or g.Character and g.Character:WaitForChild("HumanoidRootPart", Players.RespawnTime + 0.75))
 getgenv().Head = g.get_head(LocalPlayer, Players.RespawnTime + 0.75) or g.Character and (g.Character:FindFirstChild("Head") or g.Character and g.Character:WaitForChild("Head", Players.RespawnTime + 0.5))
 
 g.findplr = function(args)
-    local tbl = cmdp:GetPlayers()
+    local tbl = Players:GetPlayers()
     if args == "random" then
         local validPlayers = {}
         for _, v in pairs(tbl) do
-            if v ~= cmdlp then
+            if v ~= LocalPlayer then
                 table.insert(validPlayers, v)
             end
         end
@@ -1478,7 +1731,7 @@ g.findplr = function(args)
     if args == "new" then
         local vAges = {}
         for _, v in pairs(tbl) do
-            if v.AccountAge < 30 and v ~= cmdlp then
+            if v.AccountAge < 30 and v ~= LocalPlayer then
                 table.insert(vAges, v)
             end
         end
@@ -1488,7 +1741,7 @@ g.findplr = function(args)
     if args == "old" then
         local vAges = {}
         for _, v in pairs(tbl) do
-            if v.AccountAge > 30 and v ~= cmdlp then
+            if v.AccountAge > 30 and v ~= LocalPlayer then
                 table.insert(vAges, v)
             end
         end
@@ -1498,7 +1751,7 @@ g.findplr = function(args)
     if args == "bacon" then
         local vAges = {}
         for _, v in pairs(tbl) do
-            if v ~= cmdlp and g.get_char(v, 1) and (g.get_char(v, 1):FindFirstChild("Pal Hair") or g.get_char(v, 1):FindFirstChild("Kate Hair")) then
+            if v ~= LocalPlayer and g.get_char(v, Players.RespawnTime + 1) and (g.get_char(v, Players.RespawnTime + 1):FindFirstChild("Pal Hair") or g.get_char(v, Players.RespawnTime + 1):FindFirstChild("Kate Hair")) then
                 table.insert(vAges, v)
             end
         end
@@ -1508,7 +1761,7 @@ g.findplr = function(args)
     if args == "friend" then
         local friendList = {}
         for _, v in pairs(tbl) do
-            if v:IsFriendsWith(cmdlp.UserId) and v ~= cmdlp then
+            if v:IsFriendsWith(LocalPlayer.UserId) and v ~= LocalPlayer then
                 table.insert(friendList, v)
             end
         end
@@ -1518,7 +1771,7 @@ g.findplr = function(args)
     if args == "notfriend" then
         local vAges = {}
         for _, v in pairs(tbl) do
-            if not v:IsFriendsWith(cmdlp.UserId) and v ~= cmdlp then
+            if not v:IsFriendsWith(LocalPlayer.UserId) and v ~= LocalPlayer then
                 table.insert(vAges, v)
             end
         end
@@ -1528,7 +1781,7 @@ g.findplr = function(args)
     if args == "ally" then
         local vAges = {}
         for _, v in pairs(tbl) do
-            if v.Team == cmdlp.Team and v ~= cmdlp then
+            if v.Team == LocalPlayer.Team and v ~= LocalPlayer then
                 table.insert(vAges, v)
             end
         end
@@ -1538,7 +1791,7 @@ g.findplr = function(args)
     if args == "enemy" then
         local vAges = {}
         for _, v in pairs(tbl) do
-            if v.Team ~= cmdlp.Team and v ~= cmdlp then
+            if v.Team ~= LocalPlayer.Team and v ~= LocalPlayer then
                 table.insert(vAges, v)
             end
         end
@@ -1548,9 +1801,9 @@ g.findplr = function(args)
     if args == "near" then
         local vAges = {}
         for _, v in pairs(tbl) do
-            if v ~= cmdlp then
+            if v ~= LocalPlayer then
                 local vRootPart = g.get_root(v, 1)
-                local cmdlpRootPart = g.get_root(cmdlp, Players.RespawnTime + 0.5)
+                local cmdlpRootPart = g.HumanoidRootPart or g.get_root(LocalPlayer, Players.RespawnTime + 0.75)
                 if vRootPart and cmdlpRootPart then
                     local distance = (vRootPart.Position - cmdlpRootPart.Position).magnitude
                     if distance < 30 then
@@ -1565,9 +1818,9 @@ g.findplr = function(args)
     if args == "far" then
         local vAges = {}
         for _, v in pairs(tbl) do
-            if v ~= cmdlp then
-                local vRootPart = g.get_root(v, 1)
-                local cmdlpRootPart = g.get_root(cmdlp, Players.RespawnTime + 0.5)
+            if v ~= LocalPlayer then
+                local vRootPart = g.get_root(v, Players.RespawnTime + 1)
+                local cmdlpRootPart = g.HumanoidRootPart or g.get_root(LocalPlayer, Players.RespawnTime + 1)
                 if vRootPart and cmdlpRootPart then
                     local distance = (vRootPart.Position - cmdlpRootPart.Position).magnitude
                     if distance > 30 then
@@ -1583,8 +1836,8 @@ g.findplr = function(args)
 	for _, v in pairs(tbl) do
 		local name, display = v.Name:lower(), v.DisplayName:lower()
 		if name:find(args:lower()) or display:find(args:lower()) then
-			if v == cmdlp then
-				g.notify("Error", "You cannot target yourself!", 1)
+			if v == LocalPlayer then
+				if g.notify and typeof(g.notify) == "function" then g.notify("Error", "You cannot target yourself!", 1) end
 				return nil
 			end
 			return v
@@ -1599,8 +1852,8 @@ g.Noclip_Connection = g.Noclip_Connection or nil
 g.noclip_parts = g.noclip_parts or {}
 local function refresh_parts()
     table.clear(g.noclip_parts)
-    local Character = g.Character or LocalPlayer.Character or g.get_char(LocalPlayer, Players.RespawnTime + 0.75)
-    if not Character then return end
+    local Character = g.Character or LocalPlayer.Character or g.get_char(LocalPlayer, Players.RespawnTime + 1)
+    if not Character or not Character:FindFirstChild("HumanoidRootPart") or not Character:IsDescendantOf(game or workspace) then return end
     for _, inst in ipairs(Character:GetDescendants()) do if inst:IsA("BasePart") then table.insert(g.noclip_parts, inst) end end
 end
 
@@ -5559,8 +5812,8 @@ getgenv().resolve_character = function(character, timeout)
 		local remaining = deadline - os.clock()
 		if remaining <= 0 then break end
 		get_player = get_player or Players:GetPlayerFromCharacter(character)
-		humanoid = humanoid or character:FindFirstChildWhichIsA("Humanoid") or g.get_human(get_player, Players.RespawnTime + 0.75)
-		head = head or character:FindFirstChild("Head") or g.get_head(get_player, Players.RespawnTime + 0.75)
+		humanoid = humanoid or character:FindFirstChildWhichIsA("Humanoid") or g.get_human(get_player, math.min(Players.RespawnTime + 0.75, remaining))
+		head = head or character:FindFirstChild("Head") or g.get_head(get_player, math.min(Players.RespawnTime + 0.75, remaining))
 		root = root or character:FindFirstChild("HumanoidRootPart") or g.get_root(get_player, math.min(Players.RespawnTime + 0.5, remaining)) or g.getRoot(character)
 		if root and root.Parent ~= character then root = nil end
 		if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) and humanoid.Health > 0 and head and head.Parent and head:IsDescendantOf(game) and root and root:IsDescendantOf(game) then
@@ -5572,15 +5825,25 @@ getgenv().resolve_character = function(character, timeout)
 				elapsed   = os.clock() - start,
 			}
 		end
-
 		task.wait(math.min(0.03, remaining))
 	end
-
 	return nil
 end
 
 getgenv().register_character = function(character)
-	local timeout = Players.RespawnTime + Random.new():NextNumber(0.5, 3)
+	if character and character.Parent and character:IsDescendantOf(game) and character:IsDescendantOf(workspace) then
+		local hum = character:FindFirstChildWhichIsA("Humanoid")
+		local head = character:FindFirstChild("Head")
+		local root = character:FindFirstChild("HumanoidRootPart")
+		if hum and hum.Health > 0 and head and root then
+			getgenv().Character = character
+			getgenv().Humanoid = hum
+			getgenv().Head = head
+			getgenv().HumanoidRootPart = root
+			return
+		end
+	end
+	local timeout = Players.RespawnTime + 0.75
 	local data = g.resolve_character(character, timeout)
 	if not data then return end
 	getgenv().Character = data.character
@@ -5590,10 +5853,21 @@ getgenv().register_character = function(character)
 end
 
 getgenv().setup_local_character = function()
-	local player = g.LocalPlayer or Players.LocalPlayer
-	if not player then return end
-	if player.Character then task.spawn(getgenv().register_character, player.Character) end
-	player.CharacterAdded:Connect(function(character) task.spawn(getgenv().register_character, character) end)
+	FL.spawn("setup_local_character_init", "spawn", function()
+		while LocalPlayer and LocalPlayer.Parent do
+			local char = LocalPlayer.Character or g.get_char(LocalPlayer)
+			if char then
+				getgenv().register_character(char)
+				local hum = char:FindFirstChildWhichIsA("Humanoid")
+				if hum then hum.Died:Wait() end
+			end
+			LocalPlayer.CharacterAdded:Wait()
+		end
+	end)
+
+	FL.connect("setup_local_character_added", LocalPlayer.CharacterAdded:Connect(function(character)
+		FL.spawn("register_character_spawn", "spawn", function() getgenv().register_character(character) end)
+	end))
 end
 
 getgenv().setup_local_character()
