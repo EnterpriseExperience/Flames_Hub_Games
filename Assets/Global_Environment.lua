@@ -1053,7 +1053,7 @@ FL.wait(0.25)
 g.create_ui_element = g.create_ui_element or function(element_type, parent, config, global_name, flag)
     local creators = {
         Tab         = function() return parent:CreatePage(config) end,
-        Page         = function() return parent:CreatePage(config) end,
+        Page        = function() return parent:CreatePage(config) end,
         Section     = function() return parent:CreateSection(config) end,
         Toggle      = function() return parent:CreateToggle(config, flag) end,
         Slider      = function() return parent:CreateSlider(config, flag) end,
@@ -1065,15 +1065,38 @@ g.create_ui_element = g.create_ui_element or function(element_type, parent, conf
     }
 
     local creator = creators[element_type]
-    if not creator then return g.notify("Error", "Unknown element type: "..tostring(element_type), 10) end
+    if not creator then g.notify("Error", "Unknown element type: "..tostring(element_type), 10); return end
+    local captured_flag = flag
+    local captured_config = config
     local element
     local done = false
     FL.spawn("create_ui_element_load", "defer", function()
-        element = creator()
+        local ok, result = pcall(function()
+            if element_type == "Toggle" then
+                return parent:CreateToggle(captured_config, captured_flag)
+            elseif element_type == "Slider" then
+                return parent:CreateSlider(captured_config, captured_flag)
+            elseif element_type == "Button" then
+                return parent:CreateButton(captured_config, captured_flag)
+            elseif element_type == "ColorPicker" then
+                return parent:CreateColorPicker(captured_config, captured_flag)
+            elseif element_type == "Input" then
+                return parent:CreateTextBox(captured_config, captured_flag)
+            elseif element_type == "Dropdown" then
+                return parent:CreateDropdown(captured_config, captured_flag)
+            elseif element_type == "Label" then
+                return parent:CreateLabel(captured_config, captured_flag)
+            elseif element_type == "Tab" or element_type == "Page" then
+                return parent:CreatePage(captured_config)
+            elseif element_type == "Section" then
+                return parent:CreateSection(captured_config)
+            end
+        end)
+        if ok then element = result else warn("[create_ui_element]: " .. tostring(result)) end
         done = true
     end)
 
-    while not done do task.wait() end
+    while not done do FL.wait() end
     if global_name then getgenv()[global_name] = element end
     return element
 end
