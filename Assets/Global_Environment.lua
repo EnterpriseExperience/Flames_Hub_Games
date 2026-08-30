@@ -86,10 +86,7 @@ local function easy_wrapper(s)
         if ok and cloned then instance = cloned end
     end
 
-    if service_name and not getgenv()[service_name] then
-        getgenv()[service_name] = instance
-    end
-
+    if service_name and not getgenv()[service_name] then getgenv()[service_name] = instance end
     return instance
 end
 wait(0.1)
@@ -438,25 +435,17 @@ end
 
 g.toggle_rgb = g.toggle_rgb or function(name, state) -- toggle a certain connection.
     local data = g._rgb_conns[name]
-    if data then
-        data.paused = state
-    end
+    if data then data.paused = state end
 end
 
 g.toggle_all_rgb = g.toggle_all_rgb or function(state) -- toggle all
-    for _, data in pairs(g._rgb_conns) do
-        if data then
-            data.paused = state
-        end
-    end
+    for _, data in pairs(g._rgb_conns) do if data then data.paused = state end end
 end
 
 g.set_rgb_color_smart = g.set_rgb_color_smart or function(name, input)
     local data = g._rgb_conns[name]
     if not data or not data.obj then return end
-
     local color
-
     if typeof(input) == "string" then
         color = g.rgb_color_map[input:lower()]
     elseif typeof(input) == "number" then
@@ -957,7 +946,6 @@ getgenv().FlamesLibrary.set_starter_player_property = function(property, value)
 end
 wait(0.1)
 local FL = getgenv().FlamesLibrary
-
 g.create_ui = g.create_ui or function(config, global_name, atlas_chain)
     config = config or {}
     local default_chain = {
@@ -977,7 +965,7 @@ g.create_ui = g.create_ui or function(config, global_name, atlas_chain)
 
     local resolved = {}
     for k, v in next, defaults do resolved[k] = v end
-    for k, v in next, config   do resolved[k] = v end
+    for k, v in next, config do resolved[k] = v end
     local function validate_body(body) return type(body) == "string" and #body > 10 end
     local function try_request(url)
         local http_fn = request or http_request or (syn    and syn.request) or (http   and http.request) or (fluxus and fluxus.request)
@@ -1065,6 +1053,7 @@ FL.wait(0.25)
 g.create_ui_element = g.create_ui_element or function(element_type, parent, config, global_name, flag)
     local creators = {
         Tab         = function() return parent:CreatePage(config) end,
+        Page         = function() return parent:CreatePage(config) end,
         Section     = function() return parent:CreateSection(config) end,
         Toggle      = function() return parent:CreateToggle(config, flag) end,
         Slider      = function() return parent:CreateSlider(config, flag) end,
