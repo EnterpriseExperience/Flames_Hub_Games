@@ -1091,6 +1091,7 @@ g.create_ui_element = g.create_ui_element or function(element_type, parent, conf
             elseif element_type == "Section" then
                 return parent:CreateSection(captured_config)
             end
+            return
         end)
         if ok then element = result else warn("[create_ui_element]: " .. tostring(result)) end
         done = true
