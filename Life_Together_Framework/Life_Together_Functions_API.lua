@@ -1,20 +1,21 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
 local g = getgenv()
 g.Game = game
+local http_game = (getgenv()["game"] or game)["HttpGet"]
+getgenv().http_get = function(url) return http_game(game, url) end
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
 local RunService = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
-local StarterGui = g.StarterGui or cloneref and cloneref(game:GetService("StarterGui")) or game:GetService("StarterGui")
 local TextChatService = g.TextChatService or cloneref and cloneref(game:GetService("TextChatService")) or game:GetService("TextChatService")
 local UserInputService = g.UserInputService or cloneref and cloneref(game:GetService("UserInputService")) or game:GetService("UserInputService")
 local CoreGui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
 local SoundService = g.SoundService or cloneref and cloneref(game:GetService("SoundService")) or game:GetService("SoundService")
 local avatar_editor = g.AvatarEditorService or cloneref and cloneref(game:GetService("AvatarEditorService")) or game:GetService("AvatarEditorService")
 local ReplicatedStorage = g.ReplicatedStorage or cloneref and cloneref(game:GetService("ReplicatedStorage")) or game:GetService("ReplicatedStorage")
+local TweenService = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
 local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui
-local runservice = RunService
+local FlamesLibrary = g.FlamesLibrary or getgenv().FlamesLibrary
 local InstanceNew = Instance.new
-local orgDestroyHeight = workspace.FallenPartsDestroyHeight
 g.Script_Creator = "👑 Flames Hub 👑"
 g.Script_Owner = "✅ Flames Hub | ✅"
 getgenv().Flames_Hub_Emojis = {
@@ -94,7 +95,6 @@ local function wrap(t, e) return e.." "..t.." "..e end
 g.getholiday = g.getholiday or function()
    local m = tonumber(os.date("%m"))
    local d = tonumber(os.date("%d"))
-   local w = tonumber(os.date("%w"))
    local y = tonumber(os.date("%Y"))
    if m == 1 and d == 1 then return wrap("New Years", E["Holiday_New_Years"]) end
    if m == 1 and d == 27 then return wrap("National Chocolate Cake Day", E["Holiday_Chocolate_Cake"]) end
@@ -205,20 +205,9 @@ g.getholiday = g.getholiday or function()
 end
 
 local _na_env = g
-local Lower    = string.lower
-local Sub      = string.sub
-local GSub     = string.gsub
-local Find     = string.find
-local Match    = string.match
-local Format   = string.format
-local Unpack   = table.unpack
 local Insert   = table.insert
-local Concat   = table.concat
-local Discover = table.find
 local Spawn    = task.spawn
-local Delay    = task.delay
 local Wait     = task.wait
-local Defer    = task.defer
 local LocalPlayer = g.LocalPlayer or Players.LocalPlayer
 g.flingManager = g.flingManager or { FlingOldPos = nil; lFlingOldPos = nil; cFlingOldPos = nil; }
 local color_mapper = {
@@ -374,10 +363,10 @@ wait(0.1)
 local FL = g.FlamesLibrary
 local fw = FL.wait
 g.big_color_mapper = g.big_color_mapper or color_mapper
-g.isProperty = g.isProperty or function(inst, prop) local s, r = pcall(function() return inst[prop] end) if not s then return nil end return r end
-g.hasProp = g.hasProp or function(inst, prop) return inst and isProperty(inst, prop) ~= nil end
-g.setProperty = g.setProperty or function(inst, prop, v) local s, _ = pcall(function() inst[prop] = v end) return s end
-g.safeSet = g.safeSet or function(inst, prop, val) if inst and hasProp(inst, prop) then setProperty(inst, prop, val) end end
+g.isProperty = g.isProperty or function(inst, prop) local s, r = pcall(function() return inst[prop] end); if not s then return nil end; return r end
+g.hasProp = g.hasProp or function(inst, prop) return inst and g.isProperty(inst, prop) ~= nil end
+g.setProperty = g.setProperty or function(inst, prop, v) local s, _ = pcall(function() inst[prop] = v end); return s end
+g.safeSet = g.safeSet or function(inst, prop, val) if inst and g.hasProp(inst, prop) then g.setProperty(inst, prop, val) end end
 g.cmdsString = [[
    {prefix}rgbcar - Enables RGB/Rainbow Vehicle (FE Rainbow Vehicle).
    {prefix}unrgbcar - Disables RGB/Rainbow Vehicle (FE, Rainbow Vehicle).
@@ -582,9 +571,7 @@ g.cmdsString = [[
 ]]
 
 if not g.LocalPlayer then g.LocalPlayer = LocalPlayer or Players.LocalPlayer end
-local function safe(p) return p and typeof(p) == "Instance" end
-local function try(f) local ok = pcall(f) return ok end
-local control_module = require(g.LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
+local function try(f) local ok = pcall(f); return ok end
 g.heartbeat_wait_function = g.heartbeat_wait_function or function(timeout)
    local rs = g.RunService or RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
    local start = os.clock()
@@ -656,8 +643,7 @@ g.NA_GRAB_BODY = g.NA_GRAB_BODY or (function()
 					overrideModel = nil;
 					selectingOverride = false;
 					if Players and Players.LocalPlayer and workspace then
-						local lp = Players.LocalPlayer;
-						local cur = lp.Character;
+						local cur = LocalPlayer.Character;
 						if cur and cur.Parent and (not cur:IsDescendantOf(workspace)) then
 							Spawn(function()
 								pickOverrideModel();
@@ -669,20 +655,11 @@ g.NA_GRAB_BODY = g.NA_GRAB_BODY or (function()
 		end;
 	end;
 	pickOverrideModel = function(force)
-		if selectingOverride then
-			return overrideModel;
-		end;
-		if not (Players and Players.LocalPlayer and workspace) then
-			return overrideModel;
-		end;
-		local lp = Players.LocalPlayer;
-		local cur = lp.Character;
-		if not cur then
-			return overrideModel;
-		end;
-		if not force and cur:IsDescendantOf(workspace) then
-			return overrideModel;
-		end;
+		if selectingOverride then return overrideModel; end;
+		if not (Players and Players.LocalPlayer and workspace) then return overrideModel; end;
+		local cur = g.Character or g.LocalPlayer.Character or g.get_char(LocalPlayer, Players.RespawnTime + 1);
+		if not cur then return overrideModel; end;
+		if not force and cur:IsDescendantOf(workspace) then return overrideModel; end;
 		selectingOverride = true;
 		local btns = {};
 		local cands = {};
@@ -695,7 +672,7 @@ g.NA_GRAB_BODY = g.NA_GRAB_BODY or (function()
 			end;
 		end;
 		for _, inst in ipairs(workspace:GetDescendants()) do
-			if inst:IsA("Model") and CheckIfNPC and CheckIfNPC(inst) and (not seen[inst]) then
+			if inst:IsA("Model") and (not seen[inst]) then
 				seen[inst] = true;
 				Insert(cands, inst);
 			end;
@@ -774,6 +751,7 @@ g.NA_GRAB_BODY = g.NA_GRAB_BODY or (function()
 			end;
 		end;
 		rec.dirty = false;
+      return 
 	end;
 	local function ensure(obj)
 		local model = asChar(obj);
@@ -832,47 +810,13 @@ g.NA_GRAB_BODY = g.NA_GRAB_BODY or (function()
 	return T;
 end)();
 
-function getRoot(char)
-	local rec, model = NA_GRAB_BODY.ensure(char)
-	if not rec then return nil end
-	return rec.root or (model and NA_GRAB_BODY.firstPart(model)) or nil
-end
-
-function getTorso(char)
-	local rec, model = NA_GRAB_BODY.ensure(char)
-	if not rec then return nil end
-	return rec.torso or (model and NA_GRAB_BODY.firstPart(model)) or nil
-end
-
-function getHead(char)
-	local rec, model = NA_GRAB_BODY.ensure(char)
-	if not rec then return nil end
-	return rec.head or (model and NA_GRAB_BODY.firstPart(model)) or nil
-end
-
-function getChar()
-	local plr = Players.LocalPlayer
-	if not plr then return nil end
-	local rec, model = NA_GRAB_BODY.ensure(plr)
-	return model
-end
-
-function getPlrChar(plr)
-	return NA_GRAB_BODY.asChar(plr)
-end
-
+function getPlrChar(plr) return g.NA_GRAB_BODY.asChar(plr) end
 g.grab_char_as_flames_nameless_fetcher = g.grab_char_as_flames_nameless_fetcher or getPlrChar
-
-function getBp()
-	local plr = Players.LocalPlayer
-	return plr and plr:FindFirstChildOfClass("Backpack") or nil
-end
-
 g.getHum = g.getHum or function(char, waitSeconds)
 	local target
 
 	if char then
-		target = NA_GRAB_BODY.asChar(char) or char
+		target = g.NA_GRAB_BODY.asChar(char) or char
 	else
 		local plr = Players.LocalPlayer
 		if plr then
@@ -891,7 +835,7 @@ g.getHum = g.getHum or function(char, waitSeconds)
 
 	local timeout = tonumber(waitSeconds) or 3
 	if not timeout or timeout <= 0 then
-		local rec = NA_GRAB_BODY.ensure(target)
+		local rec = g.NA_GRAB_BODY.ensure(target)
 		return rec and rec.humanoid or nil
 	end
 
@@ -911,40 +855,20 @@ g.getHum = g.getHum or function(char, waitSeconds)
 		return hum
 	end
 
-	local rec = NA_GRAB_BODY.ensure(target)
+	local rec = g.NA_GRAB_BODY.ensure(target)
 	return rec and rec.humanoid or nil
 end
 
-g.getPlrHum = g.getPlrHum or function(plr)
-	return getHum(plr)
+g.getPlrHum = g.getPlrHum or function(plr) return g.getHum(plr) end
+
+local FireFolder = SoundService:FindFirstChild("FireTemporaryReparentFolder", true)
+if not FireFolder then
+   FireFolder = Instance.new("Folder")
+   FireFolder.Name = "FireTemporaryReparentFolder"
+   FireFolder.Parent = g.SoundService or SoundService or cloneref and cloneref(game:GetService("SoundService")) or game:GetService("SoundService")
 end
 
-function IsR15(plr)
-	plr=(plr or Players.LocalPlayer)
-	if plr then
-		local h=getPlrHum(plr)
-		if h and h.RigType==Enum.HumanoidRigType.R15 then return true end
-	end
-	return false
-end
-
-function IsR6(plr)
-	plr=(plr or Players.LocalPlayer)
-	if plr then
-		local h=getPlrHum(plr)
-		if h and h.RigType==Enum.HumanoidRigType.R6 then return true end
-	end
-	return false
-end
-
-local fireFolder = SoundService:FindFirstChild("FireTemporaryReparentFolder", true)
-if not fireFolder then
-   fireFolder = Instance.new("Folder")
-   fireFolder.Name = "FireTemporaryReparentFolder"
-   fireFolder.Parent = g.SoundService or SoundService or cloneref and cloneref(game:GetService("SoundService")) or game:GetService("SoundService")
-end
-
-for _,v in ipairs(fireFolder:GetChildren()) do try(function() v:Destroy() end) end
+for _,v in ipairs(FireFolder:GetChildren()) do try(function() v:Destroy() end) end
 g.decodeHTMLEntities = function(str) return str:gsub("&gt;", ">"):gsub("&lt;", "<"):gsub("&amp;", "&"):gsub("&quot;", '"'):gsub("&#39;", "'") end
 g.Float_Running_In_Flames_Hub = g.Float_Running_In_Flames_Hub or false
 local float_part
@@ -955,17 +879,12 @@ local UIS = UserInputService
 local isMobile = UIS.TouchEnabled
 
 g.start_flames_float = function()
-   if g.Float_Running_In_Flames_Hub then
-      return g.notify("Warning", "Flames Float-V1 is already enabled.", 5)
-   end
-
-   local char = g.Character or LocalPlayer.Character or get_char(LocalPlayer, 5)
-   local root = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or get_root(LocalPlayer, 6)
-   local hum = g.Humanoid or char and char:FindFirstChildOfClass("Humanoid") or get_human(LocalPlayer, 6)
+   if g.Float_Running_In_Flames_Hub then g.notify("Warning", "Flames Float-V1 is already enabled.", 5); return end
+   local char = g.Character or LocalPlayer.Character or g.get_char(LocalPlayer)
+   local root = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer)
+   local hum = g.Humanoid or char and char:FindFirstChildOfClass("Humanoid") or g.get_human(LocalPlayer)
    if not char or not root or not hum then return end
-
    g.Float_Running_In_Flames_Hub = true
-
    float_part = Instance.new("Part")
    float_part.Name = float_name
    float_part.Parent = workspace
@@ -977,9 +896,7 @@ g.start_flames_float = function()
 
    local controlModule
    if isMobile then
-      local ok, cm = pcall(function()
-         return require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
-      end)
+      local ok, cm = pcall(function() return require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"):WaitForChild("ControlModule")) end)
       if ok then controlModule = cm end
    end
 
@@ -1005,18 +922,15 @@ g.start_flames_float = function()
       g.FlamesLibrary.disconnect("flames_float_heartbeat")
    end
    wait(0.1)
-   g.FlamesLibrary.connect("flames_float_heartbeat", RunService.RenderStepped:Connect(function()
+   FlamesLibrary.connect("flames_float_heartbeat", RunService.RenderStepped:Connect(function()
       if not float_part then return end
-
       local char_now = g.Character or LocalPlayer.Character
       if not char_now then return end
       local root_now = g.HumanoidRootPart or char_now:FindFirstChild("HumanoidRootPart")
       local hum_now = g.Humanoid or char_now:FindFirstChildOfClass("Humanoid")
       if not root_now or not hum_now then return end
-
       local hrp_half = (root_now.Size.Y or 2) * 0.5
       local part_half = float_part.Size.Y * 0.5
-
       local feet_from_root
       if hum_now.RigType == Enum.HumanoidRigType.R6 then
          feet_from_root = hrp_half + (hum_now.HipHeight > 0 and hum_now.HipHeight or 2)
@@ -1025,10 +939,8 @@ g.start_flames_float = function()
       end
 
       local base_offset = feet_from_root + part_half
-
       local moveUp = false
       local moveDown = false
-
       if isMobile and controlModule then
          local mv = controlModule:GetMoveVector()
          moveUp = hum_now:GetState() == Enum.HumanoidStateType.Jumping
@@ -1040,7 +952,6 @@ g.start_flames_float = function()
 
       local delta = (moveDown and 1.5) or (moveUp and -1.5) or 0
       offset = math.max(0, base_offset + delta)
-
       float_part.CFrame = CFrame.new(
          root_now.Position.X,
          root_now.Position.Y - offset,
@@ -1049,23 +960,18 @@ g.start_flames_float = function()
    end))
 
    if isMobile then
-      g.notify("Success", "Flames Float-V1 enabled (Jump = Up | Move Back = Down)", 7)
+      g.notify("Success", "Flames Float-V1 enabled (Jump = Up | Move Back = Down)", 5)
    else
-      g.notify("Success", "Flames Float-V1 enabled (Hold E = Up | Hold Q = Down)", 7)
+      g.notify("Success", "Flames Float-V1 enabled (Hold E = Up | Hold Q = Down)", 5)
    end
 end
 
 g.stop_flames_float = g.stop_flames_float or function()
-   if not g.Float_Running_In_Flames_Hub then
-      return g.notify("Warning", "Flames Float-V1 is not enabled.", 5)
-   end
-
+   if not g.Float_Running_In_Flames_Hub then g.notify("Warning", "Flames Float-V1 is not enabled.", 3); return end
    g.Float_Running_In_Flames_Hub = false
-
-   g.FlamesLibrary.disconnect("flames_float_input_began")
-   g.FlamesLibrary.disconnect("flames_float_input_ended")
-   g.FlamesLibrary.disconnect("flames_float_heartbeat")
-
+   FlamesLibrary.disconnect("flames_float_input_began")
+   FlamesLibrary.disconnect("flames_float_input_ended")
+   FlamesLibrary.disconnect("flames_float_heartbeat")
    if float_part then
       float_part:Destroy()
       float_part = nil
@@ -1073,8 +979,7 @@ g.stop_flames_float = g.stop_flames_float or function()
 
    inc = false
    dec = false
-
-   g.notify("Success", "Flames Float-V1 is now disabled.", 5)
+   g.notify("Success", "Flames Hub | Float-V1 is now disabled.", 3)
 end
 
 -- [[ For LoopFling ]] --
@@ -1090,9 +995,8 @@ g.sp_max_tries = g.sp_max_tries or 100
 -- [[ Spawn Point ]] --
 
 g.set_spawnpoint = g.set_spawnpoint or function(delay)
-	local hrp = g.HumanoidRootPart or g.Character:FindFirstChild("HumanoidRootPart") or get_root(game.Players.LocalPlayer, 5)
-	if not hrp then return end
-
+	local hrp = g.HumanoidRootPart or g.Character:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer)
+	if not hrp or not hrp.Parent then return end
 	g.spawnpos = hrp.CFrame
 	g.spawnpoint = true
 	g.sp_delay = tonumber(delay) or g.sp_delay
@@ -1100,14 +1004,11 @@ g.set_spawnpoint = g.set_spawnpoint or function(delay)
 end
 
 g.clear_spawnpoint = g.clear_spawnpoint or function()
-   if not g.spawnpos then
-      return g.notify("Error", "You do not have a SpawnPoint set anywhere!", 5)
-   end
+   if not g.spawnpos then g.notify("Error", "You do not have a SpawnPoint set anywhere!", 3); return end
    if not g.spawnpoint then
-      if g.spawnpos then
-         pcall(function() g.spawnpos = nil end)
-      end
-      return g.notify("Warning", "You do not have SpawnPoint enabled!", 5)
+      if g.spawnpos then pcall(function() g.spawnpos = nil end) end
+      g.notify("Warning", "You do not have SpawnPoint enabled!", 3)
+      return
    end
 
    g.spawnpoint = false
@@ -1120,8 +1021,8 @@ if g.Current_Character_Added_Connection_HRP_Spawn_Point_System then
    g.Current_Character_Added_Connection_HRP_Spawn_Point_System = nil
 end
 wait(0.25)
-g.Current_Character_Added_Connection_HRP_Spawn_Point_System = game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
-   if not char or not char.Parent then char = game.Players.LocalPlayer.CharacterAdded:Wait() end
+g.Current_Character_Added_Connection_HRP_Spawn_Point_System = LocalPlayer.CharacterAdded:Connect(function(char)
+   if not char or not char.Parent then char = LocalPlayer.CharacterAdded:Wait() end
    local humanoid = char and char:WaitForChild("Humanoid", 10)
    local hrp = char and char:WaitForChild("HumanoidRootPart", 10)
    if not humanoid or not hrp then return end
@@ -1152,11 +1053,11 @@ local function cleanup_fling_resources()
 end
 
 g.skid_fling = g.skid_fling or function(target_player)
-	local Player = g.LocalPlayer or Players.LocalPlayer or game.Players.LocalPlayer
-	local Character = g.Character or Player.Character or get_char(LocalPlayer, 5)
-	local Humanoid = g.Humanoid or Character and Character:FindFirstChildOfClass("Humanoid") or get_human(LocalPlayer, 0.5) or getHum(Character, 0.5)
-	local HRP = g.HumanoidRootPart or Character and Character:FindFirstChild("HumanoidRootPart") or Humanoid and Humanoid.RootPart or get_root(LocalPlayer, 1)
-	local TCharacter = target_player.Character or get_char(target_player, 0.75)
+	local Player = g.LocalPlayer or Players.LocalPlayer or LocalPlayer
+	local Character = g.Character or Player.Character or g.get_char(LocalPlayer)
+	local Humanoid = g.Humanoid or Character and Character:FindFirstChildOfClass("Humanoid") or g.get_human(LocalPlayer)
+	local HRP = g.HumanoidRootPart or Character and Character:FindFirstChild("HumanoidRootPart") or Humanoid and Humanoid.RootPart or g.get_root(LocalPlayer)
+	local TCharacter = target_player.Character or g.get_char(target_player)
 	if not Character or not Humanoid or not HRP or not TCharacter then return end
 	cleanup_fling_resources()
 	local camera = workspace.CurrentCamera
@@ -1178,9 +1079,9 @@ g.skid_fling = g.skid_fling or function(target_player)
 	bodyGyro.P = 2000
 	bodyGyro.Parent = g.loopprotect
 
-	local THumanoid = TCharacter and TCharacter:FindFirstChildWhichIsA("Humanoid") or getPlrHum(TCharacter)
+	local THumanoid = TCharacter and TCharacter:FindFirstChildWhichIsA("Humanoid") or g.getPlrHum(TCharacter)
 	local TRootPart = TCharacter and TCharacter:FindFirstChild("HumanoidRootPart") or THumanoid and THumanoid.RootPart
-	local THead = TCharacter and TCharacter:FindFirstChild("Head") or getHead(TCharacter)
+	local THead = TCharacter and TCharacter:FindFirstChild("Head") or g.getHead(TCharacter)
 	local Accessory = TCharacter:FindFirstChildOfClass("Accessory")
 	local Handle = Accessory and Accessory:FindFirstChild("Handle")
 	local RootPart = HRP
@@ -1273,10 +1174,7 @@ g.skid_fling = g.skid_fling or function(target_player)
 end
 
 g.youtube_music_player = function()
-   if not g.yt_music_player_loaded_flames_hub then
-      return g.notify("Warning", "YouTube Music player is not loaded yet.", 5)
-   end
-
+   if not g.yt_music_player_loaded_flames_hub then g.notify("Warning", "YouTube Music player is not loaded yet.", 3); return end
    local gui = g.found_image_button_for_yt_music_player
    if gui and gui:IsA("ScreenGui") then
       local frame = gui:FindFirstChildOfClass("Frame")
@@ -1290,10 +1188,7 @@ end
 
 g.find_tool_folder_searcher_info = function()
    local cache = g.tool_information_folder_instance
-   if cache and cache:IsA("Folder") then
-      return cache
-   end
-
+   if cache and cache:IsA("Folder") then return cache end
    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
       if v:IsA("Folder") and v.Name:lower():find("tool") and v.Name:lower():find("info") then
          g.tool_information_folder_instance = v
@@ -1307,8 +1202,7 @@ if not g.tool_information_folder_instance then task.spawn(function() g.find_tool
 
 g.FlamesUI = g.FlamesUI or {}
 local ui = g.FlamesUI
-local lib = g.FlamesLibrary
-local function get_certain_tool(tool_name_str)
+g.get_certain_tool = function(tool_name_str)
    tool_name_str = tool_name_str:lower()
    local aliases = {
       ["assault rifle"] = {"assault", "rifle"},
@@ -1341,11 +1235,11 @@ local function get_certain_tool(tool_name_str)
       return nil
    end
 
-   return search_in(g.Character or lp.Character or get_char(LocalPlayer, 5))
+   return search_in(g.Character or LocalPlayer.Character or g.get_char(LocalPlayer))
 end
 
 local function check_missing_tools()
-   local lp = g.LocalPlayer or game.Players.LocalPlayer
+   local lp = g.LocalPlayer or Players.LocalPlayer
    local needed = { "LaserPointer", "Pistol" }
    local found = {}
    local function search(parent)
@@ -1358,8 +1252,7 @@ local function check_missing_tools()
    end
 
    search(g.Backpack or lp.Backpack)
-   search(g.Character or lp.Character or get_char(LocalPlayer, 5))
-
+   search(g.Character or lp.Character or g.get_char(LocalPlayer))
    local missing = {}
    for _, name in ipairs(needed) do
       if not found[name] then
@@ -1370,7 +1263,7 @@ local function check_missing_tools()
    return missing
 end
 
-local function retrieve_missing_tools()
+g.retrieve_missing_tools = function()
    local missing = check_missing_tools()
    if #missing > 0 then
       for _, tool_name in ipairs(missing) do
@@ -1388,7 +1281,7 @@ ui.objects = ui.objects or {
 
 ui.load = ui.load or function()
    if ui.rayfield then return ui.rayfield end
-   ui.rayfield = loadstring(game:HttpGet("https://pastefy.app/oH3cwZUj/raw"))()
+   ui.rayfield = loadstring(g.http_get("https://pastefy.app/oH3cwZUj/raw"))()
    return ui.rayfield
 end
 
@@ -1546,7 +1439,7 @@ ui.destroy_window = function(name)
 
    for _, name in ipairs(to_remove) do
       local window = ui.objects.windows[name]
-      local ok, err = pcall(function()
+      local ok = pcall(function()
          if window:IsA("ScreenGui") and window.Enabled then
             window.Enabled = false
          elseif window:IsA("Frame") and window.Visible then
@@ -1567,13 +1460,10 @@ end
 
 ui.ensure_visibility = function(name)
    local to_remove = {}
-   for name in pairs(ui.objects.windows) do
-      table.insert(to_remove, name)
-   end
-
+   for name in pairs(ui.objects.windows) do table.insert(to_remove, name) end
    for _, name in ipairs(to_remove) do
       local window = ui.objects.windows[name]
-      local ok, err = pcall(function()
+      local ok = pcall(function()
          if window:IsA("ScreenGui") and window.Enabled then
             window.Enabled = true
          elseif window:IsA("Frame") and window.Visible then
@@ -1595,13 +1485,13 @@ end
 g.tools_menu_for_life_together_flames_hub = g.tools_menu_for_life_together_flames_hub or function()
    if ui.objects.windows["©️ Tools Menu | Flames Hub LLC ©️"] then
       pcall(function() ui.ensure_visibility() end)
-      return g.notify("Warning", "Flames Hub - Tools Menu is already loaded!", 5)
+      g.notify("Warning", "Flames Hub | Tools Menu is already loaded!", 3)
+      return 
    end
    local main_window = ui.create_window("©️ Tools Menu | Flames Hub LLC ©️")
    local tab_1 = ui.create_tab(main_window, "Tools")
-   local section_1 = ui.create_section(tab_1, "||| Tools Section |||")
    local FL = g.FlamesLibrary
-   local lp = g.LocalPlayer or game.Players.LocalPlayer
+   local lp = g.LocalPlayer or Players.LocalPlayer
    local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
    local tool_map = {
       ["assault rifle"] = { patterns = {"assault", "rifle"}, net = "shoot_ar",      module = "AssaultRifle" },
@@ -1758,7 +1648,7 @@ g.tools_menu_for_life_together_flames_hub = g.tools_menu_for_life_together_flame
    end)
 
    ui.button(tab_1, "Laser + Pistol (FE)", function()
-      local lp = g.LocalPlayer or game.Players.LocalPlayer
+      local lp = g.LocalPlayer or Players.LocalPlayer
       local backpack = g.Backpack or lp.Backpack
       local character = g.Character or lp.Character
       if not character or not backpack then return end
@@ -1821,7 +1711,7 @@ end
 
 g.stop_loopfling = function()
 	local lib = g.FlamesLibrary
-	if not g.Loop_Flinging_Player_Flames_Hub then return g.notify("Warning", "Flames Hub | LoopFling-V2 is not enabled.", 5) end
+	if not g.Loop_Flinging_Player_Flames_Hub then g.notify("Warning", "Flames Hub | LoopFling-V2 is not enabled.", 3); return end
 	g.Loop_Flinging_Player_Flames_Hub = false
 	lib.disconnect("loopfling")
 	cleanup_fling_resources()
@@ -1832,13 +1722,13 @@ g.stop_loopfling = function()
       return
    end
 
-   local Char = g.Character or (g.LocalPlayer and g.LocalPlayer.Character) or (g.get_char and g.get_char(LocalPlayer, 5))
+   local Char = g.Character or (g.LocalPlayer and g.LocalPlayer.Character) or g.get_char(LocalPlayer)
    if not Char then
       warn("Char not found")
       return
    end
 
-   local Hum = g.Humanoid or Char:FindFirstChildWhichIsA("Humanoid") or (g.get_human and g.get_human(LocalPlayer, 5))
+   local Hum = g.Humanoid or Char:FindFirstChildWhichIsA("Humanoid") or g.get_human(LocalPlayer)
    if not Hum then
       warn("Hum not found")
       return
@@ -1866,7 +1756,7 @@ g.stop_loopfling = function()
 
    if Is_Out_Of_Map() and Hum.Health > 0 then
       pcall(function() Hum.Health = 0 end)
-      g.notify("Reset", "Flames Hub | You were in the void. Character reset.", 4)
+      g.notify("Reset", "Flames Hub | You were in the void, character reset.", 3)
    end
    wait(0.15)
    if Camera.CameraSubject ~= Char and Camera.CameraSubject ~= Hum then
@@ -1882,10 +1772,10 @@ end
 g.start_loopfling = function(target_player)
 	local lib = g.FlamesLibrary
    local fw = lib.wait
-	if g.Loop_Flinging_Player_Flames_Hub then return g.notify("Warning", "You're already using Flames Hub | LoopFling-V2 on someone!", 3) end
-	if not target_player or not target_player.Parent then return g.notify("Error", "That player does not exist / left the game.", 3) end
-   if g.Noclip_Enabled then return g.notify("Error", "NoClip is enabled, please turn it off first.", 3) end
-   if g.afEnabled then return g.notify("Error", "Anti-Fling is enabled, please turn it off first.", 3) end
+	if g.Loop_Flinging_Player_Flames_Hub then g.notify("Warning", "You're already using Flames Hub | LoopFling-V2 on someone!", 3); return end
+	if not target_player or not target_player.Parent then g.notify("Error", "That player does not exist / left the game.", 3); return end
+   if g.Noclip_Enabled then g.notify("Error", "NoClip is enabled, please turn it off first.", 3); return end
+   if g.afEnabled then g.notify("Error", "Anti-Fling is enabled, please turn it off first.", 3); return end
 	g.Loop_Flinging_Player_Flames_Hub = true
    lib.spawn("loopfling", "spawn", function()
       local was_dead = false
@@ -1898,9 +1788,9 @@ g.start_loopfling = function(target_player)
             break
          end
 
-         local character = target_player.Character or get_char(target_player, 0.75)
-         local humanoid = character and character:FindFirstChildOfClass("Humanoid") or character and getHum(character, 0.5) or get_human(target_player, 0.5)
-         local root_part = character and character:FindFirstChild("HumanoidRootPart") or humanoid and humanoid.RootPart or get_root(target_player, 0.5)
+         local character = target_player.Character or g.get_char(target_player)
+         local humanoid = character and character:FindFirstChildOfClass("Humanoid") or g.get_human(target_player)
+         local root_part = character and character:FindFirstChild("HumanoidRootPart") or g.get_root(target_player)
          if not character or not humanoid or humanoid.Health <= 0 or not root_part then
             if not waiting_for_respawn then
                waiting_for_respawn = true
@@ -1908,9 +1798,9 @@ g.start_loopfling = function(target_player)
 
             repeat
                fw(0.1)
-               character = target_player.Character or get_char(target_player, 0.75)
-               humanoid = character and character:FindFirstChildOfClass("Humanoid") or character and getHum(character, 0.5) or get_human(target_player, 0.5)
-               root_part = character and character:FindFirstChild("HumanoidRootPart") or humanoid and humanoid.RootPart or get_root(target_player, 0.5)
+               character = target_player.Character or g.get_char(target_player)
+               humanoid = character and character:FindFirstChildOfClass("Humanoid") or g.get_human(target_player)
+               root_part = character and character:FindFirstChild("HumanoidRootPart") or g.get_root(target_player)
             until not g.Loop_Flinging_Player_Flames_Hub
                or not target_player.Parent
                or (humanoid and humanoid.Health > 0 and root_part)
@@ -1920,21 +1810,13 @@ g.start_loopfling = function(target_player)
          end
 
          if humanoid.Health <= 0 then
-            if not was_dead then
-               was_dead = true
-            end
+            if not was_dead then was_dead = true end
             continue
          end
 
          was_dead = false
-
-         local ok, err = pcall(function()
-            g.skid_fling(target_player)
-         end)
-
-         if not ok then
-            warn("LoopFling error: "..tostring(err))
-         end
+         local ok, err = pcall(function() g.skid_fling(target_player) end)
+         if not ok then warn("LoopFling error: "..tostring(err)) end
       end
    end)
 
@@ -1944,7 +1826,6 @@ end
 g.firehidden      = g.firehidden      or false
 g.firemanual      = g.firemanual      or false
 g.firesystem_init = g.firesystem_init or false
-local RunService = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
 local FireClasses = {
    Fire           = true,
    Smoke          = true,
@@ -1952,7 +1833,7 @@ local FireClasses = {
    ParticleEmitter = true,
    Beam           = true,
 }
-loadstring(game:HttpGet("https://pastefy.app/3fhj9eVw/raw"))()
+loadstring(g.http_get("https://pastefy.app/3fhj9eVw/raw"))()
 local PendingQueue = {}
 local QueueDirty   = false
 local function is_fire_class(obj) return FireClasses[obj.ClassName] ~= nil end
@@ -2007,7 +1888,7 @@ g.set_fire_state = function(state)
    local da_key  = "anti_fire_descendant_added"
    local hb_key  = "anti_fire_heartbeat"
    if state == true then
-      if g.firehidden then return g.notify("Warning", "Flames Hub | Anti-Fire V2 is already enabled.", 6) end
+      if g.firehidden then g.notify("Warning", "Flames Hub | Anti-Fire V2 is already enabled.", 3); return end
       g.firemanual = true
       g.firehidden = true
       g.notify("Success", "Flames Hub | Anti-Fire V2 is now enabled.", 5)
@@ -2025,7 +1906,7 @@ g.set_fire_state = function(state)
          flush_queue()
       end))
    else
-      if not g.firehidden then return g.notify("Warning", "Anti-Fire V2 is not enabled.", 6) end
+      if not g.firehidden then g.notify("Warning", "Anti-Fire V2 is not enabled.", 3); return end
       g.firemanual = false
       g.firehidden = false
       g.notify("Success", "Anti-Fire V2 is now disabled.", 5)
@@ -2040,14 +1921,14 @@ g.tool_configuration_system_func = g.tool_configuration_system_func or function(
    option = option:lower()
    task.wait(0.1)
    if option == "get_tool" or option == "gettool" or option == "grab_tool" or option == "request_tool" then
-      if g.Send then g.Send("get_tool", tostring(Tool_Name)) end
+      if g.Send then g.Send("get_tool", "Assault Rifle") end
    elseif option == "delete_tool" or option == "delete_tools" or option == "remove_tool" or option == "removetools" or option == "remove_tools" or option == "deletetools" then
       if g.Send then g.Send("delete_tool") end
    elseif option == "equip_tools" or option == "equiptools" or option == "equipalltools" or option == "equip_all_tools" then
       if g.Character and g.Character:FindFirstChildOfClass("Humanoid") and g.Humanoid then
          for _, v in ipairs(g.LocalPlayer.Backpack:GetChildren()) do if v:IsA("Tool") then pcall(function() g.Humanoid:EquipTool(v) end) end end
       else
-         for _, v in ipairs(g.LocalPlayer.Backpack:GetChildren()) do if v:IsA("Tool") then pcall(function() v.Parent = g.Character or g.LocalPlayer.Character or get_char(g.LocalPlayer or game.Players.LocalPlayer, 5) end) end end
+         for _, v in ipairs(g.LocalPlayer.Backpack:GetChildren()) do if v:IsA("Tool") then pcall(function() v.Parent = g.Character or g.LocalPlayer.Character or g.get_char(g.LocalPlayer) end) end end
       end
    end
 end
@@ -2055,8 +1936,8 @@ end
 g.AdminPrefix = g.AdminPrefix or "-"
 g.AdminVersion = g.AdminVersion or "v1.0"
 g.AdminConfigChanged = g.AdminConfigChanged or Instance.new("BindableEvent")
-g.setAdminPrefix = g.setAdminPrefix or function(newPrefix) if typeof(newPrefix) == "string" and g.AdminPrefix ~= newPrefix then g.AdminPrefix = newPrefix g.AdminConfigChanged:Fire("prefix") end end
-g.setAdminVersion = g.setAdminVersion or function(newVersion) if typeof(newVersion) == "string" and g.AdminVersion ~= newVersion then g.AdminVersion = newVersion g.AdminConfigChanged:Fire("version") end end
+g.setAdminPrefix = g.setAdminPrefix or function(newPrefix) if typeof(newPrefix) == "string" and g.AdminPrefix ~= newPrefix then g.AdminPrefix = newPrefix; g.AdminConfigChanged:Fire("prefix") end end
+g.setAdminVersion = g.setAdminVersion or function(newVersion) if typeof(newVersion) == "string" and g.AdminVersion ~= newVersion then g.AdminVersion = newVersion; g.AdminConfigChanged:Fire("version") end end
 local ismobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 g.CommandsMenu_Tooltip_Init = g.CommandsMenu_Tooltip_Init or function()
    if g.CommandsMenu_Tooltip and g.CommandsMenu_Tooltip.Parent then return end
@@ -2072,7 +1953,7 @@ g.CommandsMenu_Tooltip_Init = g.CommandsMenu_Tooltip_Init or function()
    tooltip.Name = "CommandTooltip"
    tooltip.BackgroundColor3 = Color3.fromRGB(50,50,50)
    tooltip.TextColor3 = Color3.new(1,1,1)
-   tooltip.Font = Enum.Font.GothamSemibold
+   tooltip.Font = Enum.Font.GothamBold
    tooltip.TextSize = 14
    tooltip.TextWrapped = true
    tooltip.AutomaticSize = Enum.AutomaticSize.XY
@@ -2134,7 +2015,7 @@ g.CommandsMenu_Rebuild = g.CommandsMenu_Rebuild or function(Filter)
    if not Scroll then return end
    Filter = Filter and string.lower(Filter) or ""
    for _, V in ipairs(Scroll:GetChildren()) do if not V:IsA("UIListLayout") and not V:IsA("UIPadding") then V:Destroy() end end
-   local Rebuilt = string.gsub(cmdsString, "{prefix}", g.AdminPrefix)
+   local Rebuilt = string.gsub(g.cmdsString, "{prefix}", g.AdminPrefix)
    for Line in string.gmatch(Rebuilt, "[^\r\n]+") do
       Line = Line:match("^%s*(.-)%s*$")
       if Line ~= "" then
@@ -2156,7 +2037,7 @@ g.CommandsMenu_Rebuild = g.CommandsMenu_Rebuild or function(Filter)
          Label.AutomaticSize = Enum.AutomaticSize.Y
          Label.Size = UDim2.new(1, -130, 0, 20)
          Label.BackgroundTransparency = 1
-         Label.Font = Enum.Font.GothamSemibold
+         Label.Font = Enum.Font.GothamBold
          Label.TextSize = 15
          Label.TextColor3 = Color3.fromRGB(0, 0, 0)
          Label.TextWrapped = true
@@ -2218,10 +2099,8 @@ g.CommandsMenu = function()
    Commands_Menu_Main_Frame_Content_In_Flames_Hub_Context.BackgroundTransparency = ismobile and 0.05 or 0
    Commands_Menu_Main_Frame_Content_In_Flames_Hub_Context.Parent = gui
    Instance.new("UICorner", Commands_Menu_Main_Frame_Content_In_Flames_Hub_Context).CornerRadius = UDim.new(0,12)
-   while not Commands_Menu_Main_Frame_Content_In_Flames_Hub_Context or not Commands_Menu_Main_Frame_Content_In_Flames_Hub_Context.Parent do
-      g.heartbeat_wait_function(3)
-   end
-   dragify(Commands_Menu_Main_Frame_Content_In_Flames_Hub_Context)
+   while not Commands_Menu_Main_Frame_Content_In_Flames_Hub_Context or not Commands_Menu_Main_Frame_Content_In_Flames_Hub_Context.Parent do g.heartbeat_wait_function(3) end
+   if g.dragify and typeof(g.dragify) == "function" then g.dragify(Commands_Menu_Main_Frame_Content_In_Flames_Hub_Context) end
    --g.flowrgb("Commands_Menu_Main_Flow_RGB_Connection", 3, Commands_Menu_Main_Frame_Content_In_Flames_Hub_Context, true)
 
    local header = Instance.new("Frame")
@@ -2282,7 +2161,7 @@ g.CommandsMenu = function()
    Search_Bar.PlaceholderText = "Search commands..."
    Search_Bar.PlaceholderColor3 = Color3.fromRGB(140, 140, 140)
    Search_Bar.Text = ""
-   Search_Bar.Font = Enum.Font.GothamSemibold
+   Search_Bar.Font = Enum.Font.GothamBold
    Search_Bar.TextSize = 14
    Search_Bar.TextColor3 = Color3.new(1, 1, 1)
    Search_Bar.ClearTextOnFocus = false
@@ -2333,9 +2212,9 @@ local function protect_local_character()
 	if not g.protect_enabled then return end
 	local localplayer = LocalPlayer
 	if not localplayer then return end
-	local char = g.Character or localplayer.Character or get_char(LocalPlayer, 10)
+	local char = g.Character or localplayer.Character or g.get_char(LocalPlayer)
 	if not char then return end
-	local hrp = g.HumanoidRootPart or char:FindFirstChild("HumanoidRootPart") or get_root(LocalPlayer, 5)
+	local hrp = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer)
 	if not hrp then return end
 	if not g.walkflinging then
 		local max_linear = 350
@@ -2376,7 +2255,7 @@ local function protect_local_character()
 	for plr in pairs(tracking) do if not plr or not plr.Parent then tracking[plr] = nil end end
 end
 
-function set_protect_state(state)
+g.set_protect_state = function(state)
 	g.protect_enabled = state and true or false
 	if g.protect_enabled then
 		if not FlamesLibrary.is_alive("protect_heartbeat") then FlamesLibrary.connect("protect_heartbeat", RunService.Heartbeat:Connect(protect_local_character)) end
@@ -2389,7 +2268,7 @@ end
 g.anti_follow_reset = g.anti_follow_reset or function()
    local char = g.Character or g.LocalPlayer.Character or LocalPlayer.Character
    if not char then return end
-   local root = g.HumanoidRootPart or char:FindFirstChild("HumanoidRootPart") or get_root(LocalPlayer, 5)
+   local root = g.HumanoidRootPart or char:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer)
    if not root then return end
    getgenv().Org_Destroy_Height = getgenv().Org_Destroy_Height or workspace.FallenPartsDestroyHeight
    if not getgenv().Org_Destroy_Height then getgenv().Org_Destroy_Height = 500 end
@@ -2427,23 +2306,23 @@ g.DisableAntiFling = function()
 end
 
 g.resolve_humanoid = function() -- specifically for do_emote and safe_emote, but I'll definitely use it for other stuff, like in the main code.
-   local hum = g.Humanoid or g.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(game.Players.LocalPlayer, 10)
+   local hum = g.Humanoid or g.Character and g.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(LocalPlayer, Players.RespawnTime + 1)
    if hum and hum.Parent and hum:IsDescendantOf(game) then return hum end
-   local char = g.Character or g.LocalPlayer.Character or g.get_char(game.Players.LocalPlayer, 10)
+   local char = g.Character or g.LocalPlayer.Character or g.get_char(LocalPlayer, 10)
    if char and char.Parent then
       hum = char:FindFirstChildOfClass("Humanoid") or char:FindFirstChildWhichIsA("Humanoid")
-      if hum then
+      if hum and hum.Parent and hum:IsDescendantOf(game) then
          g.Humanoid = hum
          return hum
       end
    end
 
-   local plr = game.Players.LocalPlayer
+   local plr = LocalPlayer
    if plr then
       local resolved_char = g.return_char and g.return_char(plr, 10)
       if resolved_char then
          hum = resolved_char:FindFirstChildOfClass("Humanoid") or resolved_char:FindFirstChildWhichIsA("Humanoid")
-         if hum then
+         if hum and hum.Parent and hum:IsDescendantOf(game) then
             g.Character = resolved_char
             g.Humanoid = hum
             return hum
@@ -2472,7 +2351,7 @@ g.Noclip_Connection = g.Noclip_Connection or nil
 g.noclip_parts = g.noclip_parts or {}
 local function refresh_parts()
    table.clear(g.noclip_parts)
-   local Character = g.Character or LocalPlayer.Character or get_char(LocalPlayer, 10)
+   local Character = g.Character or LocalPlayer.Character or g.get_char(LocalPlayer, Players.RespawnTime + 1)
    if not Character then return end
    for _, inst in ipairs(Character:GetDescendants()) do if inst:IsA("BasePart") then table.insert(g.noclip_parts, inst) end end
 end
@@ -2490,7 +2369,7 @@ g.ToggleNoclip = function(state)
    local key = "noclip_stepped"
    if state == true then
       if g.Noclip_Enabled then
-         if g.notify then return g.notify("Warning", "Noclip is already enabled!", 5) end
+         if g.notify then g.notify("Warning", "Flames Hub | Noclip is already enabled!", 3) end
          return
       end
 
@@ -2498,10 +2377,10 @@ g.ToggleNoclip = function(state)
       refresh_parts()
       lib.connect(key, RunService.Stepped:Connect(noclip_step))
       g.Noclip_Enabled = true
-      if g.notify then g.notify("Success", "Noclip has been enabled.", 5) end
+      if g.notify then g.notify("Success", "Flames Hub | Noclip has been enabled.", 3) end
    elseif state == false then
       if not g.Noclip_Enabled then
-         if g.notify then return g.notify("Error", "Noclip is not enabled!", 5) end
+         if g.notify then g.notify("Error", "Flames Hub | Noclip is not enabled!", 3) end
          return
       end
 
@@ -2513,9 +2392,9 @@ g.ToggleNoclip = function(state)
 
       table.clear(g.noclip_parts)
       g.Noclip_Enabled = false
-      if g.notify then g.notify("Success", "Noclip has been disabled.", 5) end
+      if g.notify then g.notify("Success", "Flames Hub | Noclip has been disabled.", 3) end
    else
-      if g.notify then return g.notify("Error", "Invalid arg, expected true/false", 5) end
+      if g.notify then g.notify("Error", "Invalid arg, expected true/false", 3); return end
    end
 end
 
@@ -2523,7 +2402,7 @@ g.spamming_flames = function(toggle)
    local lib = g.FlamesLibrary
    local connection_name = "flames_spammer"
    if toggle == true then
-      if g.spamming_all_that_fire then return g.notify("Warning", "Flames Spammer V2 is already enabled.", 5) end
+      if g.spamming_all_that_fire then g.notify("Warning", "Flames Spammer V2 is already enabled.", 3); return end
       g.spamming_all_that_fire = true
       lib.spawn(connection_name, "spawn", function()
          while g.spamming_all_that_fire == true do
@@ -2532,7 +2411,7 @@ g.spamming_flames = function(toggle)
          end
       end)
    elseif toggle == false then
-      if not g.spamming_all_that_fire then return g.notify("Warning", "Flames Spammer V2 is not enabled.", 5) end
+      if not g.spamming_all_that_fire then g.notify("Warning", "Flames Spammer V2 is not enabled.", 3); return end
       g.spamming_all_that_fire = false
       lib.disconnect(connection_name)
    end
@@ -2542,12 +2421,8 @@ g.Toggleable_Noclip = g.ToggleNoclip
 wait(0.15)
 g.Toggle_AntiFling_Boolean_Func = function(flag)
    if flag == true then
-      if g.EnableAntiFling then
-         g.EnableAntiFling()
-      end
-      if g.ToggleNoclip then
-         g.ToggleNoclip(true)
-      end
+      if g.EnableAntiFling then g.EnableAntiFling() end
+      if g.ToggleNoclip then g.ToggleNoclip(true) end
    elseif flag == false then
       if g.DisableAntiFling then
          g.DisableAntiFling()
@@ -2557,7 +2432,8 @@ g.Toggle_AntiFling_Boolean_Func = function(flag)
       end
    else
       if g.notify then
-         return g.notify("Warning", "Invalid arguments have been provided.", 3)
+         g.notify("Warning", "Invalid arguments have been provided.", 3)
+         return 
       else
          return 
       end
@@ -2569,10 +2445,10 @@ g.anti_sit_func = function(toggle)
    local key = "anti_sit_loop"
    g.Seat = require(g.Game_Folder:FindFirstChild("Seat"))
    if toggle == true then
-      if g.Not_Ever_Sitting then return notify("Warning", "AntiSit is already enabled!", 5) end
+      if g.Not_Ever_Sitting then g.notify("Warning", "Flames Hub | AntiSit is already enabled!", 3); return end
       g.Not_Ever_Sitting = true
       g.notify("Success", "Anti-Sit is now enabled.", 5)
-      show_notification("Success:", "Anti-Sit is now enabled.", "Normal")
+      g.show_notification("Success:", "Anti-Sit is now enabled.", "Normal")
       lib.spawn(key, "spawn", function()
          while g.Not_Ever_Sitting == true do
             g.Seat.enabled.set(false)
@@ -2581,13 +2457,13 @@ g.anti_sit_func = function(toggle)
          lib.disconnect(key)
       end)
    elseif toggle == false then
-      if not g.Not_Ever_Sitting then return notify("Warning", "AntiSit is not enabled!", 5) end
+      if not g.Not_Ever_Sitting then g.notify("Warning", "AntiSit is not enabled!", 3); return end
       g.Not_Ever_Sitting = false
       lib.disconnect(key)
       fw(0.2)
       g.Seat.enabled.set(true)
-      notify("Success", "Anti-Sit is now disabled.", 5)
-      Phone.show_notification("Success:", "Anti-Sit is now disabled.", "Normal")
+      g.notify("Success", "Anti-Sit is now disabled.", 5)
+      g.Phone.show_notification("Success:", "Anti-Sit is now disabled.", "Normal")
    else
       return 
    end
@@ -2597,19 +2473,19 @@ g.anti_void = function(flag)
    local lib = getgenv().FlamesLibrary
    local key = "anti_void_stepped"
    if flag == true then
-      if g.Anti_Void_Enabled_Bool then return g.notify("Warning", "Anti-Void is already enabled.", 5) end
-      if lib.is_alive(key) then return g.notify("Warning", "Anti-Void is already enabled.", 5) end
+      if g.Anti_Void_Enabled_Bool then g.notify("Warning", "Flames Hub | Anti-Void is already enabled.", 3); return end
+      if lib.is_alive(key) then g.notify("Warning", "Flames Hub | Anti-Void is already enabled.", 3); return end
       if not g.originalFPDH then g.originalFPDH = workspace.FallenPartsDestroyHeight end
       task.wait(0.15)
       workspace.FallenPartsDestroyHeight = -100000
       lib.connect(key, RunService.Stepped:Connect(function()
-         local root = g.HumanoidRootPart or g.Character and g.Character:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer, 5)
+         local root = g.HumanoidRootPart or g.Character and g.Character:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer)
          if root and root.Position.Y <= g.originalFPDH + 25 then root.AssemblyLinearVelocity = root.AssemblyLinearVelocity + Vector3.new(0, 300, 0) end
       end))
       g.Anti_Void_Enabled_Bool = true
       if g.notify then g.notify("Success", "Flames Hub | Anti-Void V2 has been enabled.", 5) end
    elseif flag == false then
-      if not g.Anti_Void_Enabled_Bool then return g.notify("Warning", "Anti-Void is not enabled.", 5) end
+      if not g.Anti_Void_Enabled_Bool then g.notify("Warning", "Flames Hub | Anti-Void is not enabled.", 3); return end
       workspace.FallenPartsDestroyHeight = g.originalFPDH or -500
       lib.disconnect(key)
       g.Anti_Void_Enabled_Bool = false
@@ -2621,28 +2497,28 @@ g.VehicleDestroyer_Enabled = g.VehicleDestroyer_Enabled or false
 g.vehicle_parts_cache = g.vehicle_parts_cache or {}
 local lib = getgenv().FlamesLibrary
 local _uid = 0
-local function make_key(prefix, inst) _uid = _uid + 1 return prefix .. "_" .. tostring(inst):gsub("[^%w]", "") .. "_" .. _uid end
+local function make_key(prefix, inst) _uid = _uid + 1; return prefix .. "_" .. tostring(inst):gsub("[^%w]", "") .. "_" .. _uid end
 local function is_in_vehicle(obj, vehicle) return vehicle and obj and obj:IsDescendantOf(vehicle) end
 local function process_veh_part(part)
    if not part:IsA("BasePart") then return end
    if g.vehicle_parts_cache[part] then return end
-   local my_vehicle = get_vehicle and get_vehicle()
+   local my_vehicle = g.get_vehicle()
    if my_vehicle and is_in_vehicle(part, my_vehicle) then return end
    part.CanCollide = false
    g.vehicle_parts_cache[part] = true
    local key = make_key("VehicleDestroyer_PartCleanup", part)
    lib.connect(key, part.AncestryChanged:Connect(function()
-      if not part:IsDescendantOf(game) then g.vehicle_parts_cache[part] = nil lib.disconnect(key) end
+      if not part:IsDescendantOf(game) then g.vehicle_parts_cache[part] = nil; lib.disconnect(key) end
    end))
 end
 
 local function process_veh_model(model)
    if not model or not model.Parent then
       local elapsed = 0
-      repeat task.wait(0.5) elapsed = elapsed + 0.5 until (model and model.Parent) or elapsed >= 10
+      repeat task.wait(0.5); elapsed = elapsed + 0.5 until (model and model.Parent) or elapsed >= 10
       if not model or not model.Parent then return end
    end
-   local key = make_key("VehicleDestroyer_ModelCleanup", model)
+
    for _, inst in ipairs(model:GetDescendants()) do if inst:IsA("BasePart") then process_veh_part(inst) end end
    lib.connect(make_key("VehicleDestroyer_DescAdded", model), model.DescendantAdded:Connect(function(desc)
       if not g.VehicleDestroyer_Enabled then return end
@@ -2966,21 +2842,23 @@ local Emotes = {
 }
 wait(0.1)
 g.Emotes = Emotes -- needs to dynamically update, I'm not sure why in the hell I wouldn't make it that way.
-local function safeemote(emote_id)
-   local hum = g.Humanoid or g.Character:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer or game.Players.LocalPlayer)
+g.safeemote = function(emote_id)
+   local hum = g.Humanoid or g.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(LocalPlayer)
    if not hum or not hum.Parent then
       if g.notify then
-         return g.notify("Error", "Humanoid missing or invalid.", 5)
+         g.notify("Error", "Humanoid missing or invalid.", 3)
+         return 
       else
          return 
       end
    end
 
    local tries = 0
-   while not hum:IsDescendantOf(game) and tries < 30 do task.wait(0.1) tries += 1 end
+   while not hum:IsDescendantOf(game) and tries < 30 do task.wait(0.1); tries += 1 end
    if not hum:IsDescendantOf(game) then
       if g.notify then
-         return g.notify("Error", "Humanoid not fully initialized in DataModel.", 5)
+         g.notify("Error", "Humanoid not fully initialized in DataModel.", 3)
+         return 
       else
          return 
       end
@@ -3042,10 +2920,11 @@ wait(0.1)
 g.Aliases = Aliases -- this also needs to be dynamic, leave it as such.
 wait(0.2)
 g.disable_emoting_from_broken_animation = function()
-   local Humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("Humanoid")
+   local Humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("Humanoid") or g.get_human(LocalPlayer)
    if not Humanoid then
       if g.notify then
-         return g.notify("Error", "Humanoid not found, try resetting.", 5)
+         g.notify("Error", "Humanoid not found, try resetting.", 3)
+         return 
       else
          return 
       end
@@ -3068,10 +2947,11 @@ g.disable_emoting_from_broken_animation = function()
 end
 
 function disable_emoting()
-   local Humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("Humanoid")
+   local Humanoid = g.Humanoid or g.Character:FindFirstChildOfClass("Humanoid") or g.get_human(LocalPlayer)
    if not Humanoid then
       if g.notify then
-         return g.notify("Error", "Humanoid not found, try resetting.", 5)
+         g.notify("Error", "Humanoid not found, try resetting.", 5)
+         return 
       else
          return 
       end
@@ -3107,7 +2987,6 @@ local function safe_emote(emote_id)
    local resolved_track
    local connection
    connection = g.Humanoid.AnimationPlayed:Connect(function(track) resolved_track = track end)
-   local result = g.Humanoid:PlayEmoteAndGetAnimTrackById(emote_id)
    task.wait()
    connection:Disconnect()
    if typeof(resolved_track) ~= "Instance" or not resolved_track:IsA("AnimationTrack") then
@@ -3115,9 +2994,11 @@ local function safe_emote(emote_id)
          if g.disable_emoting_script then
             pcall(function() g.disable_emoting_from_broken_animation() end)
          end
-         return g.notify("Error", "Could not resolve Emote animation, try again.", 6)
+         g.notify("Error", "Could not resolve Emote animation, try again.", 3)
+         return 
       else
-         return warn("Could not resolve Emote animation, try again.")
+         warn("Could not resolve Emote animation, try again.")
+         return 
       end
    end
 
@@ -3158,7 +3039,8 @@ g.playemote = playemote
 function do_emote(input)
    if not g.Humanoid or not g.Humanoid.Parent then
       if g.notify then
-         return g.notify("Error", "Humanoid missing, reset and try again!", 7)
+         g.notify("Error", "Humanoid missing, reset and try again!", 3)
+         return 
       else
          return 
       end
@@ -3169,7 +3051,8 @@ function do_emote(input)
    local list = g.Emotes[key]
    if not list then
       if g.notify then
-         return g.notify("Error", "Unknown emote: "..tostring(key), 5)
+         g.notify("Error", "Unknown emote: "..tostring(key), 3)
+         return 
       else
          return 
       end
@@ -3221,13 +3104,13 @@ end
 local emotes = fetch_emotes("needy", 25)
 g.emote_list = emotes
 g.play_random_emote = function()
-   if #emotes == 0 then return getgenv().notify("Warning", "No emotes loaded.", 5) end
+   if #emotes == 0 then getgenv().notify("Warning", "No emotes loaded.", 3); return end
    local emote = emotes[math.random(1, #emotes)]
    g.playemote(emote.asset_id)
 end
 
 g.play_emote_by_index = function(index)
    local emote = emotes[index]
-   if not emote then getgenv().notify("Error", "No emote at index: "..tostring(index), 5) return end
+   if not emote then getgenv().notify("Error", "No emote at index: "..tostring(index), 5); return end
    g.playemote(emote.asset_id)
 end
