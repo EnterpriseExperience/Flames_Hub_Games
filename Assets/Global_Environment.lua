@@ -20,8 +20,6 @@ local function easy_wrapper(s)
         ["starterpack"]          = "StarterPack",
         ["workspace"]            = "Workspace",
         ["replicatedstorage"]    = "ReplicatedStorage",
-        ["serverstorage"]        = "ServerStorage",
-        ["serverscriptservice"]  = "ServerScriptService",
         ["chat"]                 = "Chat",
         ["teams"]                = "Teams",
         ["soundservice"]         = "SoundService",
@@ -55,6 +53,13 @@ local function easy_wrapper(s)
         ["collectionservice"]    = "CollectionService",
         ["debris"]               = "Debris",
         ["geometryservice"]      = "GeometryService",
+        ["replicatedfirst"]      = "ReplicatedFirst",
+        ["assetservice"]         = "AssetService",
+        ["hapticservice"]        = "HapticService",
+        ["userservice"]          = "UserService",
+        ["proximatepromptservice"] = "ProximityPromptService",
+        ["avatareditservice"]    = "AvatarEditorService",
+        ["analyticsservice"]     = "AnalyticsService",
     }
 
     local instance
@@ -112,7 +117,6 @@ easy_wrapper("ContextActionService")
 easy_wrapper("Debris")
 easy_wrapper("Chat")
 easy_wrapper("VRService")
-print("[GLOBAL ENVIRONMENT]: Loading services...")
 wait(0.25)
 local Players              = getgenv().Players
 local Workspace            = getgenv().Workspace
@@ -125,7 +129,6 @@ local TextChatService      = getgenv().TextChatService
 local Chat                 = getgenv().Chat
 local LocalPlayer          = g.LocalPlayer or Players.LocalPlayer
 local TextService          = getgenv().TextService
-print("[GLOBAL ENVIRONMENT]: Loaded services successfully.")
 g.wait_until = function(condition, interval, max_tries)
     interval = tonumber(interval) or 0.05
     if typeof(max_tries) == "string" then
@@ -167,6 +170,35 @@ getgenv().Decode_Lua_Escapes = function(Escaped_String)
 	local Chars = {}
 	for _, Byte in ipairs(Bytes) do table.insert(Chars, string.char(Byte)) end
 	return table.concat(Chars)
+end
+
+local has_gethui = (typeof(gethui) == "function") or (typeof(g.gethui) == "function")
+local has_gethidden = (typeof(get_hidden_gui) == "function") or (typeof(g.get_hidden_gui) == "function")
+if not has_gethui and not has_gethidden and not g.roblox_hidden_gui_location then
+	g.roblox_hidden_gui_location = g.roblox_hidden_gui_location or nil
+	if not g.roblox_hidden_gui_location then
+		for _, v in ipairs(CoreGui:GetChildren()) do
+			if v:IsA("ScreenGui") and v.Name == "RobloxGui" then
+				g.roblox_hidden_gui_location = v
+			end
+		end
+	end
+
+	g.gethui = function()
+		if g.roblox_hidden_gui_location and g.roblox_hidden_gui_location:IsA("ScreenGui") then
+			return g.roblox_hidden_gui_location
+		else
+			return CoreGui
+		end
+	end
+
+	g.get_hidden_gui = function()
+		if g.roblox_hidden_gui_location and g.roblox_hidden_gui_location:IsA("ScreenGui") then
+			return g.roblox_hidden_gui_location
+		else
+			return CoreGui
+		end
+	end
 end
 
 g.words_tbl = {
