@@ -18,7 +18,12 @@ local Raw_Version = "V9.2.3"
 getgenv().Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
 local localPlayer = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+local speaker = localPlayer
 g.Keybind_Input_Disabled_For_Mini_Game = g.Keybind_Input_Disabled_For_Mini_Game or false
+g.SideGlitch_Enabled = g.SideGlitch_Enabled or true
+g.SideGlitch_Speed = g.SideGlitch_Speed or 5
+g.SideGlitch_Distance = g.SideGlitch_Distance or 5
+g.SideGlitch_Smooth = g.SideGlitch_Smooth or 0.18
 g.colors = g.colors or {
     Color3.fromRGB(255,255,255),
     Color3.fromRGB(128,128,128),
@@ -44,6 +49,7 @@ wait(0.25)
 if not g.LifeTogether_Actual_Flames_Hub_Running_Functioning_Currently_On_Client then if g.notify and typeof(g.notify) == "function" then g.notify("Success", "Got LocalPlayer: "..tostring(g.LocalPlayer), 5) end end
 local RunService = cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
 local CoreGui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
+local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local has_gethui = (typeof(gethui) == "function") or (typeof(g.gethui) == "function")
 local has_gethidden = (typeof(get_hidden_gui) == "function") or (typeof(g.get_hidden_gui) == "function")
 local ReplicatedStorage = g.ReplicatedStorage or cloneref and cloneref(game:GetService("ReplicatedStorage")) or game:GetService("ReplicatedStorage")
@@ -88,7 +94,6 @@ g._attr_cache = g._attr_cache or {}
 g.attr_cached_fuzzy = g.attr_cached_fuzzy or function(obj, search)
     if not obj or not obj.Parent then return nil end
     local cache = g._attr_cache[obj]
-
     if cache then
         for name, value in pairs(cache) do
             if name:lower():find(search:lower(), 1, true) then
@@ -98,14 +103,9 @@ g.attr_cached_fuzzy = g.attr_cached_fuzzy or function(obj, search)
         return nil
     end
 
-    local ok, attrs = pcall(function()
-        return obj:GetAttributes()
-    end)
-
+    local ok, attrs = pcall(function() return obj:GetAttributes() end)
     if not ok or not attrs then return nil end
-
     g._attr_cache[obj] = attrs
-
     for name, value in pairs(attrs) do
         if name:lower():find(search:lower(), 1, true) then
             return value
@@ -116,9 +116,7 @@ g.attr_cached_fuzzy = g.attr_cached_fuzzy or function(obj, search)
 end
 
 g.attr_main_checker = g.attr_main_checker or function(obj, attr, expected)
-    local ok, result = pcall(function()
-        return obj:GetAttribute(attr)
-    end)
+    local ok, result = pcall(function() return obj:GetAttribute(attr) end)
     return ok and result == expected
 end
 
@@ -148,28 +146,15 @@ local function isVerified()
     return type(content) == "string" and content:lower():find("true") ~= nil
 end
 
-local function setVerified()
-    if writefile then
-        writefile(verify_file, "true")
-    end
-end
-
+local function setVerified() if writefile and typeof(writefile) == "function" then writefile(verify_file, "true") end end
 local function waitForGuiGone()
     local CoreGui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
-    while CoreGui:FindFirstChild("MemoryMinigameGUI") do
-        task.wait()
-    end
+    while CoreGui:FindFirstChild("MemoryMinigameGUI") do task.wait() end
 end
 
 g.disabled_global_value_correctly = g.disabled_global_value_correctly or function(input)
-    local ok, result = pcall(function()
-        return input
-    end)
-
-    if not ok then
-        return true
-    end
-
+    local ok, result = pcall(function() return input end)
+    if not ok then return true end
     return not result
 end
 
@@ -203,40 +188,28 @@ local function mask_unique_id(id)
             out[i] = string.rep("*", #parts[i])
         end
     end
-
     return table.concat(out, "-")
 end
 
 function create_flames_hub_unique_id(target_user_id)
     local file_name = "flames_hub_unique_ID.txt"
-
-    if userid ~= target_user_id then
-        return nil
-    end
-
+    if userid ~= target_user_id then return nil end
     if isfile and isfile(file_name) then
         local id = readfile and readfile(file_name)
-        if id and id ~= "" then
-            return id
-        end
+        if id and id ~= "" then return id end
     end
 
     local new_id = http:GenerateGUID(false)
     pcall(function() writefile(file_name, new_id) end)
-
     return new_id
 end
 
 function get_flames_hub_unique_id()
     local file_name = "flames_hub_unique_ID.txt"
-
     if isfile and isfile(file_name) then
         local id = readfile and readfile(file_name)
-        if id and id ~= "" then
-            return id
-        end
+        if id and id ~= "" then return id end
     end
-
     return nil
 end
 
@@ -258,9 +231,7 @@ local TextChatService = g.TextChatService or cloneref and cloneref(game:GetServi
 --local http_req = request or http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request)
 g.will_tag = g.will_tag or function(text)
     local filtered
-    local success, response = pcall(function()
-        filtered = Chat:FilterStringForBroadcast(text, me)
-    end)
+    local success, response = pcall(function() filtered = Chat:FilterStringForBroadcast(text, me) end)
     if not success then print(tostring(response)); return true end
     return filtered ~= text
 end
@@ -5564,7 +5535,7 @@ end
 wait(0.25)
 local TeleportCheck = false
 g.Teleport_Checker_For_Script = g.LocalPlayer.OnTeleport:Connect(function(State)
-	if not TeleportCheck and queueteleport then
+	if not TeleportCheck and queueteleport and typeof(queueteleport) == "function" then
 		TeleportCheck = true
 		queueteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/EnterpriseExperience/Flames_Hub_Games/refs/heads/main/Experiences/13967668166.lua'))()")
 	end
@@ -8281,7 +8252,7 @@ local function init_vehicle_esp()
     g.vehicle_esp_connections = g.vehicle_esp_connections or {}
     local highlights = g.vehicle_esp_highlights
     local connections = g.vehicle_esp_connections
-    local vehiclesFolder = g.vehicles_folder_instance_Life_Together_RP or Workspace:FindFirstChild("Vehicles")
+    local vehiclesFolder = g.vehicles_folder_instance_Life_Together_RP or workspace:FindFirstChild("Vehicles")
     local function clearESP(model)
         local hl = highlights[model]
         if hl then
@@ -8869,7 +8840,7 @@ end
 
 g.spam_sign_text = g.spam_sign_text or function(toggle)
     local Character = g.Character
-    local PlacedModels = Workspace:WaitForChild("PlacedModels")
+    local PlacedModels = workspace:WaitForChild("PlacedModels")
     local random_words = {"yo","wsg bro","aye","lit","fire"}
     local function find_tool_partial(tool_name)
         if not tool_name then return nil end
@@ -9705,7 +9676,7 @@ g.toggle_rgb_streetlights = g.toggle_rgb_streetlights or function(toggle)
     local genv = g
     if toggle == true then
         if genv.RGB_Street_Lights_NightTime_Loop or genv.StreetLightRainbowConnection then genv.notify("Warning", "RGB/Rainbow StreetLights is already running!", 5); return end
-        local Map = Workspace:FindFirstChild("Map", true)
+        local Map = workspace:FindFirstChild("Map", true)
         if not Map then genv.notify("Error", "Map Folder not found inside of Workspace!", 5); return end
         local StreetLs = Map:FindFirstChild("StreetLights", true)
         if not StreetLs then genv.notify("Error", "StreetLights not found inside of Map Folder!", 5); return end
@@ -10933,7 +10904,6 @@ g.EnableFly2 = g.EnableFly2 or function(speed)
     local char = g.Character or plr.Character or g.get_char(plr, 3)
     local HRP = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(plr, 3)
     local Humanoid = g.Humanoid or char and char:FindFirstChildOfClass("Humanoid") or g.get_human(plr, 3)
-    local Workspace = g.Workspace or g.safe_wrapper("Workspace")
     local RunService = g.RunService or g.safe_wrapper("RunService")
     local Debris = g.Debris or g.safe_wrapper("Debris")
     if not HRP or not Humanoid then g.notify("Error", "Character is not ready or Humanoid is missing.", 5); return end
@@ -11317,10 +11287,7 @@ g.vehicle_stats_viewer_GUI = g.vehicle_stats_viewer_GUI or function()
         end)
 
         local t = tick()
-        while not done and tick() - t < (timeout or 5) do
-            task.wait()
-        end
-
+        while not done and tick() - t < (timeout or 5) do task.wait() end
         if conn then conn:Disconnect() end
         return inst:GetAttribute(attr)
     end
@@ -11457,15 +11424,11 @@ g.vehicle_stats_viewer_GUI = g.vehicle_stats_viewer_GUI or function()
     end
     wait(0.25)
     g.Vehicle_Added_And_Removed_Conns.Child_Added_Watcher = Vehicles.ChildAdded:Connect(function(v)
-        task.defer(function()
-            Hook(v)
-        end)
+        task.defer(function() Hook(v) end)
     end)
 
     g.Vehicle_Added_And_Removed_Conns.Child_Removed_Watcher = Vehicles.ChildRemoved:Connect(function(v)
-        task.defer(function()
-            Unhook(v)
-        end)
+        task.defer(function() g.Unhook(v) end)
     end)
 end
 
@@ -11476,6 +11439,8 @@ g.check_premium_player = g.check_premium_player or function(plr)
         else
             return false
         end
+    else
+        return false
     end
 end
 
@@ -11533,14 +11498,6 @@ function checkban(player)
     end
 end
 
-function disablebans()
-    g.bansystem.enabled = false
-    if g.bansystem.connection then
-        g.bansystem.connection:Disconnect()
-        g.bansystem.connection = nil
-    end
-end
-
 g.start_bansystem = g.start_bansystem or function()
     if g.bansystem.enabled then return end
     if g.bansystem.starting then return end
@@ -11585,6 +11542,7 @@ g.get_server_admin_title_player = g.get_server_admin_title_player or function()
             return obj
         end
     end
+    return 
 end
 
 g.flash_server_admin_title_client_sided = g.flash_server_admin_title_client_sided or function(toggle)
@@ -11594,10 +11552,7 @@ g.flash_server_admin_title_client_sided = g.flash_server_admin_title_client_side
     local preset_texts = {"Flames Admin", "Server Admin", "Destroyer Admin", "Owner Admin", "Demon Admin", "Straight Crime", "Powerful Admin", "Creator Admin", "fLaMeS rUlEs", "FLAMES ADMIN"}
 
     if toggle == true then
-        if g.Server_Admin_Text_Title_Changer then
-            return g.notify("Warning", "Server Admin Title Text changer is already enabled!", 5)
-        end
-
+        if g.Server_Admin_Text_Title_Changer then g.notify("Warning", "Server Admin Title Text changer is already enabled!", 5); return end
         g.Server_Admin_Text_Title_Changer = true
         g.FlamesLibrary.spawn("server_admin_title_text_changer_main_loop", "spawn", function()
             while g.Server_Admin_Text_Title_Changer == true do
@@ -11609,10 +11564,7 @@ g.flash_server_admin_title_client_sided = g.flash_server_admin_title_client_side
             end
         end)
     elseif toggle == false then
-        if not g.Server_Admin_Text_Title_Changer then
-            return g.notify("Warning", "Server Admin Title Text changer is not enabled!", 5)
-        end
-
+        if not g.Server_Admin_Text_Title_Changer then g.notify("Warning", "Server Admin Title Text changer is not enabled!", 5); return end
         g.Server_Admin_Text_Title_Changer = false
         g.FlamesLibrary.disconnect("server_admin_title_text_changer_main_loop")
     else
@@ -11686,7 +11638,7 @@ g.rainbow_tool = g.rainbow_tool or function(toggled)
             g.notify("Warning", "Wait! We're giving you a colorable Tool...", 5)
             fw(0.2)
             tool = g.find_character_tool() or g.find_backpack_tool() or g.find_placed_models_tool()
-            if not tool then return g.notify("Error", "Tool still not found after giving you the Gift Tool.", 5) end
+            if not tool then g.notify("Error", "Tool still not found after giving you the Gift Tool.", 5); return end
             if tool.Parent == g.Backpack then
                 fw(0.1)
                 tool.Parent = g.Character
@@ -11708,7 +11660,8 @@ g.rainbow_tool = g.rainbow_tool or function(toggled)
             tool = g.find_character_tool() or g.find_backpack_tool() or g.find_placed_models_tool()
             if not tool then
                 g.Rainbow_Tools_FE = false
-                return g.notify("Error", "Tool unexpectedly disappeared or was destroyed.", 5)
+                g.notify("Error", "Tool unexpectedly disappeared or was destroyed.", 5)
+                return 
             end
             if tool.Parent == g.Backpack then
                 fw(0.1)
@@ -11721,10 +11674,7 @@ g.rainbow_tool = g.rainbow_tool or function(toggled)
             end
         end
     else
-        if not g.Rainbow_Tools_FE then
-            return g.notify("Warning", "RGB Tools is not enabled!", 5)
-        end
-
+        if not g.Rainbow_Tools_FE then g.notify("Warning", "RGB Tools is not enabled!", 5); return end
         g.Rainbow_Tools_FE = false
         g.notify("Success", "RGB tools has been disabled.", 5)
     end
@@ -11736,18 +11686,15 @@ g.toggle_name_func = g.toggle_name_func or function(boolean)
     elseif boolean == false then
         g.Send("hide_name", false)
     else
-        return g.notify("Error", "Invalid arguments provided.", 5)
+        g.notify("Error", "Invalid arguments provided.", 3)
+        return 
     end
 end
 
 g.flashy_name = g.flashy_name or function(Toggle)
     local FL = getgenv().FlamesLibrary
-
     if Toggle == true then
-        if getgenv().Flashing_Name_Title then
-            return g.notify("Warning", "Name-Flasher is already enabled.", 5)
-        end
-
+        if getgenv().Flashing_Name_Title then g.notify("Warning", "Name-Flasher is already enabled.", 5); return end
         getgenv().Flashing_Name_Title = true
         FL.spawn("flashy_name_loop", "spawn", function()
             while getgenv().Flashing_Name_Title == true do
@@ -11758,55 +11705,39 @@ g.flashy_name = g.flashy_name or function(Toggle)
             end
         end)
     elseif Toggle == false then
-        if not getgenv().Flashing_Name_Title then
-            return g.notify("Warning", "Name-Flasher is not enabled.", 5)
-        end
-
+        if not getgenv().Flashing_Name_Title then g.notify("Warning", "Name-Flasher is not enabled.", 5); return end
         getgenv().Flashing_Name_Title = false
         FL.disconnect("flashy_name_loop")
         fw(1.5)
         g.toggle_name_func(false)
     else
-        return g.notify("Error", "Invalid argument(s) provided.", 5)
+        g.notify("Error", "Invalid argument(s) provided.", 5)
+        return 
     end
 end
 
 g.flames_nameless_admin_ver = g.flames_nameless_admin_ver or function()
-    if g.RealNamelessLoaded then
-        return g.notify("Warning", "Nameless Admin (or the Flames Hub version) has already been loaded.", 11)
-    end
-
+    if g.RealNamelessLoaded then g.notify("Warning", "Nameless Admin (or the Flames Hub version) has already been loaded.", 11); return  end
     loadstring(game:HttpGet('https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/Source.lua'))()
 end
 
 g.infinite_premium = g.infinite_premium or function()
-    if g.GET_LOADED_IY then
-        return g.notify("Warning", "You already have Infinite Premium running.", 5)
-    end
-    if g.IY_LOADED then
-        return g.notify("Warning", "You already have Infinite Yield running! You cannot and should NOT run both at the same time.", 10)
-    end
-
+    if g.GET_LOADED_IY then g.notify("Warning", "You already have Infinite Premium running.", 5); return end
+    if g.IY_LOADED then g.notify("Warning", "You already have Infinite Yield running! You cannot and should NOT run both at the same time.", 10); return end
     loadstring(game:HttpGet('https://pastefy.app/b052AUgc/raw'))()
 end
 
 g.infinite_yield = g.infinite_yield or function()
-    if g.IY_LOADED then
-        return g.notify("Warning", "You already have Infinite Yield running.", 10)
-    end
-    if g.GET_LOADED_IY then
-        return g.notify("Warning", "You already have Infinite Premium running! You cannot and should NOT run both at the same time.", 15)
-    end
-
+    if g.IY_LOADED then g.notify("Warning", "You already have Infinite Yield running.", 10); return end
+    if g.GET_LOADED_IY then g.notify("Warning", "You already have Infinite Premium running! You cannot and should NOT run both at the same time.", 15); return end
     loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
 end
 
 g.send_msg_menu = g.send_msg_menu or function()
-    if g.sendmsgmenu_loaded then return g.notify("Warning", "Send message menu is already loaded!", 5) end
+    if g.sendmsgmenu_loaded then g.notify("Warning", "Send message menu is already loaded!", 5); return end
     g.sendmsgmenu_loaded = true
     local tween = g.TweenService
     local players = g.Players
-    local uis = g.UserInputService
     local gui = Instance.new("ScreenGui")
     gui.Name = tostring(g.randomString())
     gui.ResetOnSpawn = false
@@ -11907,9 +11838,7 @@ g.send_msg_menu = g.send_msg_menu or function()
     if g.dragify and typeof(g.dragify) == "function" then g.dragify(message_menu_frame) end
     local selected = nil
     local function refresh()
-        for _,v in ipairs(playerscroll:GetChildren()) do
-            if v:IsA("TextButton") then v:Destroy() end
-        end
+        for _,v in ipairs(playerscroll:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
         selected = nil
         local filter = string.lower(search.Text or "")
         for _,plr in ipairs(players:GetPlayers()) do
@@ -12009,13 +11938,13 @@ g.send_msg_menu = g.send_msg_menu or function()
     end)
 
     sendbtn.MouseButton1Click:Connect(function()
-        if not selected then return g.notify("Warning", "Select a player first!", 5) end
+        if not selected then g.notify("Warning", "Select a player first!", 3); return end
         local target = players:FindFirstChild(selected.Text)
-        if not target then return g.notify("Warning", "Player not found!", 5) end
+        if not target then g.notify("Warning", "Player not found!", 3); return end
         local num = tonumber(amount.Text) or 1
         num = math.clamp(num,1,30)
         local raw = msgbox.Text or ""
-        if raw == "" then return g.notify("Warning", "Message cannot be empty.", 5) end
+        if raw == "" then g.notify("Warning", "Message cannot be empty.", 3); return end
         local msgs = {}
         if raw:find("||",1,true) then
             for part in string.gmatch(raw,"([^|]+)") do
@@ -12076,19 +12005,12 @@ g.alreadyCheckedUser = function(player)
 end
 
 g.disable_rgb_for = function(plr)
-    if not plr then
-        return g.notify("Error", "Player was not found when trying to disable RGB vehicle!", 6)
-    end
-
+    if not plr then g.notify("Error", "Player was not found when trying to disable RGB vehicle!", 5); return end
     local name = plr.Name
     local state = g.VehicleStates[name]
     if not state then
-        if g.Rainbow_Tasks[name] then
-            g.Rainbow_Tasks[name] = nil
-        end
-        if g.Rainbow_Indices[name] then
-            g.Rainbow_Indices[name] = nil
-        end
+        if g.Rainbow_Tasks[name] then g.Rainbow_Tasks[name] = nil end
+        if g.Rainbow_Indices[name] then g.Rainbow_Indices[name] = nil end
         return
     end
 
@@ -12098,7 +12020,7 @@ g.disable_rgb_for = function(plr)
     if g.Rainbow_Indices[name] then g.Rainbow_Indices[name] = nil end
     state.rainbow = false
     state.rainbowIndex = nil
-    g.notify("Success", "Disabled Rainbow Vehicle for: "..tostring(name), 6)
+    g.notify("Success", "Disabled Rainbow Vehicle for: "..tostring(name), 5)
 end
 
 if not g.fully_disable_rgb_plr then g.fully_disable_rgb_plr = g.disable_rgb_for end
@@ -12221,17 +12143,14 @@ g.setup_cmd_handler_plr = function(player)
         }
         local parts = command:split(" ")
         local cmd = parts[1]
-
         if g.levenshtein(cmd, "rgbcar") <= 1 then
             local Player = g.Players[speaker.Name]
-            if not Player then
-                return g.notify("Error", "This player does not exist!", 5)
-            end
-
+            if not Player then g.notify("Error", "This player does not exist!", 5); return end
             local vehicle = g.get_other_vehicle(Player)
             if not vehicle then
                 g.Rainbow_Vehicles[Player.Name] = nil
-                return g.notify("Error", "The player doesn't have a car spawned!", 5)
+                g.notify("Error", "The player doesn't have a car spawned!", 5)
+                return 
             end
 
             g.enable_rgb_for(Player)
@@ -12239,15 +12158,8 @@ g.setup_cmd_handler_plr = function(player)
             local parts = command:split(" ")
             local delayStr = parts[2]
             local newDelay = tonumber(delayStr)
-
-            if not newDelay then
-                return 
-            end
-
-            if newDelay < 0.1 then
-                newDelay = 0.1
-            end
-
+            if not newDelay then return  end
+            if newDelay < 0.1 then newDelay = 0.1 end
             local name = g.Players[speaker.Name].Name
             g.Rainbow_Delays[name] = newDelay
             g.Rainbow_Next[name] = time()
@@ -12258,10 +12170,7 @@ g.setup_cmd_handler_plr = function(player)
                 g.LockLoop_Vehicles[speaker.Name] = false
                 return 
             end
-            if g.Locked_Vehicles[speaker.Name] then
-                return 
-            end
-
+            if g.Locked_Vehicles[speaker.Name] then return  end
             g.Unlocked_Vehicles[speaker.Name] = false
             fw(0.1)
             g.Locked_Vehicles[speaker.Name] = true
@@ -12284,10 +12193,7 @@ g.setup_cmd_handler_plr = function(player)
             fw(0.1)
             g.Unlocked_Vehicles[speaker.Name] = true
             local player = g.Players[speaker.Name]
-            if not player then
-                g.Unlocked_Vehicles[speaker.Name] = false
-            end
-
+            if not player then g.Unlocked_Vehicles[speaker.Name] = false end
             local v = g.get_other_vehicle(player)
             if v and v:GetAttribute("locked") then
                 g.Get("lock_vehicle", v)
@@ -12320,21 +12226,12 @@ g.setup_cmd_handler_plr = function(player)
         elseif command:sub(1, 5) == "check" then
             if g.Check_Cooldown then return end
             g.Check_Cooldown = true
-            task.delay(15, function()
-                g.Check_Cooldown = false
-            end)
-
+            task.delay(15, function() g.Check_Cooldown = false end)
             local args = command:split(" ")
             local checkTargetName = args[2]
-            if not checkTargetName or #checkTargetName <= 0 then
-                return getgenv().notify("Warning", "Target player invalid: "..tostring(checkTargetName), 1)
-            end
-
+            if not checkTargetName or #checkTargetName <= 0 then getgenv().notify("Warning", "Target player invalid: "..tostring(checkTargetName), 1); return end
             local target = g.findplr(checkTargetName)
-            if not target then
-                return getgenv().notify("Warning", "Could not find: "..tostring(target), 1)
-            end
-
+            if not target then getgenv().notify("Warning", "Could not find: "..tostring(target), 1); return end
             local isVerified = target:GetAttribute("is_verified")
             local general_channel = g.TextChatService:FindFirstChild("RBXGeneral", true) or g.TextChatService:FindFirstChild("TextChannels"):FindFirstChild("RBXGeneral")
             if general_channel then
@@ -12360,9 +12257,7 @@ g.setup_cmd_handler_plr = function(player)
                 ";lockcar | ;rgbcar | ;norgbcar | ;unlockcar | ;check Player | ;trailer | ;notrailer", ";lambo", ";sf90", ";charger", ";bugatti"
             )
 
-            task.delay(g.Wait_Time_Cooldown, function()
-                g.Is_OnCooldown = false
-            end)
+            task.delay(g.Wait_Time_Cooldown, function() g.Is_OnCooldown = false end)
         end
     end)
 end
@@ -12382,9 +12277,96 @@ g.removePlayerFromScriptWhitelistTable = g.removePlayerFromScriptWhitelistTable 
         if g.player_admins[player.Name] == nil then
             g.notify("Success", tostring(player.Name).." was removed from the Admins Whitelist!", 3)
         else
-            return g.notify("Error", tostring(player)..", does not exist.", 3)
+            g.notify("Error", tostring(player)..", does not exist.", 3)
+            return 
         end
     end
+end
+
+g.start_glitch_script = function()
+    if g.SideGlitch_Enabled and FlamesLibrary._connections["SideGlitch_Loop"] and #FlamesLibrary._connections["SideGlitch_Loop"] > 0 then g.notify("Warning", "Flames Hub | Glitch Script is already enabled!", 3); return end
+    local char = g.Character or speaker.Character or g.get_char(speaker)
+    if not char or not char:IsDescendantOf(game) then return end
+    local root  = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(speaker)
+    if not root or not root.Parent or not root:IsDescendantOf(game) then return end
+    local human = g.Humanoid or char and char:FindFirstChildOfClass("Humanoid")  or g.get_human(speaker)
+    if not human or not human.Parent or not human:IsDescendantOf(game) then return end
+    if not root or not human or human.Health <= 0 then return end
+    local locked_origin = root.CFrame
+    local last_flip = 0
+    local dir = 1
+    FlamesLibrary.connect("SideGlitch_Loop", RunService.RenderStepped:Connect(function()
+        if not g.SideGlitch_Enabled then return end
+        local now      = tick()
+        local speed    = math.clamp(g.SideGlitch_Speed or 10, 1, 100)
+        local distance = g.SideGlitch_Distance or 1
+        local interval = 1 / speed
+        if now - last_flip >= interval then
+            dir       = -dir
+            last_flip = now
+        end
+        local right = locked_origin.RightVector
+        root.CFrame = CFrame.new(locked_origin.Position + right * (dir * distance)) * (locked_origin - locked_origin.Position)
+    end))
+    FlamesLibrary.connect("SideGlitch_Restore", RunService.RenderStepped:Connect(function()
+        if g.SideGlitch_Enabled then return end
+        if root.CFrame.Position ~= locked_origin.Position then
+            root.CFrame = locked_origin
+        else
+            FlamesLibrary.disconnect("SideGlitch_Restore")
+        end
+    end))
+end
+
+g.start_smooth_glitch_script = function()
+    local char = g.Character or speaker.Character or g.get_char(speaker)
+    if not char or not char:IsDescendantOf(game) then return end
+    local root  = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(speaker)
+    local human = g.Humanoid or char and char:FindFirstChildOfClass("Humanoid") or g.get_human(speaker)
+    if not root or not human or human.Health <= 0 then return end
+    local locked_origin  = root.CFrame
+    local last_flip      = 0
+    local dir            = 1
+    local current_offset = 0
+    local target_offset  = 0
+    FlamesLibrary.connect("SideGlitch_Loop", RunService.RenderStepped:Connect(function(dt)
+        if not g.SideGlitch_Enabled then return end
+        local now      = tick()
+        local speed    = math.clamp(g.SideGlitch_Speed    or 5,    1, 100)
+        local distance = math.clamp(g.SideGlitch_Distance or 5,    0,  50)
+        local smooth   = math.clamp(g.SideGlitch_Smooth   or 0.18, 0,   1)
+        local interval = 1 / speed
+        if now - last_flip >= interval then
+            dir           = -dir
+            target_offset = dir * distance
+            last_flip     = now
+        end
+
+        local alpha   = 1 - (1 - smooth) ^ (dt * 60)
+        current_offset = current_offset + (target_offset - current_offset) * alpha
+        local rotation_only = locked_origin - locked_origin.Position
+        local right          = locked_origin.RightVector
+        root.CFrame = CFrame.new(locked_origin.Position + right * current_offset) * rotation_only
+    end))
+
+    FlamesLibrary.connect("SideGlitch_Restore", RunService.RenderStepped:Connect(function(dt)
+        if g.SideGlitch_Enabled then return end
+        local smooth  = math.clamp(g.SideGlitch_Smooth or 0.18, 0, 1)
+        local alpha   = 1 - (1 - smooth) ^ (dt * 60)
+        current_offset = current_offset + (0 - current_offset) * alpha
+        local rotation_only = locked_origin - locked_origin.Position
+        local right          = locked_origin.RightVector
+        root.CFrame = CFrame.new(locked_origin.Position + right * current_offset) * rotation_only
+        if math.abs(current_offset) < 0.01 then
+            root.CFrame = locked_origin
+            FlamesLibrary.disconnect("SideGlitch_Restore")
+        end
+    end))
+end
+
+g.stop_glitch_script = function()
+    g.SideGlitch_Enabled = false
+    g.FlamesLibrary.disconnect("SideGlitch_Loop")
 end
 
 g.avgSkin = g.avgSkin or function(bc)
@@ -12403,7 +12385,6 @@ g.avgSkin = g.avgSkin or function(bc)
         g = g + c.G
         b = b + c.B
     end
-
     return Color3.new(r/6,g/6,b/6)
 end
 
@@ -13231,11 +13212,10 @@ end
 
 g.unview_player = g.unview_player or function()
     local genv = g
-    if not genv.Viewing_A_Player then return genv.notify("Error", "You're not viewing anyone.", 5) end
+    if not genv.Viewing_A_Player then genv.notify("Error", "You're not viewing anyone.", 5); return end
     local hum = genv.Humanoid or genv.Character:FindFirstChildOfClass("Humanoid") or g.get_human(LocalPlayer, 1)
     local char = genv.Character or genv.LocalPlayer.Character or g.get_char(LocalPlayer, 1)
     local subject = hum or (char and char:FindFirstChildWhichIsA("Humanoid")) or char
-
     if subject and genv.Camera then
         genv.Camera.CameraSubject = subject
     elseif not genv.Camera then
@@ -13244,11 +13224,12 @@ g.unview_player = g.unview_player or function()
 
     if typeof(genv.Viewing_Plr_Tbl) ~= "table" then genv.Viewing_Plr_Tbl = {} end
     if next(genv.Viewing_Plr_Tbl) == nil then
-        return genv.notify(
+        genv.notify(
             "Error",
             "Viewing table is empty (tried unviewing nobody? how?).",
             10
         )
+        return 
     end
 
     local viewed
@@ -13259,7 +13240,6 @@ g.unview_player = g.unview_player or function()
 
     genv.Viewing_A_Player = false
     table.clear(genv.Viewing_Plr_Tbl)
-
     genv.notify("Success", "Stopped viewing: "..tostring(viewed), 5)
 end
 
@@ -13793,11 +13773,65 @@ Callback = function(state)
     g.glitch_outfit(state)
 end}, "Glitch_Outfit_Toggle_UI")
 
+g.create_ui_element("Slider", LocalPlayer_Section, {
+Name = "Side To Side Speed",
+Min = 1,
+Max = 100,
+Default = getgenv().SideGlitch_Speed or 25,
+Flag = "Side_To_Side_Speed_Slider_UI",
+Callback = function(val)
+    g.SideGlitch_Speed = val
+end}, "Side_To_Side_Speed_Slider_UI")
+
+g.create_ui_element("Slider", LocalPlayer_Section, {
+Name = "Side To Side Distance",
+Min = 1,
+Max = 25,
+Default = getgenv().SideGlitch_Distance or 5,
+Flag = "Side_To_Side_Distance_Slider_UI",
+Callback = function(val)
+    g.SideGlitch_Distance = val
+end}, "Side_To_Side_Distance_Slider_UI")
+
+g.create_ui_element("Slider", LocalPlayer_Section, {
+Name = "Side To Side Smoothness",
+Min = 0,
+Max = 1,
+Default = getgenv().SideGlitch_Smooth or 5,
+Flag = "Side_To_Side_Smoothness_UI_Slider",
+Callback = function(val)
+    g.SideGlitch_Smooth = val
+end}, "Side_To_Side_Smoothness_UI_Slider")
+
+g.create_ui_element("Toggle", LocalPlayer_Section, {
+Name = "Side To Side Glitch (FE)",
+Default = getgenv().SideGlitch_Enabled or false,
+Flag = "Side_To_Side_Glitch_Not_Smooth_Toggle_UI",
+Callback = function(state)
+    if state then
+        g.start_glitch_script()
+    else
+        g.stop_glitch_script()
+    end
+end}, "Side_To_Side_Glitch_Not_Smooth_Toggle_UI")
+
+g.create_ui_element("Toggle", LocalPlayer_Section, {
+Name = "Smooth Side To Side Glitch (FE)",
+Default = getgenv().SideGlitch_Enabled or false,
+Flag = "Side_To_Side_Glitch_Smooth_Toggle_UI",
+Callback = function(state)
+    if state then
+        g.start_smooth_glitch_script()
+    else
+        g.stop_glitch_script()
+    end
+end}, "Side_To_Side_Glitch_Smooth_Toggle_UI")
+
 g.create_ui_element("Button", Vehicle_Section, {
 Name = "Despawn Vehicle (FE)",
 Callback = function()
     local Current_Car = g.get_vehicle()
-    if not Current_Car then return g.notify("Error", "You do not have a vehicle spawned!", 3) end
+    if not Current_Car or not Current_Car:IsA("Model") then g.notify("Error", "You do not have a vehicle spawned!", 3); return end
     if Current_Car then
         g.notify("Success", "Despawned Vehicle: " .. tostring(Current_Car), 5)
         g.spawn_any_vehicle(tostring(Current_Car.Name))
@@ -13872,20 +13906,19 @@ PlaceholderText = "user or display...",
 Flag = "Teleport_Player_Input_UI",
 Callback = function(text)
     local Target = g.findplr(text)
-    if not Target then return g.notify("Error", "That is not a valid Player.", 3) end
+    if not Target then g.notify("Error", "That is not a valid Player.", 3); return end
     local Target_Char = Target.Character or g.get_char(Target, 3)
-    if not Target_Char then return g.notify("Error", "Target character is not loaded.", 3) end
+    if not Target_Char then g.notify("Error", "Target character is not loaded.", 3); return end
     local Char = g.Character or g.LocalPlayer.Character or g.get_char(LocalPlayer, 3)
-    if not Char then return g.notify("Error", "Your Character does not exist.", 5) end
+    if not Char then g.notify("Error", "Your Character does not exist.", 5); return end
     local Hum = g.Humanoid or Char:FindFirstChildOfClass("Humanoid") or g.get_human(LocalPlayer, 10)
-    if not (Char and Hum) then return g.notify("Error", "Your character is not loaded yet!", 3) end
+    if not (Char and Hum) then g.notify("Error", "Your character is not loaded yet!", 3); return end
     if Hum.Sit then
         pcall(function() Hum:ChangeState(3) end)
         task.wait(0.2)
     end
-
     local Ok, Pivot = pcall(function() return Target_Char:GetPivot() end)
-    if not Ok or not Pivot then return g.notify("Error", "Failed to get target position.", 3) end
+    if not Ok or not Pivot then g.notify("Error", "Failed to get target position.", 3); return end
     if Char and Char:FindFirstChildOfClass("Humanoid") then Char:PivotTo(Pivot * CFrame.new(0, 5, 0)) end
     g.notify("Success", "Teleported to "..Target.Name, 3)
 end}, "Teleport_Player_Input_UI")
@@ -13896,12 +13929,12 @@ PlaceholderText = "Username or displayname...",
 Flag = "View_Player_Input_UI",
 Callback = function(split)
     local View_Target = g.findplr(split)
-    if not View_Target then return g.notify("Error", "Target was not found or does not exist!", 5) end
-    if g.Viewing_A_Player then return g.notify("Error", "You're already viewing someone, unview them first.", 5) end
+    if not View_Target then g.notify("Error", "Target was not found or does not exist!", 5); return end
+    if g.Viewing_A_Player then g.notify("Error", "You're already viewing someone, unview them first.", 5); return end
     local target_char = View_Target.Character or g.get_char(View_Target, 5)
-    if not target_char then return g.notify("Error", "Target character not loaded!", 5) end
+    if not target_char then g.notify("Error", "Target character not loaded!", 5); return end
     local target_human = target_char:FindFirstChildOfClass("Humanoid") or g.get_human(View_Target, 5)
-    if not target_human then return g.notify("Error", "Target humanoid not found!", 5) end
+    if not target_human then g.notify("Error", "Target humanoid not found!", 5); return end
     g.Viewing_A_Player = true
     workspace.CurrentCamera.CameraSubject = target_human or target_char or g.Character
 end}, "View_Player_Input_UI")
@@ -13909,7 +13942,7 @@ end}, "View_Player_Input_UI")
 g.create_ui_element("Button", Players_Section, {
 Name = "Unview Player",
 Callback = function()
-    if not g.Viewing_A_Player then return g.notify("Error", "You're not viewing anyone.", 5) end
+    if not g.Viewing_A_Player then g.notify("Error", "You're not viewing anyone.", 3); return end
     g.Viewing_A_Player = false
     workspace.CurrentCamera.CameraSubject = g.Humanoid or g.Character or g.LocalPlayer.Character or g.get_char(LocalPlayer, 10)
 end})
@@ -13926,7 +13959,7 @@ g.create_ui_element("Slider", Vehicle_Section, {
 Name = "Vehicle Fly Speed",
 Min = 1,
 Max = 100,
-Default = getgenv().vehicle_fly_speed or false,
+Default = getgenv().vehicle_fly_speed or 5,
 Flag = "Vehicle_Fly_Speed",
 Callback = function(val)
     if g.vehicle_fly then g.vehicle_fly_speed = val end
@@ -13952,8 +13985,8 @@ g.create_ui_element("Button", Vehicle_Section, {
 Name = "Lock Car (FE)",
 Callback = function()
     local Current_Car = g.get_vehicle()
-    if not Current_Car then return g.notify("Error", "You do not have a vehicle spawned!", 5) end
-    if Current_Car:GetAttribute("locked") == true then return g.notify("Error", "Your Vehicle is already locked.", 5) end
+    if not Current_Car then g.notify("Error", "You do not have a vehicle spawned!", 5); return end
+    if Current_Car:GetAttribute("locked") == true then g.notify("Error", "Your Vehicle is already locked.", 5); return end
     g.lock_vehicle(g.get_vehicle())
     g.notify("Success", "Locked vehicle: " .. tostring(Current_Car), 5)
 end,})
@@ -13962,8 +13995,8 @@ g.create_ui_element("Button", Vehicle_Section, {
 Name = "Unlock Car (FE)",
 Callback = function()
     local Current_Car = g.get_vehicle()
-    if not Current_Car then return g.notify("Error", "You do not have a vehicle spawned!", 5) end
-    if Current_Car:GetAttribute("locked") ~= true then return g.notify("Error", "Your vehicle is already unlocked!", 5) end
+    if not Current_Car then g.notify("Error", "You do not have a vehicle spawned!", 5); return end
+    if Current_Car:GetAttribute("locked") ~= true then g.notify("Error", "Your vehicle is already unlocked!", 5); return end
     g.lock_vehicle(g.get_vehicle())
     g.notify("Success", "Unlocked vehicle: " .. tostring(Current_Car), 5)
 end,})
@@ -13974,7 +14007,7 @@ Default = getgenv().trailer_enabled or false,
 Flag = "Trailer_Toggle_UI",
 Callback = function(state)
     local Vehicle = g.get_vehicle()
-    if not Vehicle then return g.notify("Error", "You do not have a Vehicle spawned, spawn one and try again!", 7) end
+    if not Vehicle then g.notify("Error", "You do not have a Vehicle spawned, spawn one and try again!", 7); return  end
     if state then
         g.notify("Success", "Added WaterSkies to Vehicle: " .. tostring(Vehicle), 5)
     else
@@ -13991,9 +14024,9 @@ Callback = function(state)
     if state then
         local Camera = g.Camera or workspace.CurrentCamera
         local Vehicle = g.get_vehicle()
-        if not Vehicle then return g.notify("Error", "You don't have a Vehicle spawned, spawn one and try again!", 7) end
+        if not Vehicle then g.notify("Error", "You don't have a Vehicle spawned, spawn one and try again!", 7); return end
         local fallback = g.Humanoid or g.Character or g.get_human(g.LocalPlayer, Players.RespawnTime + 0.5) or g.get_char(g.LocalPlayer, Players.RespawnTime + 0.75)
-        if not fallback then return g.notify("Error", "No fallback camera subject found.", 5) end
+        if not fallback then g.notify("Error", "No fallback camera subject found.", 5); return end
         if g.CamWatcherConn then
             g.CamWatcherConn:Disconnect()
             g.CamWatcherConn = nil
@@ -14004,7 +14037,7 @@ Callback = function(state)
                 or v:FindFirstChildWhichIsA("BasePart", true)
         end
         local target = find_vehicle_part(Vehicle)
-        if not target then return g.notify("Error", "Could not find a valid vehicle part.", 5) end
+        if not target then g.notify("Error", "Could not find a valid vehicle part.", 5); return end
         Camera.CameraSubject = target
         getgenv().viewing_car = true
         g.notify("Info", "Now viewing Vehicle.", 5)
@@ -14778,9 +14811,11 @@ Callback = function()
         local success, err = pcall(function()
             if #g.Players:GetPlayers() <= 1 then
                 g.notify("Success", "You are now going to rejoin into a different server (this server is empty).", 10)
+                wait(0.25)
                 g.TeleportService:Teleport(PlaceID, g.LocalPlayer)
             else
-                g.notify("Success", "You are now going to be rejoined.", 5)
+                g.notify("Success", "You are now being rejoined.", 5)
+                wait(0.25)
                 g.TeleportService:TeleportToPlaceInstance(PlaceID, JobID, g.LocalPlayer)
             end
         end)
@@ -14794,7 +14829,7 @@ Callback = function()
 end}, "Rejoin_Button_UI")
 
 g.create_ui_element("Button", Extras_Section, {
-Name = "YouTube Music Player (MIGHT CRASH YOU!)",
+Name = "YouTube Music Player (MIGHT CRASH/FREEZE YOU!)",
 Callback = function()
     g.load_youtube_music_player_func()
 end})
@@ -14822,7 +14857,7 @@ Callback = function(state)
 end}, "Walk_Fling_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
-Name = "Name Spam (FE)",
+Name = "Name Spam (FE, Broken)",
 Default = getgenv().Name_Spammer_Currently_Enabled or false,
 Flag = "Name_Spam_Toggle_UI",
 Callback = function(state)
@@ -14835,9 +14870,7 @@ Default = getgenv().Auto_Calls_Blocker_V3_Is_Enabled_Boolean_Flag or false,
 Flag = "Block_Calls_Toggle_UI",
 Callback = function(state)
     if state then
-        if g.Auto_Calls_Blocker_V3_Is_Enabled_Boolean_Flag then
-            return g.notify("Warning", "You already have Calls_Blocker_V3 enabled!", 6)
-        end
+        if g.Auto_Calls_Blocker_V3_Is_Enabled_Boolean_Flag then g.notify("Warning", "You already have Calls_Blocker_V3 enabled!", 5); return end
         g.notify("Success", "Calls_Blocker_V3 has been enabled.", 5)
         g.Auto_Calls_Blocker_V3_Is_Enabled_Boolean_Flag = true
         g.FlamesLibrary.spawn("calls_blocker", "spawn", function()
@@ -14865,9 +14898,7 @@ Callback = function(state)
             end
         end)
     else
-        if not g.Auto_Calls_Blocker_V3_Is_Enabled_Boolean_Flag then
-            return g.notify("Warning", "You do NOT have Calls_Blocker_V3 enabled!", 6)
-        end
+        if not g.Auto_Calls_Blocker_V3_Is_Enabled_Boolean_Flag then g.notify("Warning", "You do NOT have Calls_Blocker_V3 enabled!", 5); return end
         if g.calls_blocker_hooks then
             for _, v in pairs(g.calls_blocker_hooks) do
                 pcall(function()

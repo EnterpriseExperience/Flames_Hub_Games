@@ -15,18 +15,22 @@ if getgenv().FreeEmotes_Enabled then
         return warn("You already have Flames Emotes GUI running!")
     end
 end
+
+local cam = workspace.CurrentCamera
 getgenv().FreeEmotes_Enabled = true
 local view_port_size = setmetatable({}, {
     __index = function(_, key)
-        local cam = Workspace.CurrentCamera
+        cam = workspace.CurrentCamera
         local size = cam and cam.ViewportSize or Vector2.new(1920, 1080)
         if key == "X" then return size.X
-        elseif key == "Y" then return size.Y end
+        elseif key == "Y" then return size.Y else return end
     end
 })
+
+local cloneref = cloneref or function(...) return ... end
 local Workspace = cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local UserInputService = cloneref and cloneref(game:GetService("UserInputService")) or game:GetService("UserInputService")
-local cam = Workspace.CurrentCamera
+cam = Workspace.CurrentCamera
 local all_clipboards = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set)
 function scale(axis, value)
     local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
@@ -37,6 +41,8 @@ function scale(axis, value)
         return value * (view_port_size.X / baseWidth) * scaleFactor
     elseif axis == "Y" then
         return value * (view_port_size.Y / baseHeight) * scaleFactor
+    else
+        return 
     end
 end
 
@@ -45,8 +51,6 @@ getgenv().missing = getgenv().missing or function(t, f, fallback)
     return fallback 
 end
 
-cloneref = missing("function", cloneref, function(...) return ... end)
-wait(0.2)
 getgenv().get_or_set = getgenv().get_or_set or function(name, value)
     local existing = getgenv()[name]
 
@@ -56,24 +60,6 @@ getgenv().get_or_set = getgenv().get_or_set or function(name, value)
     end
 
     return existing
-end
-
-local function safe_wrapper()
-    return getgenv().get_or_set("_service_proxy", setmetatable({}, {
-        __index = function(_, name)
-            local existing = getgenv()[name]
-            if existing ~= nil then
-                return existing
-            end
-
-            local svc = game:GetService(name)
-            if cloneref then
-                svc = cloneref(svc)
-            end
-
-            return getgenv().get_or_set(name, svc)
-        end
-    }))
 end
 
 local Services = getgenv().get_or_set("Services", setmetatable({}, {
@@ -92,24 +78,12 @@ local Services = getgenv().get_or_set("Services", setmetatable({}, {
     end
 }))
 
-function getRoot(char)
-	if char and char:FindFirstChildOfClass("Humanoid") then
-		return char:FindFirstChildOfClass("Humanoid").RootPart
-    elseif char and char:FindFirstChild("HumanoidRootPart") then
-        return char:WaitForChild("HumanoidRootPart")
-    elseif not char then
-		return nil
-	end
-end
-
 local Players = Services.Players
 local RunService = Services.RunService
-local UserInputService = Services.UserInputService
 local TweenService = Services.TweenService
 local AvatarEditorService = Services.AvatarEditorService
 local HttpService = Services.HttpService
 local player = Players.LocalPlayer
-local LocalPlayer = player
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:FindFirstChild("Humanoid") or character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 50)
 local lastPosition = character.PrimaryPart and character.PrimaryPart.Position or Vector3.new()
@@ -246,12 +220,7 @@ gui.Name = "FlamesEmoteGUI"
 gui.Parent = CoreGui
 gui.Enabled = false
 gui.DisplayOrder = 999
-
-local function createGradient(parent, colorSequence)
-    return 
-end
-
-getgenv().createCorner = getgenv().createCorner or function(parent, cornerRadius)
+getgenv().Create_Corner = getgenv().Create_Corner or function(parent, cornerRadius)
     if not parent then return end
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, cornerRadius)
@@ -266,7 +235,7 @@ mainContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 mainContainer.Active = true
 mainContainer.Draggable = true
 mainContainer.Parent = gui
-createCorner(mainContainer, 12)
+g.Create_Corner(mainContainer, 12)
 
 local color_gradient = Instance.new("UIGradient")
 color_gradient.Color = ColorSequence.new(Color3.fromRGB(255,255,255),Color3.fromRGB(255,255,255))
@@ -281,7 +250,7 @@ title.TextColor3 = Color3.new(1, 1, 1)
 title.Font = Enum.Font.GothamBold
 title.TextScaled = true
 title.Parent = mainContainer
-createCorner(title, 8)
+g.Create_Corner(title, 8)
 
 local catalogTabBtn = Instance.new("TextButton")
 catalogTabBtn.Size = UDim2.new(0.3, 0, 0, scale("Y", 24))
@@ -292,7 +261,7 @@ catalogTabBtn.TextColor3 = Color3.new(1, 1, 1)
 catalogTabBtn.Font = Enum.Font.GothamBold
 catalogTabBtn.TextScaled = true
 catalogTabBtn.Parent = mainContainer
-createCorner(catalogTabBtn, 6)
+g.Create_Corner(catalogTabBtn, 6)
 
 local savedTabBtn = Instance.new("TextButton")
 savedTabBtn.Size = UDim2.new(0.3, 0, 0, scale("Y", 24))
@@ -303,14 +272,14 @@ savedTabBtn.TextColor3 = Color3.new(1, 1, 1)
 savedTabBtn.Font = Enum.Font.GothamBold
 savedTabBtn.TextScaled = true
 savedTabBtn.Parent = mainContainer
-createCorner(savedTabBtn, 6)
+g.Create_Corner(savedTabBtn, 6)
 
 local divider = Instance.new("Frame")
 divider.Size = UDim2.new(0, scale("X", 2), 1, -scale("Y", 70))
 divider.Position = UDim2.new(0.6, -scale("X", 1), 0, scale("Y", 70))
 divider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 divider.Parent = mainContainer
-createCorner(divider, 1)
+g.Create_Corner(divider, 1)
 
 local catalogFrame = Instance.new("Frame")
 catalogFrame.Size = UDim2.new(0.6, -scale("X", 10), 1, -scale("Y", 70))
@@ -330,7 +299,7 @@ searchBox.TextScaled = true
 searchBox.ClearTextOnFocus = false
 searchBox.Text = ""
 searchBox.Parent = catalogFrame
-createCorner(searchBox, 6)
+g.Create_Corner(searchBox, 6)
 
 local refreshBtn = Instance.new("TextButton")
 refreshBtn.Size = UDim2.new(0.2, -scale("X", 4), 0, scale("Y", 28))
@@ -341,7 +310,7 @@ refreshBtn.Font = Enum.Font.GothamBold
 refreshBtn.TextScaled = true
 refreshBtn.TextColor3 = Color3.new(1, 1, 1)
 refreshBtn.Parent = catalogFrame
-createCorner(refreshBtn, 6)
+g.Create_Corner(refreshBtn, 6)
 
 local sortBtn = Instance.new("TextButton")
 sortBtn.Size = UDim2.new(0.2, -scale("X", 8), 0, scale("Y", 28))
@@ -352,7 +321,7 @@ sortBtn.Font = Enum.Font.GothamBold
 sortBtn.TextScaled = true
 sortBtn.TextColor3 = Color3.new(1, 1, 1)
 sortBtn.Parent = catalogFrame
-createCorner(sortBtn, 6)
+g.Create_Corner(sortBtn, 6)
 
 local savedFrame = Instance.new("Frame")
 savedFrame.Size = UDim2.new(0.6, -scale("X", 10), 1, -scale("Y", 70))
@@ -372,7 +341,7 @@ savedSearch.TextScaled = true
 savedSearch.ClearTextOnFocus = false
 savedSearch.Text = ""
 savedSearch.Parent = savedFrame
-createCorner(savedSearch, 6)
+g.Create_Corner(savedSearch, 6)
 
 local savedScroll = Instance.new("ScrollingFrame")
 savedScroll.Size = UDim2.new(1, -scale("X", 16), 1, -scale("Y", 40))
@@ -422,13 +391,9 @@ scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 scrollFrame.ScrollBarThickness = 6
 scrollFrame.Parent = settingsFrame
 
-local function lockX()
-    scrollFrame.CanvasPosition = Vector2.new(0, scrollFrame.CanvasPosition.Y)
-end
-
+local function lockX() scrollFrame.CanvasPosition = Vector2.new(0, scrollFrame.CanvasPosition.Y) end
 if not getgenv().convas_position_property_changer_watcher then
     getgenv().convas_position_property_changer_watcher = true
-
     scrollFrame:GetPropertyChangedSignal("CanvasPosition"):Connect(lockX)
 end
 
@@ -436,32 +401,26 @@ local listLayout = Instance.new("UIListLayout", scrollFrame)
 listLayout.Padding = UDim.new(0, 6)
 listLayout.FillDirection = Enum.FillDirection.Vertical
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
 if not getgenv().property_watcher_list_layout_checker then
     getgenv().property_watcher_list_layout_checker = true
-
     listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
     end)
 end
 
 function GetReal(id)
-    local ok, obj = pcall(function()
-        return game:GetObjects("rbxassetid://"..tostring(id))
-    end)
+    local ok, obj = pcall(function() return game:GetObjects("rbxassetid://"..tostring(id)) end)
     if ok and obj and #obj > 0 then
         local anim = obj[1]
-        if anim:IsA("Animation") and anim.AnimationId ~= "" then
-            return tonumber(anim.AnimationId:match("%d+"))
-        end
+        if anim:IsA("Animation") and anim.AnimationId ~= "" then return tonumber(anim.AnimationId:match("%d+")) end
     end
+    return 
 end
 
 getgenv().Settings._sliders = {}
 getgenv().Settings._toggles = {}
 local function createSlider(name, min, max, default)
     getgenv().Settings[name] = default or min
-
     local container = Instance.new("Frame")
     container.Size = UDim2.new(1, 0, 0, scale("Y", 65))
     container.BackgroundTransparency = 1
@@ -690,21 +649,20 @@ createToggle("Allow Invisible   ")
 createToggle("Stop Other Animations On Play")
 
 resetButton.MouseButton1Click:Connect(function()
-    EditToggle("Stop Emote When Moving", true)
-    EditToggle("Stop Other Animations On Play", true)
-    EditSlider("Fade In", 0.1)
-    EditSlider("Fade Out", 0.1)
-    EditSlider("Weight", 1)
-    EditSlider("Speed", 1)
-    EditToggle("Allow Invisible  ", true)
-    EditSlider("Time Position", 0)
-    EditToggle("Freeze On Finish", false)
-    EditToggle("Looped", true)
+    g.EditToggle("Stop Emote When Moving", true)
+    g.EditToggle("Stop Other Animations On Play", true)
+    g.EditSlider("Fade In", 0.1)
+    g.EditSlider("Fade Out", 0.1)
+    g.EditSlider("Weight", 1)
+    g.EditSlider("Speed", 1)
+    g.EditToggle("Allow Invisible  ", true)
+    g.EditSlider("Time Position", 0)
+    g.EditToggle("Freeze On Finish", false)
+    g.EditToggle("Looped", true)
 end)
 
 local originalCollisionStates = {}
 local lastFixClipState = getgenv().Settings["Allow Invisible  "]
-
 local function saveCollisionStates()
     for _, part in ipairs(character:GetDescendants()) do
         if part:IsA("BasePart") and part ~= character.PrimaryPart then
@@ -832,18 +790,16 @@ local function createCard(item)
     local card = Instance.new("Frame")
     card.Size = UDim2.new(0, scale("X", 120), 0, scale("Y", 180))
     card.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
-    createCorner(card, 8)
+    g.Create_Corner(card, 8)
     local thumbId = item.AssetId or item.Id
     local img = Instance.new("ImageLabel")
     img.Size = UDim2.new(1, -scale("X", 10), 0, scale("Y", 90))
     img.Position = UDim2.new(0, scale("X", 5), 0, scale("Y", 5))
     img.BackgroundTransparency = 1
     img.ScaleType = Enum.ScaleType.Fit
-    pcall(function()
-        img.Image = "rbxthumb://type=Asset&id=" .. tonumber(thumbId) .. "&w=150&h=150"
-    end)
+    pcall(function() img.Image = "rbxthumb://type=Asset&id=" .. thumbId .. "&w=150&h=150" end)
     img.Parent = card
-    createCorner(img, 6)
+    g.Create_Corner(img, 6)
     local name = Instance.new("TextLabel")
     name.Size = UDim2.new(1, -scale("X", 10), 0, scale("Y", 28))
     name.Position = UDim2.new(0, scale("X", 5), 0, scale("Y", 100))
@@ -855,7 +811,7 @@ local function createCard(item)
     name.TextColor3 = Color3.new(1, 1, 1)
     name.Parent = card
 
-    local url = "https://www.roblox.com/catalog/" .. tonumber(item.Id)
+    local url = "https://www.roblox.com/catalog/" .. item.Id
     local copyLinkButton = Instance.new("TextButton")
     copyLinkButton.Parent = card
     copyLinkButton.Size = UDim2.new(0, scale("X", 36), 0, scale("Y", 36))
@@ -866,14 +822,9 @@ local function createCard(item)
     copyLinkButton.TextScaled = true
     copyLinkButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     copyLinkButton.AutoButtonColor = false
-    createCorner(copyLinkButton, 8)
-
+    g.Create_Corner(copyLinkButton, 8)
     copyLinkButton.MouseButton1Click:Connect(function()
-        if not all_clipboards then
-            copyLinkButton.Text = "❌"
-            return
-        end
-
+        if not all_clipboards or typeof(all_clipboards) ~= "function" then copyLinkButton.Text = "❌"; return end
         all_clipboards(url)
         copyLinkButton.Text = "✅"
         copyLinkButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
@@ -891,11 +842,8 @@ local function createCard(item)
     playBtn.TextScaled = true
     playBtn.TextColor3 = Color3.new(1, 1, 1)
     playBtn.Parent = card
-    createCorner(playBtn, 6)
-    playBtn.MouseButton1Click:Connect(function()
-        LoadTrack(thumbId)
-    end)
-
+    g.Create_Corner(playBtn, 6)
+    playBtn.MouseButton1Click:Connect(function() LoadTrack(thumbId) end)
     local saveBtn = Instance.new("TextButton")
     saveBtn.Size = UDim2.new(0.45, -scale("X", 5), 0, scale("Y", 24))
     saveBtn.Position = UDim2.new(0.55, 0, 1, -scale("Y", 29))
@@ -906,11 +854,10 @@ local function createCard(item)
     saveBtn.TextColor3 = Color3.new(1, 1, 1)
     saveBtn.Parent = card
     wait(0.1)
-    createCorner(saveBtn, 6)
+    g.Create_Corner(saveBtn, 6)
 
     saveBtn.MouseButton1Click:Connect(function()
         local alreadySaved = false
-
         for _, saved in ipairs(savedEmotes) do
             if saved.Id == item.Id then
                 alreadySaved = true
@@ -920,18 +867,16 @@ local function createCard(item)
 
         if not alreadySaved then
             function GetReal(id)
-                local ok, obj = pcall(function()
-                    return game:GetObjects("rbxassetid://"..tostring(id))
-                end)
-
+                local ok, obj = pcall(function() return game:GetObjects("rbxassetid://"..tostring(id)) end)
                 if not ok or not obj or #obj == 0 then return end
-
                 local target = obj[1]
                 if target:IsA("Animation") and target.AnimationId ~= "" then
                     return tonumber(target.AnimationId:match("%d+"))
                 elseif target:FindFirstChildOfClass("Animation") then
                     local anim = target:FindFirstChildOfClass("Animation")
                     return tonumber(anim.AnimationId:match("%d+"))
+                else
+                    return 
                 end
             end
             table.insert(savedEmotes, {
@@ -941,7 +886,7 @@ local function createCard(item)
                 AnimationId = "rbxassetid://" .. GetReal(thumbId),
                 Favorite = false
             })
-            saveEmotesToData()
+            g.saveEmotesToData()
             saveBtn.Text = "Saved!"
             saveBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
             task.wait(1)
@@ -986,7 +931,7 @@ prevBtn.Text = "< Prev"
 prevBtn.Font = Enum.Font.GothamBold
 prevBtn.TextScaled = true
 prevBtn.TextColor3 = Color3.new(1, 1, 1)
-createCorner(prevBtn, 6)
+g.Create_Corner(prevBtn, 6)
 
 local nextBtn = Instance.new("TextButton", catalogFrame)
 nextBtn.Size = UDim2.new(0.4, -scale("X", 6), 0, scale("Y", 32))
@@ -996,7 +941,7 @@ nextBtn.Text = "Next >"
 nextBtn.Font = Enum.Font.GothamBold
 nextBtn.TextScaled = true
 nextBtn.TextColor3 = Color3.new(1, 1, 1)
-createCorner(nextBtn, 6)
+g.Create_Corner(nextBtn, 6)
 
 local pageBox = Instance.new("TextBox", catalogFrame)
 pageBox.Size = UDim2.new(0.2, 0, 0, scale("Y", 32))
@@ -1069,10 +1014,7 @@ local pages = getPages(currentKeyword)
 if not pages then return nil end
 for i = 2, targetPage do
     if pages.IsFinished then break end
-        local ok, err = pcall(function()
-            pages:AdvanceToNextPageAsync()
-        end)
-
+        local ok = pcall(function() pages:AdvanceToNextPageAsync() end)
         if not ok then break end
     end
     return pages
@@ -1082,21 +1024,13 @@ local function doNewSearch(keyword)
     currentKeyword = keyword or ""
     currentPageNumber = 1
     pageBox.Text = "Loading..."
-    
     currentPages = getPages(currentKeyword)
-    if currentPages then
-        showPage(currentPages)
-    end
+    if currentPages then showPage(currentPages) end
 end
 
-refreshBtn.MouseButton1Click:Connect(function()
-    doNewSearch(searchBox.Text)
-end)
-
+refreshBtn.MouseButton1Click:Connect(function() doNewSearch(searchBox.Text) end)
 searchBox.FocusLost:Connect(function(enterPressed)
-    if enterPressed then
-        doNewSearch(searchBox.Text)
-    end
+    if enterPressed then doNewSearch(searchBox.Text) end
 end)
 
 sortBtn.MouseButton1Click:Connect(function()
@@ -1107,9 +1041,7 @@ end)
 
 local function goNextPage()
 	if not currentPages or currentPages.IsFinished then return end
-	local ok, err = pcall(function()
-		currentPages:AdvanceToNextPageAsync()
-	end)
+	local ok = pcall(function() currentPages:AdvanceToNextPageAsync() end)
 	if ok then
 		currentPageNumber = currentPageNumber + 1
 		showPage(currentPages)
@@ -1126,9 +1058,7 @@ end
 
 local function goPrevPage()
 	if not currentPages or currentPageNumber <= 1 then return end
-	local ok, err = pcall(function()
-		currentPages:AdvanceToPreviousPageAsync()
-	end)
+	local ok = pcall(function() currentPages:AdvanceToPreviousPageAsync() end)
 	if ok then
 		currentPageNumber = math.max(1, currentPageNumber - 1)
 		showPage(currentPages)
@@ -1171,10 +1101,7 @@ pageBox.FocusLost:Connect(function(enterPressed)
     end
 
     pageBox.Text = "Loading..."
-    local ok, pages = pcall(function()
-        return fetchPagesTo(targetPage)
-    end)
-
+    local ok, pages = pcall(function() return fetchPagesTo(targetPage) end)
     if not ok or not pages then
         pageNotif.Text = "Unable to fetch page"
         pageNotif.Visible = true
@@ -1199,7 +1126,7 @@ local function createSavedCard(item)
     local card = Instance.new("Frame")
     card.Size = UDim2.new(0, scale("X", 120), 0, scale("Y", 200))
     card.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
-    createCorner(card, 8)
+    g.Create_Corner(card, 8)
     local img = Instance.new("ImageLabel")
     img.Size = UDim2.new(1, -scale("X", 10), 0, scale("Y", 90))
     img.Position = UDim2.new(0, scale("X", 5), 0, scale("Y", 5))
@@ -1207,7 +1134,7 @@ local function createSavedCard(item)
     img.ScaleType = Enum.ScaleType.Fit
     img.Image = "rbxthumb://type=Asset&id=11768914234&w=150&h=150"
     img.Parent = card
-    createCorner(img, 6)
+    g.Create_Corner(img, 6)
     local name = Instance.new("TextLabel")
     name.Size = UDim2.new(1, -scale("X", 10), 0, scale("Y", 28))
     name.Position = UDim2.new(0, scale("X", 5), 0, scale("Y", 100))
@@ -1227,7 +1154,7 @@ local function createSavedCard(item)
     playBtn.TextScaled = true
     playBtn.TextColor3 = Color3.new(1, 1, 1)
     playBtn.Parent = card
-    createCorner(playBtn, 6)
+    g.Create_Corner(playBtn, 6)
     playBtn.MouseButton1Click:Connect(function()
         LoadTrack(item.Id)
     end)
@@ -1241,7 +1168,7 @@ local function createSavedCard(item)
     removeBtn.TextScaled = true
     removeBtn.TextColor3 = Color3.new(1, 1, 1)
     removeBtn.Parent = card
-    createCorner(removeBtn, 6)
+    g.Create_Corner(removeBtn, 6)
     
     local copyBtn = Instance.new("TextButton")
     copyBtn.Size = UDim2.new(0, scale("X", 40), 0, scale("Y", 24))
@@ -1252,7 +1179,7 @@ local function createSavedCard(item)
     copyBtn.TextScaled = true
     copyBtn.TextColor3 = Color3.new(1, 1, 1)
     copyBtn.Parent = card
-    createCorner(copyBtn, 6)
+    g.Create_Corner(copyBtn, 6)
 
     copyBtn.MouseButton1Click:Connect(function()
         if all_clipboards then
@@ -1276,14 +1203,14 @@ local function createSavedCard(item)
     favBtn.MouseButton1Click:Connect(function()
         item.Favorite = not item.Favorite
         favBtn.Text = item.Favorite and "★" or "☆"
-        saveEmotesToData()
+        g.saveEmotesToData()
     end)
 
     removeBtn.MouseButton1Click:Connect(function()
         for i, saved in ipairs(savedEmotes) do
             if saved.Id == item.Id then
                 table.remove(savedEmotes, i)
-                saveEmotesToData()
+                g.saveEmotesToData()
                 refreshSavedTab()
                 break
             end
@@ -1294,9 +1221,7 @@ local function createSavedCard(item)
 end
 
 function refreshSavedTab()
-    for _, child in ipairs(savedScroll:GetChildren()) do
-        if child:IsA("Frame") then child:Destroy() end
-    end
+    for _, child in ipairs(savedScroll:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
     local text = (savedSearch.Text or ""):lower()
     local results = {}
     for _, item in ipairs(savedEmotes) do
@@ -1313,9 +1238,7 @@ function refreshSavedTab()
     end)
     if #results > 0 then
         savedEmptyLabel.Visible = false
-        for _, item in ipairs(results) do
-            createSavedCard(item).Parent = savedScroll
-        end
+        for _, item in ipairs(results) do createSavedCard(item).Parent = savedScroll end
     else
         savedEmptyLabel.Visible = true
     end
@@ -1324,7 +1247,6 @@ end
 
 if not getgenv().saved_search_property_changed_signal_watcher_conn then
     getgenv().saved_search_property_changed_signal_watcher_conn = true
-
     savedSearch:GetPropertyChangedSignal("Text"):Connect(refreshSavedTab)
 end
 
@@ -1336,17 +1258,10 @@ savedTabBtn.MouseButton1Click:Connect(function()
     refreshSavedTab()
 end)
 
-local function doNewSearchInitial()
-    doNewSearch("")
-end
-
+local function doNewSearchInitial() doNewSearch("") end
 doNewSearchInitial()
-
 local targetGui = gui
-local function toggleGui()
-    targetGui.Enabled = not targetGui.Enabled
-end
-
+local function toggleGui() targetGui.Enabled = not targetGui.Enabled end
 local screonGui = Instance.new("ScreenGui")
 screonGui.Name = "ToggleButtonGui"
 screonGui.ResetOnSpawn = false
@@ -1357,7 +1272,7 @@ btn.Parent = screonGui
 btn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
 btn.Text = "F"
 btn.TextColor3 = Color3.fromRGB(0, 0, 0)
-btn.Font = Enum.Font.GothamSemibold
+btn.Font = Enum.Font.GothamBold
 btn.TextScaled = true
 btn.Size = UDim2.new(0, 50, 0, 50)
 btn.Position = UDim2.new(0, 20, 0.5, -50)

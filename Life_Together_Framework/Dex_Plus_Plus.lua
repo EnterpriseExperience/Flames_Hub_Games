@@ -4,7 +4,6 @@ local oldgame = game
 local game = workspace.Parent
 if getgenv().true_dex_plus_plus_loaded then return end
 getgenv().true_dex_plus_plus_loaded = true
-
 cloneref = cloneref or function(ref)
 	if not getreg then return ref end
 	local InstanceList
@@ -23,9 +22,7 @@ cloneref = cloneref or function(ref)
 	end
 	local f = {}
 	function f.invalidate(g)
-		if not InstanceList then
-			return
-		end
+		if not InstanceList then return end
 		for b, c in pairs(InstanceList) do
 			if c == g then
 				InstanceList[b] = nil
@@ -619,31 +616,18 @@ local function main()
 	};
 
 	Console.Init = function()
-		-- StarterGui.ScreenGui.ConsoleHandler
-
 		local CtrlScroll = false
 		local AutoScroll = false
-
 		local LogService = game:GetService("LogService")
-		local Players = game:GetService("Players")
-		local LocalPlayer = Players.LocalPlayer
-		local Mouse = LocalPlayer:GetMouse()
 		local UserInputService = game:GetService("UserInputService")
-		local RunService = game:GetService("RunService")
-
 		local Console = ConsoleFrame
 		local SyntaxHighlightingModule = require(G2L["1c"].SyntaxHighlighter)
 		local OutputTextSize = Console.Output.OutputTextSize
-
 		local function Tween(obj, info, prop)
 			local tween = game:GetService("TweenService"):Create(obj, info, prop)
 			tween:Play()
 			return tween
 		end
-
-
-
-		-- MOUSE STUFFS
 
 		if CtrlScroll == true then
 			Console.CtrlScroll.BackgroundColor3 = Color3.fromRGB(11, 90, 175)
@@ -690,12 +674,9 @@ local function main()
 			end
 		end)
 
-		-- Console part
 		local displayedOutput = {}
 		local OutputLimit = Console.Output.OutputLimit
-
 		Console.TextSizeBox.TextBox.Text = tostring(OutputTextSize.Value)
-
 		Console.TextSizeBox.TextBox:GetPropertyChangedSignal("Text"):Connect(function()
 			local tonum = tonumber(Console.TextSizeBox.TextBox.Text)
 			if tonum then
@@ -802,11 +783,9 @@ local function main()
 			Console.CommandLine.ScrollingFrame.Highlight.Text = SyntaxHighlightingModule.run(Console.CommandLine.ScrollingFrame.TextBox.Text)
 		end)
 
-
-
 		Console.CommandLine.ScrollingFrame.TextBox.FocusLost:Connect(function(enterPressed)
 			if enterPressed and Console.CommandLine.ScrollingFrame.TextBox.Text ~= "" then
-				print("> "..Console.CommandLine.ScrollingFrame.TextBox.Text)
+				print("> "..tostring(Console.CommandLine.ScrollingFrame.TextBox.Text))
 				loadstring(Console.CommandLine.ScrollingFrame.TextBox.Text)()
 			end
 		end)
@@ -818,13 +797,6 @@ end
 return {InitDeps = initDeps, InitAfterMain = initAfterMain, Main = main}
 end,
 ["Explorer"] = function()
---[[
-	Explorer App Module
-	
-	The main explorer interface
-]]
-
--- Common Locals
 local Main,Lib,Apps,Settings -- Main Containers
 local Explorer, Properties, ScriptViewer, ModelViewer, Notebook -- Major Apps
 local API,RMD,env,service,plr,create,createSimple -- Main Locals
@@ -1728,7 +1700,7 @@ local function main()
 		if env.setclipboard then context:AddRegistered("COPY_PATH") end
 		context:AddRegistered("INSERT_OBJECT")
 		context:AddRegistered("SAVE_INST")
-		-- context:AddRegistered("CALL_FUNCTION")
+		context:AddRegistered("CALL_FUNCTION")
 		-- context:AddRegistered("VIEW_CONNECTIONS")
 		-- context:AddRegistered("GET_REFERENCES")
 		context:AddRegistered("COPY_API_PAGE")
@@ -1997,13 +1969,11 @@ local function main()
 
 		context:Register("TELEPORT_TO",{Name = "Teleport To", IconMap = Explorer.MiscIcons, Icon = "TeleportTo", OnClick = function()
 			local sList = selection.List
-			local plrRP = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-
-			if not plrRP then return end
-
-			for _,node in next, sList do
-				local Obj = node.Obj
-
+			local Plr_Char = plr.Character
+			local plrRP = Plr_Char and Plr_Char:FindFirstChild("HumanoidRootPart")
+			if not Plr_Char or not Plr_Char:IsDescendantOf(game) or not plrRP or not plrRP.Parent or not plrRP:IsDescendantOf(game) then return end
+			for _, node in next, sList do
+				local Obj = node and node.Obj
 				if Obj:IsA("BasePart") then
 					if Obj.CanCollide then
 						plr.Character:MoveTo(Obj.Position)
@@ -2039,27 +2009,22 @@ local function main()
 		local OldAnimation
 		context:Register("PLAY_TWEEN",{Name = "Play Tween", IconMap = Explorer.MiscIcons, Icon = "Play", OnClick = function()
 			local sList = selection.List
-
 			for i = 1, #sList do
 				local node = sList[i]
 				local Obj = node.Obj
-
-				if Obj:IsA("Tween") then Obj:Play() end
+				if Obj and Obj:IsA("Tween") then Obj:Play() end
 			end
 		end})
 
 		local OldAnimation
 		context:Register("LOAD_ANIMATION",{Name = "Load Animation", IconMap = Explorer.MiscIcons, Icon = "Play", OnClick = function()
 			local sList = selection.List
-
-			local Humanoid = plr.Character and plr.Character:FindFirstChild("Humanoid")
-			if not Humanoid then return end
-
+			local Humanoid = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
+			if not Humanoid or not Humanoid.Parent or not Humanoid:IsDescendantOf(game) then return end
 			for i = 1, #sList do
 				local node = sList[i]
 				local Obj = node.Obj
-
-				if Obj:IsA("Animation") then
+				if Obj and Obj:IsA("Animation") then
 					if OldAnimation then OldAnimation:Stop() end
 					OldAnimation = Humanoid:LoadAnimation(Obj)
 					OldAnimation:Play()
@@ -2070,15 +2035,12 @@ local function main()
 
 		context:Register("STOP_ANIMATION",{Name = "Stop Animation", IconMap = Explorer.MiscIcons, Icon = "Pause", OnClick = function()
 			local sList = selection.List
-
-			local Humanoid = plr.Character and plr.Character:FindFirstChild("Humanoid")
-			if not Humanoid then return end
-
+			local Humanoid = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
+			if not Humanoid or not Humanoid.Parent or not Humanoid:IsDescendantOf(game) then return end
 			for i = 1, #sList do
 				local node = sList[i]
 				local Obj = node.Obj
-
-				if Obj:IsA("Animation") then
+				if Obj and Obj:IsA("Animation") then
 					if OldAnimation then OldAnimation:Stop() end
 					Humanoid:LoadAnimation(Obj):Stop()
 					break
@@ -2088,7 +2050,6 @@ local function main()
 
 		context:Register("EXPAND_ALL",{Name = "Expand All", OnClick = function()
 			local sList = selection.List
-
 			local function expand(node)
 				expanded[node] = true
 				for i = 1,#node do
@@ -2107,7 +2068,6 @@ local function main()
 
 		context:Register("COLLAPSE_ALL",{Name = "Collapse All", OnClick = function()
 			local sList = selection.List
-
 			local function expand(node)
 				expanded[node] = nil
 				for i = 1,#node do
@@ -2117,10 +2077,7 @@ local function main()
 				end
 			end
 
-			for i = 1,#sList do
-				expand(sList[i])
-			end
-
+			for i = 1,#sList do expand(sList[i]) end
 			Explorer.ForceUpdate()
 		end})
 
@@ -2128,7 +2085,6 @@ local function main()
 			local newSelection = {}
 			local count = 1
 			local sList = selection.List
-
 			for i = 1,#sList do
 				newSelection[count] = sList[i]
 				count = count + 1
@@ -2141,7 +2097,6 @@ local function main()
 			end
 		end})
 
-		-- this code is very bad but im lazy and it works so cope
 		local clth = function(str)
 			if str:sub(1, 28) == "game:GetService(\"Workspace\")" then str = str:gsub("game:GetService%(\"Workspace\"%)", "workspace", 1) end
 			if str:sub(1, 27 + #plr.Name) == "game:GetService(\"Players\")." .. plr.Name then str = str:gsub("game:GetService%(\"Players\"%)." .. plr.Name, "game:GetService(\"Players\").LocalPlayer", 1) end
@@ -2173,14 +2128,26 @@ local function main()
 			Explorer.InsertObjectContext:Show(x,y)
 		end})
 
-		--[[context:Register("CALL_FUNCTION",{Name = "Call Function", IconMap = Explorer.ClassIcons, Icon = 66, OnClick = function()
+		context:Register("CALL_FUNCTION", {
+		Name = "Call Function",
+		IconMap = Explorer.ClassIcons,
+		Icon = 66,
+		OnClick = function()
+			for _, entry in selection.List do
+				local object = entry.Obj
+				if object and object:IsA("BindableEvent") then
+					local ok, err = pcall(function() object:Fire() end)
+					if not ok then warn("Could not fire: "..tostring(object:GetFullName())..": "..tostring(err)) end
+				elseif object and object:IsA("BindableFunction") then
+					local ok, result = pcall(function() return object:Invoke() end)
+					if not ok then warn("Could not invoke: "..tostring(object:GetFullName())..": "..tostring(result)) end
+				end
+			end
+		end,})
 
-		end})
-
-		context:Register("GET_REFERENCES",{Name = "Get Lua References", IconMap = Explorer.ClassIcons, Icon = 34, OnClick = function()
-
-		end})]]
-
+		--[[context:Register("GET_REFERENCES",{Name = "Get Lua References", IconMap = Explorer.ClassIcons, Icon = 34, OnClick = function()
+			print("Something.")
+		end})--]]
 		context:Register("SAVE_INST",{Name = "Save to File", IconMap = Explorer.MiscIcons, Icon = "Save", OnClick = function()
 			local sList = selection.List
 			if #sList == 1 then
@@ -2213,27 +2180,22 @@ local function main()
 			RemoteEvent = "FireServer",
 			RemoteFunction = "InvokeServer",
 			UnreliableRemoteEvent = "FireServer",
-
 			BindableRemote = "Fire",
 			BindableFunction = "Invoke",
 		}
 		context:Register("BLOCK_REMOTE",{Name = "Block From Firing", IconMap = Explorer.MiscIcons, Icon = "Delete", DisabledIcon = "Empty", OnClick = function()
 			local sList = selection.List
+			if not hookmetamethod or typeof(hookmetamethod) ~= "function" then return end
 			for i, list in sList do
 				local obj = list.Obj
 				if not remote_blocklist[obj] then
 					local functionToHook = ClassFire[obj.ClassName]
 					remote_blocklist[obj] = true
 					local old; old = env.hookmetamethod((oldgame or game), "__namecall", function(self, ...)
-						if remote_blocklist[obj] and self == obj and getnamecallmethod() == functionToHook then
-							return nil
-						end
+						if remote_blocklist[obj] and self == obj and getnamecallmethod() == functionToHook then return nil end
 						return old(self,...)
 					end)
-					if Settings.RemoteBlockWriteAttribute then
-						obj:SetAttribute("IsBlocked", true)
-					end
-					--print("blocking ",functionToHook)
+					if Settings.RemoteBlockWriteAttribute then obj:SetAttribute("IsBlocked", true) end
 				end
 			end
 		end})
@@ -2244,10 +2206,7 @@ local function main()
 				local obj = list.Obj
 				if remote_blocklist[obj] then
 					remote_blocklist[obj] = nil
-					if Settings.RemoteBlockWriteAttribute then
-						list.Obj:SetAttribute("IsBlocked", false)
-					end
-					--print("unblocking ",functionToHook)
+					if Settings.RemoteBlockWriteAttribute then list.Obj:SetAttribute("IsBlocked", false) end
 				end
 			end
 		end})
@@ -2276,16 +2235,15 @@ local function main()
 		context:Register("VIEW_OBJECT",{Name = "View Object (Right click to reset)", IconMap = Explorer.LegacyClassIcons, Icon = 5, OnClick = function()
 			local sList = selection.List
 			local isa = game.IsA
-
 			for i = 1,#sList do
 				local node = sList[i]
-
 				if isa(node.Obj,"BasePart") or isa(node.Obj,"Model") then
 					workspace.CurrentCamera.CameraSubject = node.Obj
 					break
 				end
 			end
 		end, OnRightClick = function()
+			if not plr.Character or not plr.Character:IsDescendantOf(game) then return end
 			workspace.CurrentCamera.CameraSubject = plr.Character
 		end})
 
@@ -2329,7 +2287,6 @@ local function main()
 					local fileName = ("%s_%s_%i_Source.txt"):format(env.parsefile(v.Obj.Name), v.Obj.ClassName, game.PlaceId)
 					--env.writefile(fileName, source)
 					Lib.SaveAsPrompt(fileName, source)
-					
 					task.wait(0.2)
 				end
 			end
@@ -15739,5 +15696,4 @@ Main = (function()
 end)()
 
 Main.Init()
-
 --for i,v in pairs(Main.MissingEnv) do print(i,v) end

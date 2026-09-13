@@ -1,4 +1,4 @@
-local VERSION = "1.35"
+getgenv().ATLAS_VERSION = "1.35"
 if not LPH_OBFUSCATED then
     local function r(...) return ... end
     LPH_JIT_MAX = r
@@ -14,7 +14,6 @@ local UIS = game:GetService("UserInputService")
 local Core = game:GetService("CoreGui")
 local MPS = game:GetService("MarketplaceService")
 local UserInputService = game:GetService("UserInputService")
-local CoreGui = Core or game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local Is_Mobile = UserInputService.TouchEnabled
 local player = Players.LocalPlayer
@@ -25,7 +24,7 @@ local Page = {}
 local Section = {}
 local Element = {}
 local existing_atlas = Core:FindFirstChild("Atlas")
-if existing_atlas and existing_atlas:IsA("ScreenGui") then existing_atlas:Destroy() repeat task.wait() until existing_atlas.Parent == nil end
+if existing_atlas and existing_atlas:IsA("ScreenGui") then existing_atlas:Destroy(); repeat task.wait() until existing_atlas.Parent == nil end
 Library.__index = Library
 Page.__index = Page
 Section.__index = Section
@@ -89,7 +88,7 @@ do
     end
 
     function utility:FormatNumber(number,decimalPlaces)
-        if not typeof(number)=="number" then error("Arg 1 must be a number") end
+        if typeof(number) ~= "number" then error("Arg 1 must be a number.") end
         decimalPlaces = math.clamp(decimalPlaces,0,math.huge)
         local exp = 10^decimalPlaces
         number = math.round(number*exp)/exp
@@ -209,7 +208,7 @@ do
     end
 
     function utility:GetGameThumbnail(placeId)
-        local thumbnailId = MP:GetProductInfo(placeId).IconImageAssetId
+        local thumbnailId = MPS:GetProductInfo(placeId).IconImageAssetId
         return "rbxassetid://"..thumbnailId
     end
 
@@ -946,7 +945,7 @@ do
         if info.CheckKey and not info.Discord then
             warn("You must include a Discord argument when using check key argument!")
             wait(9e9)
-            error()
+            error("?")
         end
 
         local function makeLibrary()
@@ -3299,8 +3298,8 @@ do
                         toggle.BackgroundColor3 = backgroundGoalColor
                         img.Size = imageGoalSize
                     elseif lastFlag~=currentFlag then
-                        pcall(function() tween1:Disconnect() tween1:Destroy() end)
-                        pcall(function() tween2:Disconnect() tween2:Destroy() end)
+                        pcall(function() tween1:Disconnect(); tween1:Destroy() end)
+                        pcall(function() tween2:Disconnect(); tween2:Destroy() end)
                         tween1 = TS:Create(toggle,tweenInfo,{["BackgroundColor3"] = backgroundGoalColor})
                         tween2 = TS:Create(img,tweenInfo,{["Size"] = imageGoalSize})
                         tween1:Play()
@@ -4046,7 +4045,6 @@ do
 
             local tweenInfo = TweenInfo.new(0.1,Enum.EasingStyle.Sine,Enum.EasingDirection.In,0,false,0)
             local lastFlag = nil
-            local lastFlag = nil
             local con
             LPH_JIT_MAX(function()
                 con = Run.RenderStepped:Connect(function()
@@ -4735,12 +4733,11 @@ do
                     end)
                     if not s then
                         warn("Error in tab completion function: "..r)
-                        error()
+                        error("?")
                     elseif (type(r)~="string" and r~=nil) then
                         warn("TabComplete function must return a string")
-                        error()
+                        error("?")
                     end
-                    local final = string.gsub(string.gsub(string.gsub(result or textbox.Text, "^%s+", ""), "%s+$", ""),"\t","")
                     textbox.Text = result or textbox.Text
                     textbox:GetPropertyChangedSignal("Text"):Wait()
                     textbox.Text = textbox.Text:gsub("\t",""):gsub( '^%s+', '' ):gsub( '%s+$', '' )
@@ -5077,6 +5074,7 @@ do
         element.Name = string.rep("_",elementNum)..info.Name
         element.Parent = section.holder.Contents
     end
+
     function Element.CreateKeybind(section,info)
         local _self = section._self
         -- Requirements
@@ -5087,11 +5085,8 @@ do
         info.Callback = info.Callback or utility.BlankFunction
         info.KeyPressed = info.KeyPressed or utility.BlankFunction
 
-        if info.Default and type(info.Default)=="string" then
-            info.Default = Enum.KeyCode[info.Default]
-        end
-        info.Default = info.Default or Enum.KeyCode.Unknown
-
+        if info.Default and type(info.Default)=="string" then info.Default = Enum.KeyCode[info.Default] end
+        info.Default = info.Default
         if _self._usedFlags[info.Flag] then
             warn("Flag must have unique name!")
             return
@@ -5350,9 +5345,7 @@ do
                 if input.UserInputType==Enum.UserInputType.Keyboard then
                     keyLastPressed = input.KeyCode
                     lastPressed = os.clock()
-                    if input.KeyCode == _self.Flags[info.Flag] and input.KeyCode~=Enum.KeyCode.Unknown then
-                        info.KeyPressed()
-                    end
+                    if input.KeyCode == _self.Flags[info.Flag] then info.KeyPressed() end
                 end
             end))
             fr.InputEnded:Connect(function(input)
@@ -5360,9 +5353,7 @@ do
                     listening = true
                     local save = tonumber(lastPressed)
                     repeat utility:Wait() until save~=lastPressed
-                    if keyLastPressed==Enum.KeyCode.Backspace then
-                        keyLastPressed = Enum.KeyCode.Unknown
-                    end
+                    if keyLastPressed==Enum.KeyCode.Backspace then keyLastPressed = nil end
                     _self.Flags[info.Flag] = keyLastPressed
                     listening = false
                     info.Callback(keyLastPressed)
@@ -5370,7 +5361,10 @@ do
             end)
             LPH_JIT_MAX(function()
                 table.insert(_self._connections,Run.RenderStepped:Connect(function()
-                    key.Text = listening and "..." or ((_self.Flags[info.Flag]==nil or _self.Flags[info.Flag].Name=="Unknown") and "None" or _self.Flags[info.Flag].Name)
+                    key.Text = listening and "..." or (
+                        _self.Flags[info.Flag] == nil and "None"
+                        or _self.Flags[info.Flag].Name
+                    )
                 end))
             end)()
         end
