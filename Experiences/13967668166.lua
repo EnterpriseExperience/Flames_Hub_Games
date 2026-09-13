@@ -14228,13 +14228,15 @@ PlaceholderText = "Username or displayname...",
 Flag = "Annoy_Player_Input_UI",
 Callback = function(split)
     local Target = g.findplr(split)
-    if not Target then return g.notify("Error", "That Player does not exist or has left the game.", 7) end
+    if not Target then g.notify("Error", "That Player does not exist or has left the game.", 7); return end
     if Target.Name == "CIippedByAura" or Target.Name == "L0CKED_1N1" then return end
     if g.Currently_Running_Annoy_Loop then
         if g.Currently_Annoying_Player then
-            return g.notify("Error", "You are already annoying: " .. tostring(g.Currently_Annoying_Player) .. "!", 5)
+            g.notify("Error", "You are already annoying: " .. tostring(g.Currently_Annoying_Player) .. "!", 5)
+            return
         else
-            return g.notify("Error", "You are already annoying a Player!", 5)
+            g.notify("Error", "You are already annoying a Player!", 5)
+            return 
         end
     end
 
@@ -14243,7 +14245,6 @@ Callback = function(split)
     g.Currently_Annoying_Player = Target.Name
     g.annoy_active = true
     g.notify("Success", "Now annoying Player: " .. Target.Name, 7)
-
     local Annoy_Thread = task.spawn(function()
         while g.annoy_active == true do
             fw(0)
@@ -14270,7 +14271,8 @@ Callback = function(split)
                         g.annoy_active = false
                         g.Currently_Annoying_Player = nil
                         g.Currently_Running_Annoy_Loop = nil
-                        return g.notify("Warning", "Target did not rejoin within 60 seconds, loop disabled.", 10)
+                        g.notify("Warning", "Target did not rejoin within 60 seconds, loop disabled.", 10)
+                        return 
                     end
                 end
 
@@ -14291,17 +14293,13 @@ Callback = function(split)
         g.Currently_Annoying_Player = nil
         g.Currently_Running_Annoy_Loop = nil
     end)
-
     g.Currently_Running_Annoy_Loop = Annoy_Thread
 end}, "Annoy_Player_Input_UI")
 
 g.create_ui_element("Button", Players_Section, {
 Name = "UnAnnoy Player",
 Callback = function() 
-    if not g.annoy_active then
-        return g.notify("Warning", "Annoy Player is not currently running.", 5)
-    end
-
+    if not g.annoy_active then g.notify("Warning", "Annoy Player is not running.", 5); return end
     g.annoy_active = false
     if g.Currently_Annoying_Player then g.Currently_Annoying_Player = nil end
     if g.Currently_Running_Annoy_Loop then g.Currently_Running_Annoy_Loop = nil end
@@ -14314,7 +14312,7 @@ PlaceholderText = "Username or displayname...",
 Flag = "Loop_Fling_Input_UI",
 Callback = function(split)
     local loop_fling_victim = g.findplr(split)
-    if not loop_fling_victim then return g.notify("Error", "That Player does not exist!", 5) end
+    if not loop_fling_victim then g.notify("Error", "That Player does not exist!", 3); return end
     if loop_fling_victim and loop_fling_victim.Character then
         g.start_loopfling(loop_fling_victim)
     end

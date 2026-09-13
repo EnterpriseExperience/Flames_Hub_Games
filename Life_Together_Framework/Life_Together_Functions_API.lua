@@ -13,6 +13,7 @@ local SoundService = g.SoundService or cloneref and cloneref(game:GetService("So
 local avatar_editor = g.AvatarEditorService or cloneref and cloneref(game:GetService("AvatarEditorService")) or game:GetService("AvatarEditorService")
 local ReplicatedStorage = g.ReplicatedStorage or cloneref and cloneref(game:GetService("ReplicatedStorage")) or game:GetService("ReplicatedStorage")
 local TweenService = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
+local speaker = g.LocalPlayer or Players.LocalPlayer
 local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui
 local FlamesLibrary = g.FlamesLibrary or getgenv().FlamesLibrary
 local InstanceNew = Instance.new
@@ -1239,7 +1240,7 @@ g.get_certain_tool = function(tool_name_str)
 end
 
 local function check_missing_tools()
-   local lp = g.LocalPlayer or Players.LocalPlayer
+   local lp = speaker or g.LocalPlayer or Players.LocalPlayer
    local needed = { "LaserPointer", "Pistol" }
    local found = {}
    local function search(parent)
@@ -1491,7 +1492,7 @@ g.tools_menu_for_life_together_flames_hub = g.tools_menu_for_life_together_flame
    local main_window = ui.create_window("©️ Tools Menu | Flames Hub LLC ©️")
    local tab_1 = ui.create_tab(main_window, "Tools")
    local FL = g.FlamesLibrary
-   local lp = g.LocalPlayer or Players.LocalPlayer
+   local lp = speaker or g.LocalPlayer or Players.LocalPlayer
    local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
    local tool_map = {
       ["assault rifle"] = { patterns = {"assault", "rifle"}, net = "shoot_ar",      module = "AssaultRifle" },
@@ -1601,9 +1602,7 @@ g.tools_menu_for_life_together_flames_hub = g.tools_menu_for_life_together_flame
          end))
       end
 
-      FL.connect("tool_char", lp.CharacterRemoving:Connect(function()
-         stop_firing()
-      end))
+      FL.connect("tool_char", lp.CharacterRemoving:Connect(function() stop_firing() end))
    end
 
    local function Teardown_Input()
@@ -1630,7 +1629,6 @@ g.tools_menu_for_life_together_flames_hub = g.tools_menu_for_life_together_flame
    local tool_information = g.tool_information_folder_instance or g.find_tool_folder_searcher_info()
    local options = {}
    local tool_data_main = {}
-
    if tool_information then
       for _, v in ipairs(tool_information:GetChildren()) do
          if v:IsA("Tool") then
@@ -1642,63 +1640,34 @@ g.tools_menu_for_life_together_flames_hub = g.tools_menu_for_life_together_flame
 
    ui.dropdown(tab_1, "Get Any Weapon (FE)", "GetAnyWeapon", options, nil, false, function(selected)
       local tool = tool_data_main[selected]
-      if tool then
-         if g.Send then g.Send("get_tool", tool.Name) end
-      end
+      if tool then if g.Send and typeof(g.Send) == "function" then g.Send("get_tool", tool.Name) end end
    end)
 
    ui.button(tab_1, "Laser + Pistol (FE)", function()
-      local lp = g.LocalPlayer or Players.LocalPlayer
-      local backpack = g.Backpack or lp.Backpack
-      local character = g.Character or lp.Character
-      if not character or not backpack then return end
-      local function is_wanted(name)
-         name = name:lower()
-         return name:find("laser") or name:find("pistol")
-      end
-
-      local function already_equipped(name)
-         for _, v in ipairs(character:GetChildren()) do
-            if v:IsA("Tool") and v.Name == name then
-               return true
-            end
-         end
-         return false
-      end
-
-      if already_equipped("LaserPointer") and already_equipped("Pistol") then return end
-      local function has_unwanted()
-         for _, v in ipairs(character:GetChildren()) do
-            if v:IsA("Tool") and not is_wanted(v.Name) then return true end
-         end
-         for _, v in ipairs(backpack:GetChildren()) do
-            if v:IsA("Tool") and not is_wanted(v.Name) then return true end
-         end
-         return false
-      end
-
-      if has_unwanted() then
-         g.Send("delete_tool")
-         task.wait(0.25)
-      end
-
-      local wanted = { "LaserPointer", "Pistol" }
-      for _, tool_name in ipairs(wanted) do
+      local lp = LocalPlayer or g.LocalPlayer or Players.LocalPlayer
+      local backpack = g.Backpack or lp:FindFirstChildOfClass("Backpack")
+      local character = g.Character or lp.Character or g.get_char(lp)
+      local humanoid = g.Humanoid or character and character:FindFirstChildOfClass("Humanoid") or g.get_human(lp)
+      if not character or not backpack or not humanoid then return end
+      local wanted_names = { ["LaserPointer"] = true, ["Pistol"] = true }
+      humanoid:UnequipTools()
+      task.wait(0.1)
+      for name in pairs(wanted_names) do
          local in_backpack = false
          for _, v in ipairs(backpack:GetChildren()) do
-            if v:IsA("Tool") and v.Name == tool_name then
+            if v:IsA("Tool") and v.Name == name then
                in_backpack = true
                break
             end
          end
-         if not already_equipped(tool_name) and not in_backpack then
-            g.Send("get_tool", tool_name)
+         if not in_backpack then
+            g.Send("get_tool", name)
             task.wait(0.1)
          end
       end
       task.wait(0.25)
       for _, v in ipairs(backpack:GetChildren()) do
-         if v:IsA("Tool") and is_wanted(v.Name) and not already_equipped(v.Name) then
+         if (v:IsA("Tool") or v:IsA("HopperBin")) and wanted_names[v.Name] then
             v.Parent = character
          end
       end
