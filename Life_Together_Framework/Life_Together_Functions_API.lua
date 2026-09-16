@@ -13,11 +13,24 @@ local SoundService = g.SoundService or cloneref and cloneref(game:GetService("So
 local avatar_editor = g.AvatarEditorService or cloneref and cloneref(game:GetService("AvatarEditorService")) or game:GetService("AvatarEditorService")
 local ReplicatedStorage = g.ReplicatedStorage or cloneref and cloneref(game:GetService("ReplicatedStorage")) or game:GetService("ReplicatedStorage")
 local TweenService = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
+local StarterGui = g.StarterGui or cloneref and cloneref(game:GetService("StarterGui")) or game:GetService("StarterGui")
 local speaker = g.LocalPlayer or Players.LocalPlayer
 local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui
 local FlamesLibrary = g.FlamesLibrary or getgenv().FlamesLibrary
 local lib = FlamesLibrary
 local InstanceNew = Instance.new
+g.Reset_Fallen_Parts_Height = g.Reset_Fallen_Parts_Height or false
+if workspace.FallenPartsDestroyHeight ~= -500 then
+   if g.notify and typeof(g.notify) == "function" then g.notify("Warning", "Resetting: FallenPartsDestroyHeight, it's not it's usual number.", 5) end
+   local ok = pcall(function() workspace.FallenPartsDestroyHeight = -500 end)
+   wait(0.25)
+   if ok then
+      g.Reset_Fallen_Parts_Height = true
+   else
+      g.Reset_Fallen_Parts_Height = false
+   end
+end
+wait(0.1)
 g.originalFPDH = g.originalFPDH or workspace.FallenPartsDestroyHeight
 g.Script_Creator = "👑 Flames Hub 👑"
 g.Script_Owner = "✅ Flames Hub | ✅"
@@ -817,25 +830,15 @@ function getPlrChar(plr) return g.NA_GRAB_BODY.asChar(plr) end
 g.grab_char_as_flames_nameless_fetcher = g.grab_char_as_flames_nameless_fetcher or getPlrChar
 g.getHum = g.getHum or function(char, waitSeconds)
 	local target
-
 	if char then
 		target = g.NA_GRAB_BODY.asChar(char) or char
 	else
 		local plr = Players.LocalPlayer
-		if plr then
-			target = plr.Character
-		end
+		if plr then target = plr.Character end
 	end
-
-	if not target then
-		return nil
-	end
-
+	if not target then return nil end
 	local hum = target:FindFirstChildOfClass("Humanoid") or target:FindFirstChildOfClass("AnimationController")
-	if hum then
-		return hum
-	end
-
+	if hum and hum.Parent and hum:IsDescendantOf(game) then return hum end
 	local timeout = tonumber(waitSeconds) or 3
 	if not timeout or timeout <= 0 then
 		local rec = g.NA_GRAB_BODY.ensure(target)
@@ -844,25 +847,209 @@ g.getHum = g.getHum or function(char, waitSeconds)
 
 	timeout = math.max(0, timeout)
 	local deadline = os.clock() + timeout
-
-	local function findHumanoid()
-		return target:FindFirstChildOfClass("Humanoid") or target:FindFirstChildOfClass("AnimationController")
-	end
-
+	local function findHumanoid() return target:FindFirstChildOfClass("Humanoid") or target:FindFirstChildOfClass("AnimationController") end
 	while not hum and os.clock() < deadline do
 		Wait(0.05)
 		hum = findHumanoid()
 	end
 
-	if hum then
-		return hum
-	end
-
+	if hum and hum.Parent and hum:IsDescendantOf(game) then return hum end
 	local rec = g.NA_GRAB_BODY.ensure(target)
 	return rec and rec.humanoid or nil
 end
 
 g.getPlrHum = g.getPlrHum or function(plr) return g.getHum(plr) end
+local function make_input_normal(str)
+   if type(str) ~= "string" then str = tostring(str or "") end
+   local ok, lowered = pcall(string.lower, str)
+   if not ok then lowered = tostring(str) end
+   local cleaned = {}
+   for i = 1, #lowered do
+      local c = lowered:sub(i, i)
+      if c:match("[%w]") then table.insert(cleaned, c) end
+   end
+   return table.concat(cleaned)
+end
+
+FlamesLibrary.spawn("exec_name_init", "defer", function()
+   if not identifyexecutor or typeof(identifyexecutor) ~= "function" then ExecName = "Unknown Executor"; return end
+   local ok, name = pcall(function() return identifyexecutor() or "Unknown Executor" end)
+   ExecName = ok and tostring(name) or "Unknown Executor"
+   task.wait(0.1)
+   ExecName = make_input_normal(ExecName)
+end)
+
+local Allowed_Executors = {
+   ["Volcano"] = true,
+   ["Wave"] = false,
+   ["Zenith"] = true,
+   ["Delta"] = true, -- I am seriously hoping they fixed it by now.
+   ["CodeX"] = false,
+   ["Velocity"] = false,
+   ["Bunni"] = true,
+   ["Swift"] = true,
+   ["Sirhurt"] = true,
+   ["KRNL"] = false,
+   ["Potassium"] = true,
+   ["Macsploit"] = false,
+   ["Seliware"] = true,
+   ["Hydrogen"] = false,
+   ["Lx63"] = false,
+   ["Cryptic"] = false,
+   ["Arceus"] = false,
+   ["Vega"] = false,
+   ["Synapse"] = false,
+   ["Valex"] = false,
+   ["Nucleus"] = false,
+   ["Opiumware"] = false,
+}
+
+local function allowed_executor()
+   local normalized_str = make_input_normal(ExecName or "")
+   for allowed_name, Is_Allowed_Exec in pairs(Allowed_Executors) do
+      if Is_Allowed_Exec and normalized_str:find(make_input_normal(allowed_name), 1, true) then
+         return true
+      end
+   end
+   return false
+end
+
+g.Saved_Old_NameCall = nil
+g.Saved_Old_Index = nil
+g.Teardown_Hook = function()
+   local ok, err = pcall(function()
+      if g.Saved_Old_NameCall then
+         hookmetamethod(TextChatService, "__namecall", g.Saved_Old_NameCall)
+         g.Saved_Old_NameCall = nil
+      end
+      if g.Saved_Old_Index then
+         hookmetamethod(TextChatService, "__index", g.Saved_Old_Index)
+         g.Saved_Old_Index = nil
+      end
+   end)
+   if not ok then g.notify("Error", "Failed to restore hooks: " .. tostring(err), 8) end
+end
+
+g.Teardown_Cooldown_System = function()
+   FlamesLibrary.disconnect("cooldown_hashtag_watcher")
+   g.CooldownActive = false
+   g.HashtagCount = 0
+   StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true)
+end
+
+g.Start_Cooldown_System = function()
+   if g.TextChatAntiBanApplied then
+      local CooldownTime = 15
+      local Chat = Enum.CoreGuiType.Chat
+      g.CooldownActive = g.CooldownActive or false
+      g.HashtagCount = g.HashtagCount or 0
+
+      local function StartCooldown(duration)
+         if g.CooldownActive then g.notify("Warning", "Your TextChat cooldown is still currently active.", 6); return end
+         g.CooldownActive = true
+         g.notify("Info", "Cooldown has now started for: " .. duration .. " seconds.", 8)
+         task.delay(duration, function()
+            if not g.TextChatAntiBanApplied then return end
+            g.CooldownActive = false
+            g.HashtagCount = 0
+            StarterGui:SetCoreGuiEnabled(Chat, true)
+            g.notify("Success", "Chat is now re-enabled, cooldown has stopped.", 7)
+         end)
+      end
+
+      FlamesLibrary.connect("cooldown_hashtag_watcher", TextChatService.MessageReceived:Connect(function(msg)
+         if not g.TextChatAntiBanApplied then return end
+         local source = msg.TextSource
+         if not source then return end
+         local player = Players:GetPlayerByUserId(source.UserId)
+         if player ~= LocalPlayer then return end
+         local text = msg.Text
+         if text and text:match("^#+$") then
+            g.HashtagCount += 1
+            if g.HashtagCount >= 4 then
+               StarterGui:SetCoreGuiEnabled(Chat, false)
+               StartCooldown(CooldownTime)
+               g.notify("Warning", "Chat disabled to protect you from being banned, when the chat turns back on your messages will NOT be hashtags anymore.", 15)
+            end
+         end
+      end))
+   else
+      g.notify("Info", "Skipping this part, hook not applied.", 3)
+   end
+end
+
+g.Safe_Chat_Hookin = function()
+   if not hookmetamethod or not newcclosure then g.notify("Warning", "Your executor does not support hookmetamethod or getnamecallmethod.", 5); return end
+   if not allowed_executor() then g.notify("Warning", "Executor not allowed for chat protection hook.", 5); return end
+   if g.TextChatAntiBanApplied then g.notify("Info", "TextChatAntiBan hook already applied.", 5); return end
+
+   local Old_NameCall, Old_Index
+   local function Hook_Meta()
+      local ok, err = pcall(function()
+         Old_NameCall = hookmetamethod(TextChatService, "__namecall", newcclosure(function(self, ...)
+            local method = getnamecallmethod()
+            if method == "SendAsync" and g.CooldownActive then
+               g.notify("Warning", "You cannot send messages during cooldown.", 6)
+               return nil
+            end
+            return Old_NameCall(self, ...)
+         end))
+
+         Old_Index = hookmetamethod(TextChatService, "__index", newcclosure(function(self, key)
+            if key == "SendAsync" and g.CooldownActive then
+               return function()
+                  g.notify("Warning", "Chat disabled during cooldown.", 6)
+                  return nil
+               end
+            end
+            return Old_Index(self, key)
+         end))
+      end)
+
+      if not ok then
+         g.notify("Error", "Failed to hook metatable safely: " .. tostring(err), 8)
+         return false
+      end
+
+      g.Saved_Old_NameCall = Old_NameCall
+      g.Saved_Old_Index = Old_Index
+      return true
+   end
+
+   local Hook_Applied = Hook_Meta()()
+   if Hook_Applied then
+      g.TextChatAntiBanApplied = true
+      g.notify("Success", "TextChatService hook successfully applied.", 6)
+      g.Start_Cooldown_System()
+   else
+      g.notify("Warning", "Hook attempt failed or blocked by executor sandbox.", 6)
+   end
+end
+
+g.Disable_Chat_Antiban = function()
+   if not g.TextChatAntiBanApplied then g.notify("Info", "TextChatAntiBan is not active.", 3); return end
+   g.Teardown_Cooldown_System()
+   g.Teardown_Hook()
+   g.TextChatAntiBanApplied = false
+   g.notify("Success", "TextChatAntiBan disabled and hooks restored.", 6)
+end
+
+g.Start_Cooldown_Hashtag_System = function(enabled)
+   if enabled == false then
+      FlamesLibrary.spawn("safe_chat_hook_disable", "defer", function()
+         g.Disable_Chat_Antiban()
+      end)
+      return
+   end
+
+   FlamesLibrary.spawn("safe_chat_hook_init", "defer", function()
+      if allowed_executor() then
+         g.Safe_Chat_Hookin()
+      else
+         g.notify("Warning", "Executor not allowed to apply SendAsync hook.", 5)
+      end
+   end)
+end
 
 local FireFolder = SoundService:FindFirstChild("FireTemporaryReparentFolder", true)
 if not FireFolder then
@@ -2174,41 +2361,104 @@ end))
 
 local overlap_params = OverlapParams.new()
 overlap_params.FilterType = Enum.RaycastFilterType.Exclude
+
 g.protect_enabled = g.protect_enabled or false
+g.fling_recovery_enabled = g.fling_recovery_enabled or false
+g.afEnabled = g.afEnabled or false
 g.player_overlap_tracking = g.player_overlap_tracking or {}
-local function protect_local_character()
-	if not g.protect_enabled then return end
-	local localplayer = LocalPlayer
-	if not localplayer then return end
-	local char = g.Character or localplayer.Character or g.get_char(LocalPlayer)
-	if not char then return end
-	local hrp = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer)
-	if not hrp then return end
+g.position_history = g.position_history or {}
+
+local fling_threshold = 350
+local recovery_duration = 1.5
+local recovery_age = 5
+local history_ttl = 7
+local max_linear = 350
+local max_angular = 60
+
+local fr_active = false
+local fr_start = 0
+local fr_target = nil
+
+local function get_hrp(localplayer)
+	local char = g.Character or localplayer.Character or g.get_char(localplayer)
+	if not char then return nil, nil end
+	local hrp = g.HumanoidRootPart or char:FindFirstChild("HumanoidRootPart") or g.get_root(localplayer)
+	return char, hrp
+end
+
+local function run_fling_recovery(hrp, now)
+	local speed = hrp.AssemblyLinearVelocity.Magnitude
+
+	if fr_active then
+		if (now - fr_start) < recovery_duration then
+			hrp.CFrame = fr_target
+			hrp.AssemblyLinearVelocity = Vector3.zero
+			hrp.AssemblyAngularVelocity = Vector3.zero
+		else
+			fr_active = false
+			fr_target = nil
+		end
+		return true
+	end
+
+	if speed > fling_threshold and not g.walkflinging then
+		local history = g.position_history
+		local target_t = now - recovery_age
+		local saved = nil
+		for i = #history, 1, -1 do
+			if history[i].t <= target_t then
+				saved = history[i]
+				break
+			end
+		end
+		if saved then
+			fr_active = true
+			fr_start = now
+			fr_target = saved.cf
+			hrp.CFrame = saved.cf
+			hrp.AssemblyLinearVelocity = Vector3.zero
+			hrp.AssemblyAngularVelocity = Vector3.zero
+		end
+		return true
+	end
+
 	if not g.walkflinging then
-		local max_linear = 350
-		local max_angular = 60
+		local history = g.position_history
+		table.insert(history, { cf = hrp.CFrame, t = now })
+		local cutoff = now - history_ttl
+		while #history > 0 and history[1].t < cutoff do
+			table.remove(history, 1)
+		end
+	end
+
+	return false
+end
+
+local function run_protect(hrp, char, localplayer, now)
+	if not g.walkflinging then
 		local lv = hrp.AssemblyLinearVelocity
 		if lv.Magnitude > max_linear then hrp.AssemblyLinearVelocity = Vector3.zero end
 		local av = hrp.AssemblyAngularVelocity
 		if av.Magnitude > max_angular then hrp.AssemblyAngularVelocity = av.Unit * max_angular end
 	end
 
-	overlap_params.FilterDescendantsInstances = {char}
+	overlap_params.FilterDescendantsInstances = { char }
 	local tracking = g.player_overlap_tracking
 	local parts = workspace:GetPartsInPart(hrp, overlap_params)
-	local now = os.clock()
+
 	for _, part in ipairs(parts) do
 		local model = part:FindFirstAncestorOfClass("Model")
 		if model then
 			local plr = Players:GetPlayerFromCharacter(model)
 			if plr and plr ~= localplayer then
-				if not tracking[plr] then tracking[plr] = {attempts = 0, last_time = 0, reset_time = now} end
+				if not tracking[plr] then
+					tracking[plr] = { attempts = 0, last_time = 0, reset_time = now }
+				end
 				local data = tracking[plr]
 				if (now - data.last_time) > 3 then
 					data.attempts = 0
 					data.reset_time = now
 				end
-
 				if data.attempts < 2 and (now - data.last_time) > 0.4 then
 					data.attempts += 1
 					data.last_time = now
@@ -2220,57 +2470,92 @@ local function protect_local_character()
 			end
 		end
 	end
+
 	for plr in pairs(tracking) do if not plr or not plr.Parent then tracking[plr] = nil end end
+end
+
+local function protection_step()
+	if not g.protect_enabled and not g.fling_recovery_enabled then return end
+	local localplayer = LocalPlayer
+	if not localplayer then return end
+	local char, hrp = get_hrp(localplayer)
+	if not char or not hrp then return end
+	local now = os.clock()
+	if g.fling_recovery_enabled then
+		local blocked = run_fling_recovery(hrp, now)
+		if blocked then return end
+	end
+
+	if g.protect_enabled then run_protect(hrp, char, localplayer, now) end
+end
+
+local function sync_protection_connection()
+	local needs = g.protect_enabled or g.fling_recovery_enabled
+	if needs then
+		if not FlamesLibrary.is_alive("protect_heartbeat") then
+			FlamesLibrary.connect("protect_heartbeat", RunService.Heartbeat:Connect(protection_step))
+		end
+	else
+		if FlamesLibrary.is_alive("protect_heartbeat") then
+			FlamesLibrary.disconnect("protect_heartbeat")
+		end
+	end
 end
 
 g.set_protect_state = function(state)
 	g.protect_enabled = state and true or false
-	if g.protect_enabled then
-		if not FlamesLibrary.is_alive("protect_heartbeat") then FlamesLibrary.connect("protect_heartbeat", RunService.Heartbeat:Connect(protect_local_character)) end
-	else
-		if FlamesLibrary.is_alive("protect_heartbeat") then FlamesLibrary.disconnect("protect_heartbeat") end
+	if not g.protect_enabled then
 		g.player_overlap_tracking = {}
 	end
+	sync_protection_connection()
 end
 
-g.anti_follow_reset = g.anti_follow_reset or function()
-   local char = g.Character or g.LocalPlayer.Character or LocalPlayer.Character
-   if not char then return end
-   local root = g.HumanoidRootPart or char:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer)
-   if not root then return end
-   getgenv().Org_Destroy_Height = getgenv().Org_Destroy_Height or workspace.FallenPartsDestroyHeight
-   if not getgenv().Org_Destroy_Height then getgenv().Org_Destroy_Height = 500 end
-   local old_pos = root.CFrame
-   workspace.FallenPartsDestroyHeight = 0
-   root.CFrame = CFrame.new(Vector3.new(0, getgenv().Org_Destroy_Height - 25, 0))
-   task.wait(1)
-   root.CFrame = old_pos
-   workspace.FallenPartsDestroyHeight = getgenv().Org_Destroy_Height
+g.set_fling_recovery_state = function(state)
+	g.fling_recovery_enabled = state and true or false
+	if not g.fling_recovery_enabled then
+		g.position_history = {}
+		fr_active = false
+		fr_target = nil
+	end
+	sync_protection_connection()
 end
 
-g.afEnabled = g.afEnabled or false
+g.anti_follow_reset = function()
+	local char = g.Character or g.LocalPlayer.Character or LocalPlayer.Character or g.get_char(LocalPlayer)
+	if not char or not char:IsDescendantOf(game) then return end
+	local root = g.HumanoidRootPart or char:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer)
+	if not root or not root.Parent or not root:IsDescendantOf(game) then return end
+	getgenv().Org_Destroy_Height = getgenv().Org_Destroy_Height or workspace.FallenPartsDestroyHeight
+	if not getgenv().Org_Destroy_Height then getgenv().Org_Destroy_Height = 500 end
+	local old_pos = root.CFrame
+	root.CFrame = CFrame.new(Vector3.new(0, getgenv().Org_Destroy_Height - 25, 0))
+	task.wait(1)
+	root.CFrame = old_pos
+   if g.anti_void and typeof(g.anti_void) == "function" then g.anti_void(g.fling_recovery_enabled or true) end -- just making sure.
+end
+
 g.EnableAntiFling = function()
-   if g.afEnabled then return end
-   g.afEnabled = true
-   g.antifling_enabled = true
-   g.FlamesLibrary.disconnect("antifling")
-   g.FlamesLibrary.connect("antifling", RunService.Stepped:Connect(function()
-      if not g.afEnabled then return end
-      for _, plr in ipairs(Players:GetPlayers()) do
-         if plr ~= Players.LocalPlayer and plr.Character then
-            for _, part in ipairs(plr.Character:GetDescendants()) do
-               if part:IsA("BasePart") then part.CanCollide = false end
-            end
-         end
-      end
-   end))
+	if g.afEnabled then return end
+	g.afEnabled = true
+	g.antifling_enabled = true
+	g.FlamesLibrary.disconnect("antifling")
+	g.FlamesLibrary.connect("antifling", RunService.Stepped:Connect(function()
+		if not g.afEnabled then return end
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= Players.LocalPlayer and plr.Character then
+				for _, part in ipairs(plr.Character:GetDescendants()) do
+					if part:IsA("BasePart") then part.CanCollide = false end
+				end
+			end
+		end
+	end))
 end
 
 g.DisableAntiFling = function()
-   if not g.afEnabled then return end
-   g.afEnabled = false
-   g.antifling_enabled = false
-   g.FlamesLibrary.disconnect("antifling")
+	if not g.afEnabled then return end
+	g.afEnabled = false
+	g.antifling_enabled = false
+	g.FlamesLibrary.disconnect("antifling")
 end
 
 g.resolve_humanoid = function() -- specifically for do_emote and safe_emote, but I'll definitely use it for other stuff, like in the main code.
@@ -2390,12 +2675,8 @@ g.Toggle_AntiFling_Boolean_Func = function(flag)
       if g.EnableAntiFling then g.EnableAntiFling() end
       if g.ToggleNoclip then g.ToggleNoclip(true) end
    elseif flag == false then
-      if g.DisableAntiFling then
-         g.DisableAntiFling()
-      end
-      if g.ToggleNoclip then
-         g.ToggleNoclip(false)
-      end
+      if g.DisableAntiFling then g.DisableAntiFling() end
+      if g.ToggleNoclip then g.ToggleNoclip(false) end
    else
       if g.notify then
          g.notify("Warning", "Invalid arguments have been provided.", 3)
@@ -2769,19 +3050,22 @@ local Emotes = {
       85116004655341,
       117694627966105,
       111139266390945,
-      109334537949622,
       73823025897559,
-      110470494752196,
-      121021070983682,
-      106954828406312,
       120297764741811,
       111539333518905,
       75710785243393,
       107014304867611,
       89635826639063,
-      105856550104502,
-      91510776097850,
       106512155105010,
+      88735301098763,
+      124478943965243,
+      97145353082007,
+      137707411881716,
+      83776375387511,
+      82335103855314,
+      84053160211641,
+      132729654521660,
+      83747628322104
    },
    michaeljackson = {
       136661789802174, -- I fw this a ton bro lol.
