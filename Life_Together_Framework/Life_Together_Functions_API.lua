@@ -17,6 +17,7 @@ local speaker = g.LocalPlayer or Players.LocalPlayer
 local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui
 local FlamesLibrary = g.FlamesLibrary or getgenv().FlamesLibrary
 local InstanceNew = Instance.new
+g.originalFPDH = g.originalFPDH or workspace.FallenPartsDestroyHeight
 g.Script_Creator = "👑 Flames Hub 👑"
 g.Script_Owner = "✅ Flames Hub | ✅"
 getgenv().Flames_Hub_Emojis = {
@@ -2438,15 +2439,13 @@ g.anti_sit_func = function(toggle)
    end
 end
 
+local OrgDestroyHeight = workspace.FallenPartsDestroyHeight
 g.anti_void = function(flag)
    local lib = getgenv().FlamesLibrary
    local key = "anti_void_stepped"
    if flag == true then
       if g.Anti_Void_Enabled_Bool then g.notify("Warning", "Flames Hub | Anti-Void is already enabled.", 3); return end
       if lib.is_alive(key) then g.notify("Warning", "Flames Hub | Anti-Void is already enabled.", 3); return end
-      if not g.originalFPDH then g.originalFPDH = workspace.FallenPartsDestroyHeight end
-      task.wait(0.15)
-      workspace.FallenPartsDestroyHeight = -100000
       lib.connect(key, RunService.Stepped:Connect(function()
          local root = g.HumanoidRootPart or g.Character and g.Character:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer)
          if root and root.Position.Y <= g.originalFPDH + 25 then root.AssemblyLinearVelocity = root.AssemblyLinearVelocity + Vector3.new(0, 300, 0) end
@@ -2455,7 +2454,7 @@ g.anti_void = function(flag)
       if g.notify then g.notify("Success", "Flames Hub | Anti-Void V2 has been enabled.", 5) end
    elseif flag == false then
       if not g.Anti_Void_Enabled_Bool then g.notify("Warning", "Flames Hub | Anti-Void is not enabled.", 3); return end
-      workspace.FallenPartsDestroyHeight = g.originalFPDH or -500
+      workspace.FallenPartsDestroyHeight = OrgDestroyHeight
       lib.disconnect(key)
       g.Anti_Void_Enabled_Bool = false
       if g.notify then g.notify("Success", "Flames Hub | Anti-Void V2 has been disabled.", 5) end
