@@ -16,6 +16,7 @@ local TweenService = g.TweenService or cloneref and cloneref(game:GetService("Tw
 local speaker = g.LocalPlayer or Players.LocalPlayer
 local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui
 local FlamesLibrary = g.FlamesLibrary or getgenv().FlamesLibrary
+local lib = FlamesLibrary
 local InstanceNew = Instance.new
 g.originalFPDH = g.originalFPDH or workspace.FallenPartsDestroyHeight
 g.Script_Creator = "👑 Flames Hub 👑"
@@ -1680,7 +1681,6 @@ g.tools_menu_for_life_together_flames_hub = g.tools_menu_for_life_together_flame
 end
 
 g.stop_loopfling = function()
-	local lib = g.FlamesLibrary
 	if not g.Loop_Flinging_Player_Flames_Hub then g.notify("Warning", "Flames Hub | LoopFling-V2 is not enabled.", 3); return end
 	g.Loop_Flinging_Player_Flames_Hub = false
 	lib.disconnect("loopfling")
@@ -1740,7 +1740,6 @@ g.stop_loopfling = function()
 end
 
 g.start_loopfling = function(target_player)
-	local lib = g.FlamesLibrary
    local fw = lib.wait
 	if g.Loop_Flinging_Player_Flames_Hub then g.notify("Warning", "You're already using Flames Hub | LoopFling-V2 on someone!", 3); return end
 	if not target_player or not target_player.Parent then g.notify("Error", "That player does not exist / left the game.", 3); return end
@@ -1854,7 +1853,6 @@ end
 
 if not g.firesystem_init then g.firesystem_init = true end
 g.set_fire_state = function(state)
-   local lib = getgenv().FlamesLibrary
    local da_key  = "anti_fire_descendant_added"
    local hb_key  = "anti_fire_heartbeat"
    if state == true then
@@ -2335,7 +2333,6 @@ local function noclip_step()
 end
 
 g.ToggleNoclip = function(state)
-   local lib = getgenv().FlamesLibrary
    local key = "noclip_stepped"
    if state == true then
       if g.Noclip_Enabled then
@@ -2369,7 +2366,6 @@ g.ToggleNoclip = function(state)
 end
 
 g.spamming_flames = function(toggle)
-   local lib = g.FlamesLibrary
    local connection_name = "flames_spammer"
    if toggle == true then
       if g.spamming_all_that_fire then g.notify("Warning", "Flames Spammer V2 is already enabled.", 3); return end
@@ -2411,7 +2407,6 @@ g.Toggle_AntiFling_Boolean_Func = function(flag)
 end
 
 g.anti_sit_func = function(toggle)
-   local lib = g.FlamesLibrary
    local key = "anti_sit_loop"
    g.Seat = require(g.Game_Folder:FindFirstChild("Seat"))
    if toggle == true then
@@ -2441,7 +2436,6 @@ end
 
 local OrgDestroyHeight = workspace.FallenPartsDestroyHeight
 g.anti_void = function(flag)
-   local lib = getgenv().FlamesLibrary
    local key = "anti_void_stepped"
    if flag == true then
       if g.Anti_Void_Enabled_Bool then g.notify("Warning", "Flames Hub | Anti-Void is already enabled.", 3); return end
@@ -2463,7 +2457,6 @@ end
 
 g.VehicleDestroyer_Enabled = g.VehicleDestroyer_Enabled or false
 g.vehicle_parts_cache = g.vehicle_parts_cache or {}
-local lib = getgenv().FlamesLibrary
 local _uid = 0
 local function make_key(prefix, inst) _uid = _uid + 1; return prefix .. "_" .. tostring(inst):gsub("[^%w]", "") .. "_" .. _uid end
 local function is_in_vehicle(obj, vehicle) return vehicle and obj and obj:IsDescendantOf(vehicle) end
