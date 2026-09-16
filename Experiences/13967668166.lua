@@ -152,6 +152,146 @@ g.safeSet = g.safeSet or function(inst, prop, val)
     if inst and g.hasProp(inst, prop) then g.setProperty(inst, prop, val) end
 end
 
+local locale_ids = {
+    "en-us", "en-gb", "en-au", "en-ca", "en-za", "en-nz", "en-ie",
+    "pt-br", "pt-pt",
+    "es-es", "es-mx", "es-ar", "es-co", "es-cl", "es-pe", "es-ve",
+    "fr-fr", "fr-ca", "fr-be", "fr-ch",
+    "de-de", "de-at", "de-ch",
+    "it-it", "it-ch",
+    "nl-nl", "nl-be",
+    "pl-pl",
+    "ru-ru",
+    "tr-tr",
+    "sv-se",
+    "no-no",
+    "da-dk",
+    "fi-fi",
+    "cs-cz",
+    "sk-sk",
+    "hu-hu",
+    "ro-ro",
+    "bg-bg",
+    "hr-hr",
+    "uk-ua",
+    "el-gr",
+    "ja-jp",
+    "ko-kr",
+    "zh-cn",
+    "zh-tw",
+    "id-id",
+    "ms-my",
+    "th-th",
+    "vi-vn",
+    "ar-sa",
+}
+
+local matrix_ids = {
+    "1865-6-19-matrix",
+    "1923-4-7-matrix",
+    "1947-8-15-matrix",
+    "1955-12-1-matrix",
+    "1961-4-12-matrix",
+    "1963-11-22-matrix",
+    "1969-7-20-matrix",
+    "1971-3-8-matrix",
+    "1975-4-30-matrix",
+    "1977-5-25-matrix",
+    "1981-1-20-matrix",
+    "1983-9-1-matrix",
+    "1986-4-26-matrix",
+    "1989-11-9-matrix",
+    "1991-8-6-matrix",
+    "1994-4-27-matrix",
+    "1997-7-1-matrix",
+    "1999-3-31-matrix",
+    "2001-9-11-matrix",
+    "2003-3-20-matrix",
+    "2004-8-4-matrix",
+    "2005-7-7-matrix",
+    "2007-6-29-matrix",
+    "2008-9-15-matrix",
+    "2009-1-15-matrix",
+    "2010-4-20-matrix",
+    "2011-3-11-matrix",
+    "2012-7-20-matrix",
+    "2013-4-15-matrix",
+    "2014-6-5-matrix",
+    "2015-11-13-matrix",
+    "2016-6-12-matrix",
+    "2017-8-21-matrix",
+    "2018-3-14-matrix",
+    "2019-4-15-matrix",
+    "2020-1-26-matrix",
+    "2020-3-11-matrix",
+    "2021-1-6-matrix",
+    "2021-8-30-matrix",
+    "2022-2-24-matrix",
+    "2022-9-8-matrix",
+    "2023-1-30-matrix",
+    "2023-4-4-matrix",
+    "2023-7-8-matrix",
+    "2023-9-22-matrix",
+    "2024-2-29-matrix",
+    "2024-5-17-matrix",
+    "2024-8-3-matrix",
+    "2024-11-5-matrix",
+    "2025-1-1-matrix",
+}
+
+local spoofed_platforms = {
+    "Adopt Me!",
+    "Brookhaven RP",
+    "Blox Fruits",
+    "Pet Simulator X",
+    "Murder Mystery 2",
+    "Royale High",
+    "Tower of Hell",
+    "Arsenal",
+    "Jailbreak",
+    "Piggy",
+    "Natural Disaster Survival",
+    "Work at a Pizza Place",
+    "Flee the Facility",
+    "Phantom Forces",
+    "Shindo Life",
+    "Anime Fighting Simulator",
+    "Bedwars",
+    "Doors",
+    "Brookhaven",
+    "Anime Dimensions",
+    "Skywars",
+    "Funky Friday",
+    "Dragon Ball Z Final Stand",
+    "Ro-Ghoul",
+    "Islands",
+    "Anime Battle Arena",
+    "Build a Boat for Treasure",
+    "The Mimic",
+    "Livetopia",
+    "Starving Artists",
+    "A Universal Time",
+    "Creatures of Sonaria",
+    "My Hello Kitty Cafe",
+    "Wacky Wizards",
+    "Dress to Impress",
+    "Frontlines",
+    "Sword Burst 2",
+    "Super Golf",
+    "Mad City",
+    "Theme Park Tycoon 2",
+    "Car Dealership Tycoon",
+    "MeepCity",
+    "Ragdoll Engine",
+    "Obby But Youre On A Bike",
+    "Saber Simulator",
+    "Dungeon Quest",
+    "Epic Minigames",
+    "Weight Lifting Simulator",
+    "Scuba Diving at Quill Lake",
+    "Survive the Killer",
+}
+
 local function isVerified()
     if not isfile then return false end
     if not isfile(verify_file) then return false end
@@ -4400,11 +4540,23 @@ elseif g.LifeTogetherRP_Admin and g.Script_Loaded_Correctly_LifeTogether_Admin_F
     return 
 end
 
-if g.notify then g.notify("Info", "Now checking for Flames Hub files...", 5) end
+if g.notify and typeof(g.notify) == "function" then g.notify("Info", "Now checking for Flames Hub files...", 5) end
 g.ConstantUpdate_Checker_Live = true
 if isfile and not isfile("flames_hub_agreement_COPY.txt") then
     pcall(function()
         writefile("flames_hub_agreement_COPY.txt", "has not decided")
+    end)
+end
+
+if isfile and typeof(isfile) == "function" and not isfile("LifeTogether_RP_Admin_Custom_Name.txt") then
+    pcall(function()
+        writefile("LifeTogether_RP_Admin_Custom_Name.txt", speaker.DisplayName)
+    end)
+end
+wait(0.1)
+if isfile and typeof(isfile) == "function" and not isfile("LifeTogether_RP_Admin_Custom_Bio.txt") then
+    pcall(function()
+        writefile("LifeTogether_RP_Admin_Custom_Bio.txt", "🔥 Flames Hub 🔥")
     end)
 end
 wait(0.2)
@@ -7084,10 +7236,7 @@ g.get_other_vehicle = g.get_other_vehicle or function(Player)
 end
 
 local RGB_KEY = "rgb_phone_loop"
-g.change_phone_color = g.change_phone_color or function(New_Color)
-    g.Send("phone_color", New_Color)
-end
-
+g.change_phone_color = g.change_phone_color or function(New_Color) g.Send("phone_color", New_Color) end
 g.RGB_Phone = g.RGB_Phone or function(Boolean)
     local lib = g.FlamesLibrary
 
@@ -7114,13 +7263,111 @@ g.RGB_Phone = g.RGB_Phone or function(Boolean)
     end
 end
 
-g.steal_car_functionality = g.steal_car_functionality or function(target_plr)
-    local selected_player = nil
+g.Find_DAISE_Integration_Folder = function()
+    local cache = g.DAISE_Integration_Folder_Main_WS
+    if cache and cache:IsA("Folder") then return cache end
 
+    for _, v in ipairs(Workspace:GetChildren()) do
+        if v:IsA("Folder") and v.Name:lower():find("daise") then
+            g.DAISE_Integration_Folder_Main_WS = v
+            return v
+        end
+    end
+
+    return nil
+end
+wait(0.1)
+if not g.DAISE_Integration_Folder_Main_WS then pcall(function() g.Find_DAISE_Integration_Folder() end) end
+
+g.Find_DAISE_Main_NPC_Model = function()
+    local cache = g.DAISE_NPC_Model_Found
+    if cache and cache.Parent and cache:IsA("Model") then return cache end
+    for _, v in ipairs(Workspace:GetDescendants()) do
+        if v:IsA("Model") and v.Name:lower():find("npc") and v.Parent.Name:lower():find("daise") then
+            g.DAISE_NPC_Model_Found = v
+            return v
+        end
+    end
+
+    return nil
+end
+wait(0.1)
+if not g.DAISE_NPC_Model_Found then pcall(function() g.Find_DAISE_Main_NPC_Model() end) end
+
+g.Find_Persistent_Model_For_DAISE = function()
+    local cache = g.DAISE_Persistent_Model_Found
+    if cache and cache.Parent and cache:IsA("Model") then return cache end
+    for _, v in ipairs(Workspace:GetDescendants()) do
+        if v:IsA("Model") and v.Name:lower():find("persistent") and v.Parent.Name:lower():find("challenge") then
+            g.DAISE_Persistent_Model_Found = v
+            return v
+        end
+    end
+
+    return nil
+end
+wait(0.1)
+if not g.DAISE_Persistent_Model_Found then pcall(function() g.Find_Persistent_Model_For_DAISE() end) end
+
+g.Hide_DAISE_Area = function(state)
+    if g.DAISE_Area_Hidden == state then g.notify("Warning", state and "DAISE Area is already hidden." or "DAISE Area is already visible.", 3); return end
+    local folder = g.DAISE_Integration_Folder_Main_WS or g.Find_DAISE_Integration_Folder()
+    if not folder or not folder:IsA("Folder") then g.notify("Error", "DAISE Integration folder not found.", 3); return end
+    local npc = g.DAISE_NPC_Model_Found or g.Find_DAISE_Main_NPC_Model()
+    if not npc or not npc:IsA("Model") then g.notify("Error", "DAISE NPC Model not found.", 3); return end
+    local persistent = g.DAISE_Persistent_Model_Found or g.Find_Persistent_Model_For_DAISE()
+    if persistent then
+        for _, v in ipairs(persistent:GetChildren()) do
+            if v:IsA("Folder") and v.Name:lower():find("display") then
+                v:Destroy()
+            end
+        end
+    end
+    for _, v in ipairs(npc:GetDescendants()) do
+        if v.Name == "TouchPart" then
+            v.Transparency = 1
+            v.CanCollide = false
+            for _, child in ipairs(v:GetChildren()) do
+                if child:IsA("TouchTransmitter") then
+                    child:Destroy()
+                end
+            end
+        elseif v.Name == "HumanoidRootPart" then
+            v.CanCollide = false
+        end
+    end
+    for _, v in ipairs(folder:GetDescendants()) do
+        if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" and v.Name ~= "TouchPart" and v.Name ~= "DAISESlogan" and v.Name ~= "DAISEBeautyArea" then
+            local has_banner_decal = false
+            for _, child in ipairs(v:GetChildren()) do
+                if child:IsA("Decal") and child.Texture == "rbxassetid://133336087393319" then
+                    has_banner_decal = true
+                    break
+                end
+            end
+            if has_banner_decal then
+                v.Transparency = 1
+                v.CanCollide = false
+            else
+                v.Transparency = state and 1 or 0
+                v.CanCollide = not state
+            end
+        elseif v:IsA("Decal") then
+            v.Transparency = state and 1 or 0
+        elseif v:IsA("SurfaceGui") then
+            v.Enabled = not state
+        end
+    end
+    g.DAISE_Area_Hidden = state
+    g.notify("Success", state and "DAISE Area Hidden" or "DAISE Area Shown", 3)
+end
+
+g.steal_car_functionality = function(target_plr)
+    local selected_player = nil
     if typeof(target_plr) == "Instance" and target_plr:IsA("Player") then
         selected_player = target_plr
     elseif typeof(target_plr) == "string" then
-        for _, plr in pairs(g.Players:GetPlayers()) do
+        for _, plr in pairs(Players:GetPlayers()) do
             if plr.Name == target_plr then
                 selected_player = plr
                 break
@@ -7129,11 +7376,11 @@ g.steal_car_functionality = g.steal_car_functionality or function(target_plr)
     end
 
     if not selected_player then return end
-    for _, vehicle in pairs(g.Workspace:FindFirstChild("Vehicles"):GetChildren()) do
+    for _, vehicle in pairs(Workspace:FindFirstChild("Vehicles"):GetChildren()) do
         local seat = vehicle:FindFirstChild("VehicleSeat") or vehicle:FindFirstChild("VehicleSeat", true)
         if not seat then g.notify("Error", "We could not find VehicleSeat in this Vehicle.", 3); return end
         local owner_object = vehicle:FindFirstChild("owner")
-        if not owner_object then g.notify("Error", "No 'owner' object found in this Vehicle.", 3); return end
+        if not owner_object or not owner_object:IsA("ObjectValue") then g.notify("Error", "ObjectValue: owner not found or does not exist.", 3); return end
         if owner_object.Value == selected_player then
             if seat.Occupant == nil and vehicle:GetAttribute("locked") == false then
                 local ok, response = pcall(function() g.Get("sit", seat) end)
@@ -8766,6 +9013,11 @@ g.anti_outfit_copier = function(toggle)
     end
 end
 
+g.Delete_House = function()
+    local s = g.Get
+    if s and typeof(s) == "function" then g.Get("request_delete_house") end
+end
+
 local upvalues_func_main = getupvalue or getupvalues or rawget and rawget(debug, "getupvalues")
 local get_proto_func = getproto or rawget and rawget(debug, "getproto") or getprotos
 g.hook_meta_main = g.hook_meta_main or function(obj, metamethod, func)
@@ -8817,6 +9069,56 @@ if not g.RateLimiter_Bypass_Applied then
         if not ok then
             warn("RateLimiter bypass method failed unexpectedly.")
         end
+    end
+end
+
+g.Spam_Survey_Completions = function(state)
+    if state == true then
+        g.Spam_And_Spoof_Survey_Submissions = true
+        g.notify("Success", "Flames Hub | Life Together RP survey spammer is now active.", 3)
+        FlamesLibrary.spawn("spam_survey_completions", "spawn", function()
+            while g.Spam_And_Spoof_Survey_Submissions == true do
+            task.wait(0)
+                local Survey_Args = {
+                    "survey_completed",
+                    "5",
+                    {
+                        {
+                            questionKey = "question_1",
+                            answerKeys = {"question_5"}
+                        },
+                        {
+                            answerKey = "question_2",
+                            questionKey = "question_2"
+                        },
+                        {
+                            questionKey = "question_3",
+                            answerKeys = {"question_2"}
+                        },
+                        {
+                            answerKey = "answer_2",
+                            questionKey = "question_4"
+                        },
+                        {
+                            answerKey = "answer_1",
+                            questionKey = "question_5"
+                        }
+                    },
+                    {
+                        platform = spoofed_platforms[math.random(1, #spoofed_platforms)],
+                        localeId = locale_ids[math.random(1, #locale_ids)],
+                        sdkVersion = matrix_ids[math.random(1, #matrix_ids)]
+                    }
+                }
+                g.Send(unpack(Survey_Args))
+            end
+        end)
+    elseif state == false then
+        g.Spam_And_Spoof_Survey_Submissions = false
+        FlamesLibrary.disconnect("spam_survey_completions")
+        g.notify("Success", "Flames Hub | Life Together RP survey spammer is now disabled.", 3)
+    else
+        return 
     end
 end
 
@@ -13752,6 +14054,22 @@ Callback = function()
 end,})
 
 g.create_ui_element("Toggle", Home_Section, {
+Name = "Survey Spam (FE)",
+Default = g.Spam_And_Spoof_Survey_Submissions or false,
+Flag = "Survey_Spammer_Toggle_UI",
+Callback = function(state)
+    g.Spam_Survey_Completions(state)
+end}, "Survey_Spammer_Toggle_UI")
+
+g.create_ui_element("Toggle", Home_Section, {
+Name = "Hide DAISE Area",
+Default = g.DAISE_Area_Hidden or false,
+Flag = "Hide_DAISE_Area_Toggle_UI",
+Callback = function(state)
+    g.Hide_DAISE_Area(state)
+end}, "Hide_DAISE_Area_Toggle_UI")
+
+g.create_ui_element("Toggle", Home_Section, {
 Name = "Anti Tent Spawn",
 Default = g.Anti_Tent_Spawning_Currently_Active or false,
 Flag = "Anti_Tent_Spawning_Toggled_UI",
@@ -14740,6 +15058,12 @@ Flag = "Anti_Void_Toggle_UI",
 Callback = function(state)
     g.anti_void(state)
 end}, "Anti_Void_Toggle_UI")
+
+g.create_ui_element("Button", Houses_Section, {
+Name = "Delete House (FE)",
+Callback = function()
+    g.Delete_House()
+end,})
 
 g.create_ui_element("Toggle", Houses_Section, {
 Name = "Anti House Ban (FE)",

@@ -1,6 +1,6 @@
--- [[ welcome to the NEW and IMPROVED fully global environmental initialization system. ]] --
--- [[ it LITERALLY dumbs down everything for us so simply. ]] --
--- [[ it's literally like one of the safest things I think I've ever created, EVERYTHING is checked. ]] --
+-- [[ Welcome to Flames Hub's global environment initialization system. ]] --
+-- [[ It is literally like one of the safest things I think I have ever created, everything is concrete and has been properly and thoroughly reviewed. ]] --
+-- [[ This works for all executors, including low level executors such as: Solara, Xeno, JJSploit, etc. ]] --
 if not game:IsLoaded() then game.Loaded:Wait() end
 if getgenv().GlobalEnvironmentFramework_Initialized then return end
 getgenv().GlobalEnvironmentFramework_Initialized = true
