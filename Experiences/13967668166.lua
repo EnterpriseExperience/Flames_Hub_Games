@@ -16,8 +16,8 @@ local http_game = (getgenv()["game"] or game)["HttpGet"]
 getgenv().http_get = function(url) return http_game(game, url) end
 local Raw_Version = "V9.2.3"
 getgenv().Script_Version = tostring(Raw_Version).."-LifeHub"
-local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
-local localPlayer = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
+local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
 local speaker = localPlayer
 g.Keybind_Input_Disabled_For_Mini_Game = g.Keybind_Input_Disabled_For_Mini_Game or false
 g.SideGlitch_Enabled = g.SideGlitch_Enabled or true
@@ -47,16 +47,35 @@ if not g.GlobalEnvironmentFramework_Initialized then
 end
 wait(0.25)
 if not g.LifeTogether_Actual_Flames_Hub_Running_Functioning_Currently_On_Client then if g.notify and typeof(g.notify) == "function" then g.notify("Success", "Got LocalPlayer: "..tostring(g.LocalPlayer), 5) end end
+-- [[     SERVICES     ]] --
 local RunService = cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
 local CoreGui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local has_gethui = (typeof(gethui) == "function") or (typeof(g.gethui) == "function")
 local has_gethidden = (typeof(get_hidden_gui) == "function") or (typeof(g.get_hidden_gui) == "function")
 local ReplicatedStorage = g.ReplicatedStorage or cloneref and cloneref(game:GetService("ReplicatedStorage")) or game:GetService("ReplicatedStorage")
+local HttpService = g.HttpService or cloneref and cloneref(game:GetService("HttpService")) or game:GetService("HttpService")
+local TextService = g.TextService or cloneref and cloneref(game:GetService("TextService")) or game:GetService("TextService")
+local LocalPlayer = g.LocalPlayer or Players.LocalPlayer
+local UserInputService = g.UserInputService or cloneref and cloneref(game:GetService("UserInputService")) or game:GetService("UserInputService")
+local TweenService = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
+local Debris = g.Debris or cloneref and cloneref(game:GetService("Debris")) or game:GetService("Debris")
+local Chat = g.Chat or cloneref and cloneref(game:GetService("Chat")) or game:GetService("Chat")
+local me = LocalPlayer or speaker or g.LocalPlayer or Players.LocalPlayer
+local plr = me
+local TextChatService = g.TextChatService or cloneref and cloneref(game:GetService("TextChatService")) or game:GetService("TextChatService")
+local Lighting = g.Lighting or cloneref and cloneref(game:GetService("Lighting")) or game:GetService("Lighting")
+local lighting = Lighting
+local work = Workspace
+local player_gui = g.PlayerGui or LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:FindFirstChildWhichIsA("PlayerGui")
+local uis = UserInputService
+local UIS = uis
+local ts  = TweenService
+local rs  = RunService
+local IsMobile = UserInputService.TouchEnabled
+local http = HttpService
 if not has_gethui and not has_gethidden and not g.roblox_hidden_gui_location then
     if RunService:IsStudio() then
-        local lp = g.LocalPlayer or Players.LocalPlayer or game:GetService("Players").LocalPlayer
-        local player_gui = lp and lp:FindFirstChildWhichIsA("PlayerGui")
         g.roblox_hidden_gui_location = player_gui or CoreGui
     else
         for _, v in ipairs(CoreGui:GetChildren()) do
@@ -78,14 +97,8 @@ local verify_file = "is_verified_in_Flames_Hub.txt"
 local Insert = table.insert
 -- [[ for the Command Handler, because it can check if there is a number in a string (like a command you send). ]] -- 
 g.Is_Integer_In_Str = g.Is_Integer_In_Str or function(str)
-    if type(str) == "number" then
-        return str % 1 == 0
-    end
-
-    if type(str) == "string" then
-        return str:match("^-?%d+$") ~= nil
-    end
-
+    if type(str) == "number" then return str % 1 == 0 end
+    if type(str) == "string" then return str:match("^-?%d+$") ~= nil end
     return false
 end
 
@@ -147,11 +160,7 @@ local function isVerified()
 end
 
 local function setVerified() if writefile and typeof(writefile) == "function" then writefile(verify_file, "true") end end
-local function waitForGuiGone()
-    local CoreGui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
-    while CoreGui:FindFirstChild("MemoryMinigameGUI") do task.wait() end
-end
-
+local function waitForGuiGone() while CoreGui:FindFirstChild("MemoryMinigameGUI") do task.wait() end end
 g.disabled_global_value_correctly = g.disabled_global_value_correctly or function(input)
     local ok, result = pcall(function() return input end)
     if not ok then return true end
@@ -160,12 +169,10 @@ end
 
 g.LifeTogether_Actual_Flames_Hub_Running_Functioning_Currently_On_Client = true
 local userid = localPlayer.UserId
-local http = g.HttpService or cloneref and cloneref(game:GetService("HttpService")) or game:GetService("HttpService")
 local lib = g.FlamesLibrary
 getgenv().lib = getgenv().FlamesLibrary -- necessary for some reason.
 local lib_attempts = 0
 local lib_max_attempts = 15
-local TextService = g.TextService or cloneref and cloneref(game:GetService("TextService")) or game:GetService("TextService")
 while (not lib or type(lib) ~= "table") and lib_attempts < lib_max_attempts do
     task.wait(0.5)
     lib_attempts = lib_attempts + 1
@@ -173,7 +180,7 @@ while (not lib or type(lib) ~= "table") and lib_attempts < lib_max_attempts do
 end
 
 if not lib or type(lib) ~= "table" then
-    if g.notify then g.notify("Error", "FlamesLibrary failed to load, title system cannot continue.", 10) end
+    if g.notify then g.notify("Error", "FlamesLibrary failed to load, the system cannot continue without it.", 15) end
     return
 end
 
@@ -213,25 +220,17 @@ function get_flames_hub_unique_id()
     return nil
 end
 
---[[function create_masked_flames_hub_unique_server_id(target_user_id)
-    local raw = create_flames_hub_unique_id(target_user_id)
-    return mask_unique_id(raw)
-end--]]
-
 function get_masked_flames_hub_unique_id()
     local raw = get_flames_hub_unique_id()
     return mask_unique_id(raw)
 end
 
 local FlamesLibrary = g.lib or g.FlamesLibrary or getgenv().FlamesLibrary
-local Chat = cloneref and cloneref(game:GetService("Chat")) or game:GetService("Chat")
-local me = g.LocalPlayer or Players.LocalPlayer
-local TextChatService = g.TextChatService or cloneref and cloneref(game:GetService("TextChatService")) or game:GetService("TextChatService")
 --local ws_connect = (syn and syn.websocket and syn.websocket.connect) or (WebSocket and WebSocket.connect) or (websocket and websocket.connect)
 --local http_req = request or http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request)
-g.will_tag = g.will_tag or function(text)
+g.will_tag = function(text)
     local filtered
-    local success, response = pcall(function() filtered = Chat:FilterStringForBroadcast(text, me) end)
+    local success, response = pcall(function() filtered = Chat:FilterStringForBroadcast(text, g.LocalPlayer) end)
     if not success then print(tostring(response)); return true end
     return filtered ~= text
 end
@@ -2610,7 +2609,6 @@ g.signal_triangulation_minigame = function()
         return
     end
 
-    local UserInputService = g.UserInputService or cloneref and cloneref(game:GetService("UserInputService")) or game:GetService("UserInputService")
     local preset = get_preset("signal")
     local DARK = Color3.fromRGB(10, 12, 16)
     local CYAN = Color3.fromRGB(60, 200, 220)
@@ -4301,11 +4299,10 @@ g.load_youtube_music_player_func = g.load_youtube_music_player_func or function(
     local asset_id = "76673896881913"
     local target_image = "rbxassetid://" .. asset_id
     task.spawn(function()
-        local core_gui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
         local screen_gui
         repeat
             task.wait(0.1)
-            for _, v in ipairs(core_gui:GetChildren()) do
+            for _, v in ipairs(CoreGui:GetChildren()) do
                 if v:IsA("ScreenGui") then
                     for _, child in ipairs(v:GetDescendants()) do
                         if child:IsA("ImageButton") and child.Image == target_image then
@@ -4413,9 +4410,6 @@ end
 wait(0.2)
 if not g.dragify then
     do
-        local uis = g.safe_wrapper("UserInputService")
-        local ts  = g.safe_wrapper("TweenService")
-        local rs  = g.safe_wrapper("RunService")
         local active_frame     = nil
         local active_drag_start = nil
         local active_start_pos  = nil
@@ -4703,10 +4697,6 @@ if type(LifeTogether_Framework_Base_1) == "function" then LifeTogether_Framework
 if type(LifeTogether_Framework_Base_2) == "function" then LifeTogether_Framework_Base_2() end
 if type(Dex_Explorer_Checker) == "function" then Dex_Explorer_Checker() end
 if g.ConstantUpdate_Checker_Live then g.notify("Success", "Enabled/Re-Enabled LIVE update checker.", 5) end
-local LocalPlayer = g.LocalPlayer or Players.LocalPlayer
-local UserInputService = g.UserInputService or g.safe_wrapper("UserInputService")
-local HttpService = g.HttpService or g.safe_wrapper("HttpService")
-local isMobile = UserInputService.TouchEnabled
 g.all_saved_Life_Together_RP_Outfit_IDs = {}
 g.get_all_current_outfits_and_their_IDs = function()
     local Data = require(ReplicatedStorage:FindFirstChild("Data", true))
@@ -4956,7 +4946,6 @@ end
 
 local function ensure_global_loop()
     if g._rgb_global_conn then return end
-    local rs = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
     local conn = rs.RenderStepped:Connect(function(dt)
         local conns = g._rgb_conns
         local any = false
@@ -5316,18 +5305,17 @@ if not g.Flames_Hub_Owner_Title_Animated_Initialized then
         if player.Character then cleanup_character(player.Character) end
     end
 
-    for _, plr in ipairs(Players:GetPlayers()) do watch_owners_character(plr) end
+    for _, player in ipairs(Players:GetPlayers()) do watch_owners_character(player) end
     if not g.Flames_Title_Owner_Added_And_Removing_Checks then
         g.Flames_Title_Owner_Added_And_Removing_Checks = true
-
-        lib.connect(OWNER_KEY .. "_player_added", Players.PlayerAdded:Connect(function(plr)
-            lib.spawn(OWNER_KEY .. "_watch_" .. tostring(plr.UserId), "spawn", function()
-                watch_owners_character(plr)
+        lib.connect(OWNER_KEY .. "_player_added", Players.PlayerAdded:Connect(function(player)
+            lib.spawn(OWNER_KEY .. "_watch_" .. tostring(player.UserId), "spawn", function()
+                watch_owners_character(player)
             end)
         end))
 
-        lib.connect(OWNER_KEY .. "_player_removing", Players.PlayerRemoving:Connect(function(plr)
-            unwatch_player(plr)
+        lib.connect(OWNER_KEY .. "_player_removing", Players.PlayerRemoving:Connect(function(player)
+            unwatch_player(player)
         end))
     end
 end
@@ -5454,14 +5442,14 @@ local ccEffects = {
     })
 }
 
-local vignetteGui = g.CoreGui:FindFirstChild("VignetteEffect") or g.PlayerGui:FindFirstChild("VignetteEffect")
+local vignetteGui = CoreGui:FindFirstChild("VignetteEffect") or g.PlayerGui:FindFirstChild("VignetteEffect")
 if not vignetteGui then
     vignetteGui = Instance.new("ScreenGui")
     vignetteGui.Name = "VignetteEffect"
     vignetteGui.IgnoreGuiInset = true
     vignetteGui.Enabled = false
     vignetteGui.ResetOnSpawn = false
-    vignetteGui.Parent = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
+    vignetteGui.Parent = CoreGui
 end
 
 local vignetteImage = vignetteGui:FindFirstChildOfClass("ImageLabel")
@@ -6346,7 +6334,7 @@ g.car_listing_gui = function()
     ScreenGui.Parent = parent_gui
 
     local MainFrame = Instance.new("Frame")
-    MainFrame.Size = isMobile and UDim2.new(0, 280, 0, 350) or UDim2.new(0, 350, 0, 450)
+    MainFrame.Size = IsMobile and UDim2.new(0, 280, 0, 350) or UDim2.new(0, 350, 0, 450)
     MainFrame.Position = UDim2.new(0.5, -MainFrame.Size.X.Offset/2, 0.5, -MainFrame.Size.Y.Offset/2)
     MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     MainFrame.BorderSizePixel = 0
@@ -7893,7 +7881,7 @@ g.start_vehicle_fly = g.start_vehicle_fly or function()
         base.AssemblyAngularVelocity = Vector3.zero
         local cam = workspace.CurrentCamera
 
-        if isMobile then
+        if IsMobile then
             bg.CFrame = cam.CFrame
             local mv = controlModule:GetMoveVector()
             local vel = Vector3.zero
@@ -7913,7 +7901,7 @@ g.start_vehicle_fly = g.start_vehicle_fly or function()
         end
     end)
 
-    if not isMobile then
+    if not IsMobile then
         g.vehiclefly_conns.down = UserInputService.InputBegan:Connect(function(i, game_processed)
             if game_processed then return end
             if i.KeyCode == Enum.KeyCode.W then g.vehiclefly_control.f = 1  end
@@ -8796,27 +8784,21 @@ end
 
 g.find_messages_modulescript = g.find_messages_modulescript or function()
     if g.Messages_Module_Found_Loc then return g.Messages_Module_Found_Loc end
-    local reps = g.ReplicatedStorage or g.safe_wrapper("ReplicatedStorage")
-    if not reps then return nil end
-    local found = reps:FindFirstChild("Messages", true)
+    local found = ReplicatedStorage:FindFirstChild("Messages", true)
     if found and found:IsA("ModuleScript") then g.Messages_Module_Found_Loc = found end
     return g.Messages_Module_Found_Loc
 end
 
 g.find_UI_modulescript = g.find_UI_modulescript or function()
     if g.UI_Module_Main then return g.UI_Module_Main end
-    local reps = g.ReplicatedStorage or g.safe_wrapper("ReplicatedStorage")
-    if not reps then return nil end
-    local found = reps:FindFirstChild("UI", true)
+    local found = ReplicatedStorage:FindFirstChild("UI", true)
     if found and found:IsA("ModuleScript") then g.UI_Module_Main = found end
     return g.UI_Module_Main
 end
 
 g.find_RateLimiter_modulescript = g.find_RateLimiter_modulescript or function()
     if g.RateLimiter_Module_Main then return g.RateLimiter_Module_Main end
-    local reps = g.ReplicatedStorage or g.safe_wrapper("ReplicatedStorage")
-    if not reps then return nil end
-    local found = reps:FindFirstChild("RateLimiter", true)
+    local found = ReplicatedStorage:FindFirstChild("RateLimiter", true)
     if found and found:IsA("ModuleScript") then g.RateLimiter_Module_Main = found end
     return g.RateLimiter_Module_Main
 end
@@ -9321,7 +9303,6 @@ end
 g.start_orbit_plr = g.start_orbit_plr or function(target, speed, distance)
     if g.Is_Orbiting then g.notify("Warning", "Already orbiting someone!", 3); return end
     if not target or not target.Character then g.notify("Error", "Target invalid or they're missing their Character.", 5); return end
-    local RunService = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
     local target_char = target.Character or g.get_char(target)
     local root = g.HumanoidRootPart or g.get_root(LocalPlayer, 3)
     local humanoid = g.Humanoid or g.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(LocalPlayer)
@@ -9386,7 +9367,6 @@ g.flyKeyDown = g.flyKeyDown or nil
 g.flyKeyUp = g.flyKeyUp or nil
 g.mobileFlyConn = g.mobileFlyConn or nil
 g.pcFlyConn = g.pcFlyConn or nil
-local UIS = g.UserInputService or cloneref and cloneref(game:GetService("UserInputService")) or game:GetService("UserInputService")
 g.EnableFly = g.EnableFly or function(state, speed, vfly)
     if g.FlyEnabled then
         if speed and tonumber(speed) then
@@ -9398,7 +9378,6 @@ g.EnableFly = g.EnableFly or function(state, speed, vfly)
         return 
     end
 
-    local plr = g.LocalPlayer or g.Players.LocalPlayer or Players.LocalPlayer
     local char = g.Character or plr.Character or g.get_char(plr, Players.RespawnTime + 1)
     local hrp = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(plr, Players.RespawnTime + 1)
     local hum = g.Humanoid or char and char:FindFirstChildOfClass("Humanoid") or g.get_human(plr, Players.RespawnTime + 1)
@@ -9432,7 +9411,7 @@ g.EnableFly = g.EnableFly or function(state, speed, vfly)
     BV.Parent = hrp
 
     hum.PlatformStand = true
-    if not isMobile then
+    if not IsMobile then
         local CONTROL = {F=0,B=0,L=0,R=0,Q=0,E=0}
         g.pcFlyConn = RunService.RenderStepped:Connect(function(dt)
             if not g.FlyEnabled then return end
@@ -9512,7 +9491,6 @@ g.DisableFly = g.DisableFly or function()
     if g.flyKeyUp then g.flyKeyUp:Disconnect(); g.flyKeyUp = nil end
     if g.pcFlyConn then g.pcFlyConn:Disconnect(); g.pcFlyConn = nil end
     if g.mobileFlyConn then g.mobileFlyConn:Disconnect(); g.mobileFlyConn = nil end
-    local plr = g.LocalPlayer
     local char = g.Character or plr.Character or g.get_char(plr, 3)
     local hrp = g.HumanoidRootPart or char:FindFirstChild("HumanoidRootPart") or g.get_root(plr, 3)
     local hum = g.Humanoid or char:FindFirstChildWhichIsA("Humanoid") or g.get_human(plr, 3)
@@ -9971,8 +9949,6 @@ local excluded_functions = {
 
 g.Flames_Debugger_Function_Tester_GUI = g.Flames_Debugger_Function_Tester_GUI or function()
     local genv = g
-    local CoreGui = genv.CoreGui or (cloneref and cloneref(game:GetService("CoreGui"))) or game:GetService("CoreGui")
-    local UIS = genv.UserInputService or game:GetService("UserInputService")
     local start_scan
 
     if genv.__flames_debugger_running then
@@ -10217,7 +10193,7 @@ g.CreateCreditsLabel = function()
     g.MainCreditsLabel_WithPrefix = label
     label.AnchorPoint = Vector2.new(0.5, 1)
 
-    if isMobile then
+    if IsMobile then
         label.Position = UDim2.new(0.5, 0, 0.95, -10)
         label.Size = UDim2.new(0.3, 0, 0, 28)
     else
@@ -10404,7 +10380,12 @@ FlamesLibrary.connect("pmh_playerremoving", Players.PlayerRemoving:Connect(funct
     FlamesLibrary.disconnect(plr_id .. "_charwait")
 end))
 
-for _, plr in ipairs(Players:GetPlayers()) do if plr ~= Players.LocalPlayer then g.hook_player(plr) end end
+g.run_hooking_players = function()
+    for _, player in ipairs(Players:GetPlayers()) do if player ~= Players.LocalPlayer then g.hook_player(player) end end
+end
+wait(0.1)
+pcall(function() g.run_hooking_players() end)
+
 g.rescan_all_pcms = g.rescan_all_pcms or function()
     for pcm in pairs(g._pcm_registry) do
         if not pcm.Parent then
@@ -10615,8 +10596,6 @@ end
 g.stored_effects_main_tbl = g.stored_effects_main_tbl or {}
 g.stored_parts_main_tbl = g.stored_parts_main_tbl or {}
 g.parts_seen = g.parts_seen or {}
-local lighting = g.Lighting or cloneref and cloneref(game:GetService("Lighting")) or game:GetService("Lighting")
-local work = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 g.validWorkspacePart = g.validWorkspacePart or function(inst)
     if not inst or not inst.Parent then return false end
     if inst:IsDescendantOf(lighting) then return false end
@@ -10825,7 +10804,7 @@ g.StartAdonisAdminFlyScript = g.StartAdonisAdminFlyScript or function()
         )
 
         local offset = Vector3.zero
-        if isMobile and controlModule then
+        if IsMobile and controlModule then
             local mv = controlModule:GetMoveVector()
             if mv.Magnitude > 0 then offset = (camera.CFrame.LookVector * -mv.Z + camera.CFrame.RightVector * mv.X) * speed end
         else
@@ -10900,12 +10879,9 @@ g.fly2Heartbeat = nil
 g.fly2MobileConn = nil
 g.EnableFly2 = g.EnableFly2 or function(speed)
     if g.Enabled_Flying then g.notify("Warning", "Fly-2 is already enabled!", 3); return end
-    local plr = g.LocalPlayer or Players.LocalPlayer
     local char = g.Character or plr.Character or g.get_char(plr, 3)
     local HRP = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(plr, 3)
     local Humanoid = g.Humanoid or char and char:FindFirstChildOfClass("Humanoid") or g.get_human(plr, 3)
-    local RunService = g.RunService or g.safe_wrapper("RunService")
-    local Debris = g.Debris or g.safe_wrapper("Debris")
     if not HRP or not Humanoid then g.notify("Error", "Character is not ready or Humanoid is missing.", 5); return end
     g.Enabled_Flying = true
     g.Fly2Speed = tonumber(speed) or 10
@@ -10923,9 +10899,8 @@ g.EnableFly2 = g.EnableFly2 or function(speed)
     vel.Velocity = Vector3.zero
     vel.Name = "Fly2Velocity"
     vel.Parent = HRP
-
-    Humanoid.PlatformStand = true
-    if not isMobile then
+    if Humanoid and Humanoid.Parent and Humanoid:IsDescendantOf(game) then Humanoid.PlatformStand = true end
+    if not IsMobile then
         if g.fly2InputBegan then g.fly2InputBegan:Disconnect() end
         if g.fly2InputEnded then g.fly2InputEnded:Disconnect() end
         if g.fly2Heartbeat then g.fly2Heartbeat:Disconnect() end
@@ -13659,7 +13634,7 @@ if not g.FlamesHubPlayerEvents_Check then
     g.FlamesLibrary.connect("PlayerAdded_OwnerAdminCheck", Players.PlayerAdded:Connect(function(Player)
         local Name = Player and Player.Name
         g.Blacklisted_Friends = g.Blacklisted_Friends or {}
-        if Player:IsFriendsWith(g.LocalPlayer.UserId) then
+        if Player:IsFriendsWith(speaker.UserId) then
             if not g.Blacklisted_Friends[Name] then
                 g.automatically_add_friends()
             end
@@ -13690,12 +13665,8 @@ if not g.FlamesHubPlayerEvents_Check then
 
         g.disable_rgb_for(Name)
         g.fully_disable_rgb_plr(Name)
-        if g.Locked_Vehicles[Name] then
-            g.Locked_Vehicles[Name] = false
-        end
-        if g.Unlocked_Vehicles[Name] then
-            g.Unlocked_Vehicles[Name] = false
-        end
+        if g.Locked_Vehicles[Name] then g.Locked_Vehicles[Name] = false end
+        if g.Unlocked_Vehicles[Name] then g.Unlocked_Vehicles[Name] = false end
     end))
 end
 
@@ -13754,7 +13725,6 @@ g.create_ui_element("Button", Home_Section, {
 Name = "Join the Flames Hub Discord server.",
 Callback = function()
     local http_requesting_func = request or http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request)
-    local http_service = g.HttpService or (cloneref and cloneref(game:GetService("HttpService"))) or game:GetService("HttpService")
     local opened = false
     if http_requesting_func and typeof(http_requesting_func) == "function" then
         local success = pcall(function()
@@ -13765,9 +13735,9 @@ Callback = function()
                     ['Content-Type'] = 'application/json',
                     Origin = 'https://discord.com'
                 },
-                Body = http_service:JSONEncode({
+                Body = HttpService:JSONEncode({
                     cmd = 'INVITE_BROWSER',
-                    nonce = http_service:GenerateGUID(false),
+                    nonce = HttpService:GenerateGUID(false),
                     args = {code = 'Xhvm6eu6tx'}
                 })
             })
@@ -13811,10 +13781,10 @@ end,})
 
 g.create_ui_element("Toggle", Home_Section, {
 Name = "Anti Hashtags (FE) BETA!",
-Default = (getgenv().FlamesLibrary.modules and getgenv().FlamesLibrary.modules.chat_filter_override.enabled) or false,
+Default = (FlamesLibrary.modules and FlamesLibrary.modules.chat_filter_override.enabled) or false,
 Flag = "Anti_Hashtags_Toggle_UI",
 Callback = function(state)
-    if getgenv().FlamesLibrary.modules then getgenv().FlamesLibrary.modules.chat_filter_override:toggle(state) end
+    if FlamesLibrary.modules then FlamesLibrary.modules.chat_filter_override:toggle(state) end
 end}, "Anti_Hashtags_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
@@ -15116,13 +15086,11 @@ PlaceholderText = "Username or displayname...",
 Flag = "Rainbow_Car_Friend_Input_UI",
 Callback = function(split)
     local Player_To_RGB_Car = g.findplr(split)
-    if not Player_To_RGB_Car then return g.notify("Error", "Player does not exist!", 5) end
-    if not g.get_other_vehicle(Player_To_RGB_Car) then return g.notify("Error", "Player does not have a Vehicle spawned!", 5) end
+    if not Player_To_RGB_Car then g.notify("Error", "Player does not exist!", 3); return end
+    if not g.get_other_vehicle(Player_To_RGB_Car) then g.notify("Error", "Player does not have a Vehicle spawned!", 5); return end
     local checker = g.check_friend(Player_To_RGB_Car)
-    if not checker or checker ~= true then
-        return g.notify("Error", "Player is not your friend, add them to use this!", 5)
-    end
-    if g.FlamesLibrary.is_alive("rainbow_car_" .. Player_To_RGB_Car.Name) then return g.notify("Error", "Player already has their car rainbow!", 5) end
+    if not checker or checker ~= true then g.notify("Error", "Player is not your friend, add them to use this!", 5); return end
+    if g.FlamesLibrary.is_alive("rainbow_car_" .. Player_To_RGB_Car.Name) then g.notify("Error", "Player already has their car rainbow!", 5); return end
     local colors = {
         Color3.fromRGB(255, 255, 255), Color3.fromRGB(128, 128, 128),
         Color3.fromRGB(0, 0, 0), Color3.fromRGB(0, 0, 255),
@@ -15139,7 +15107,8 @@ Callback = function(split)
             local current_plr = g.Players:FindFirstChild(Player_To_RGB_Car.Name)
             if not current_plr then
                 g.FlamesLibrary.disconnect(thread_name)
-                return g.notify("Error", "Player must have left the game.", 5)
+                g.notify("Error", "Player must have left the game.", 5)
+                return
             end
             for _, color in ipairs(colors) do
                 if not g.FlamesLibrary.is_alive(thread_name) then break end
@@ -15157,12 +15126,12 @@ PlaceholderText = "Username or displayname...",
 Flag = "Stop_Rainbow_Car_Friend_Input_UI",
 Callback = function(split)
     local Player_To_RGB_Car_Stop = g.findplr(split)
-    if not Player_To_RGB_Car_Stop then return g.notify("Error", "Player does not exist!", 5) end
-    if not g.get_other_vehicle(Player_To_RGB_Car_Stop) then return g.notify("Error", "Player does not have a Vehicle spawned!", 5) end
+    if not Player_To_RGB_Car_Stop then g.notify("Error", "Player does not exist!", 5); return end
+    if not g.get_other_vehicle(Player_To_RGB_Car_Stop) then g.notify("Error", "Player does not have a Vehicle spawned!", 5); return end
     local checker = g.check_friend(Player_To_RGB_Car_Stop) or Player_To_RGB_Car_Stop:IsFriendsWith(g.LocalPlayer.UserId)
-    if checker ~= true then return g.notify("Error", "Player is not your friend, add them to use this!", 5) end
+    if checker ~= true then g.notify("Error", "Player is not your friend, add them to use this!", 5) end
     local thread_name = "rainbow_car_" .. Player_To_RGB_Car_Stop.Name
-    if not g.FlamesLibrary.is_alive(thread_name) then return g.notify("Warning", "This Player does not have Rainbow Vehicle enabled.", 6) end
+    if not g.FlamesLibrary.is_alive(thread_name) then g.notify("Warning", "This Player does not have Rainbow Vehicle enabled.", 6); return end
     g.FlamesLibrary.disconnect(thread_name)
     g.disable_rgb_for(Player_To_RGB_Car_Stop)
     g.notify("Success", "Disabled Rainbow Vehicle for: " .. Player_To_RGB_Car_Stop.Name, 5)
@@ -15173,7 +15142,8 @@ Name = "Lock Home (FE)",
 Callback = function()
     local is_locked = g.is_home_locked(g.LocalPlayer)
     if is_locked == true then
-        return g.notify("Warning", "Your home is already locked.", 5)
+        g.notify("Warning", "Your home is already locked.", 5)
+        return 
     elseif is_locked == false then
         g.toggle_house_lock(g.LocalPlayer)
         g.notify("Success", "Locked your home.", 5)
@@ -15187,7 +15157,8 @@ Name = "Unlock Home (FE)",
 Callback = function()
     local is_locked = g.is_home_locked(g.LocalPlayer)
     if is_locked == false then
-        return g.notify("Warning", "Your home is not locked.", 5)
+        g.notify("Warning", "Your home is not locked.", 5)
+        return 
     elseif is_locked == true then
         g.toggle_house_lock(g.LocalPlayer)
         g.notify("Success", "Unlocked your home.", 5)
@@ -15210,13 +15181,12 @@ PlaceholderText = "Username or displayname...",
 Flag = "Lock_Player_Home_Input_UI",
 Callback = function(split)
     local plr_to_lock = g.findplr(split)
-    if not plr_to_lock then return g.notify("Error", "Player not found or does not exist.", 5) end
-    if not plr_to_lock:IsFriendsWith(g.LocalPlayer.UserId) then
-        return g.notify("Error", "You must be friends with the player to lock their House!", 10)
-    end
+    if not plr_to_lock then g.notify("Error", "Player not found or does not exist.", 5); return end
+    if not plr_to_lock:IsFriendsWith(g.LocalPlayer.UserId) then g.notify("Error", "You must be friends with the player to lock their House!", 10); return end
     local is_locked = g.is_home_locked(plr_to_lock)
     if is_locked == true then
-        return g.notify("Warning", tostring(plr_to_lock) .. "'s home is already locked.", 5)
+        g.notify("Warning", tostring(plr_to_lock) .. "'s home is already locked.", 5)
+        return 
     elseif is_locked == false then
         g.toggle_house_lock(plr_to_lock)
         g.notify("Success", "Locked: " .. tostring(plr_to_lock) .. "'s home.", 5)
@@ -15231,13 +15201,12 @@ PlaceholderText = "Username or displayname...",
 Flag = "Unlock_Player_Home_Input_UI",
 Callback = function(split)
     local plr_to_unlock = g.findplr(split)
-    if not plr_to_unlock then return g.notify("Error", "Player not found or does not exist.", 5) end
-    if not plr_to_unlock:IsFriendsWith(g.LocalPlayer.UserId) then
-        return g.notify("Error", "You must be friends with the player to unlock their House!", 10)
-    end
+    if not plr_to_unlock then g.notify("Error", "Player not found or does not exist.", 5); return end
+    if not plr_to_unlock:IsFriendsWith(g.LocalPlayer.UserId) then g.notify("Error", "You must be friends with the player to unlock their House!", 10); return end
     local is_locked = g.is_home_locked(plr_to_unlock)
     if is_locked == false then
-        return g.notify("Warning", tostring(plr_to_unlock) .. "'s home is not locked.", 5)
+        g.notify("Warning", tostring(plr_to_unlock) .. "'s home is not locked.", 5)
+        return
     elseif is_locked == true then
         g.toggle_house_lock(plr_to_unlock)
         g.notify("Success", "Unlocked: " .. tostring(plr_to_unlock) .. "'s home.", 5)
@@ -15252,7 +15221,7 @@ PlaceholderText = "Username or displayname...",
 Flag = "Friend_Player_Input_UI",
 Callback = function(split)
     local target_friend_plr = g.findplr(split)
-    if not target_friend_plr then return g.notify("Error", "That player does not exist or has left the game.", 6) end
+    if not target_friend_plr then g.notify("Error", "That player does not exist or has left the game.", 6); return end
     g.friend_user_async_function(target_friend_plr)
 end}, "Friend_Player_Input_UI")
 
@@ -15262,7 +15231,7 @@ PlaceholderText = "Username or displayname...",
 Flag = "Unfriend_Player_Input_UI",
 Callback = function(split)
     local target_unfriend_plr = g.findplr(split)
-    if not target_unfriend_plr then return g.notify("Error", "That player does not exist or has left the game.", 6) end
+    if not target_unfriend_plr then g.notify("Error", "That player does not exist or has left the game.", 6); return end
     g.unfriend_user_async(target_unfriend_plr)
 end}, "Unfriend_Player_Input_UI")
 
@@ -15282,11 +15251,11 @@ Default = getgenv().HidePhoneModels or false,
 Flag = "Anti_RGB_Phone_Toggle_UI",
 Callback = function(state)
     if state then
-        if g.HidePhoneModels then return g.notify("Warning", "Anti RGB Phone is already enabled.", 5) end
+        if g.HidePhoneModels then g.notify("Warning", "Anti RGB Phone is already enabled.", 5); return end
         g.notify("Success", "Enabled Anti RGB Phone.", 5)
         g.TogglePhoneModelHider(true)
     else
-        if not g.HidePhoneModels then return g.notify("Warning", "Anti RGB Phone is not enabled.", 5) end
+        if not g.HidePhoneModels then g.notify("Warning", "Anti RGB Phone is not enabled.", 5); return end
         g.notify("Success", "Disabled Anti RGB Phone.", 5)
         g.TogglePhoneModelHider(false)
     end
@@ -15322,10 +15291,10 @@ Default = getgenv().Rainbow_Tools_FE or false,
 Flag = "RGB_Tool_Toggle_UI",
 Callback = function(state)
     if state then
-        if g.Rainbow_Tools_FE then return g.notify("Warning", "Rainbow Tool is already enabled.", 5) end
+        if g.Rainbow_Tools_FE then g.notify("Warning", "Rainbow Tool is already enabled.", 5); return end
         g.rainbow_tool(true)
     else
-        if not g.Rainbow_Tools_FE then return g.notify("Warning", "Rainbow Tool is not enabled.", 5) end
+        if not g.Rainbow_Tools_FE then g.notify("Warning", "Rainbow Tool is not enabled.", 5); return end
         g.rainbow_tool(false)
     end
 end}, "RGB_Tool_Toggle_UI")
@@ -15336,12 +15305,12 @@ Default = getgenv().firehidden or false,
 Flag = "Anti_Fire_Toggle_UI",
 Callback = function(state)
     if state then
-        if g.firehidden then return g.notify("Warning", "Flames Anti-Fire Spammer V3 is already enabled.", 6) end
-        if g.spamming_all_that_fire then return g.notify("Warning", "Flames Spammer is enabled, disable it first!", 10) end
+        if g.firehidden then g.notify("Warning", "Flames Anti-Fire Spammer V3 is already enabled.", 6); return end
+        if g.spamming_all_that_fire then g.notify("Warning", "Flames Spammer is enabled, disable it first!", 10); return end
         g.notify("Success", "Flames Anti-Fire Spammer V3 is now enabled.", 6)
         g.set_fire_state(true)
     else
-        if not g.firehidden then return g.notify("Warning", "Flames Anti-Fire Spammer V3 is not enabled.", 6) end
+        if not g.firehidden then g.notify("Warning", "Flames Anti-Fire Spammer V3 is not enabled.", 6); return end
         g.notify("Success", "Flames Anti-Fire Spammer V3 is now disabled.", 6)
         g.set_fire_state(false)
     end
@@ -15392,8 +15361,8 @@ if priv_server_is_in == true then
     Flag = "Kick_Player_Input_UI",
     Callback = function(split)
         local target_plr = g.findplr(split)
-        if not target_plr then return g.notify("Error", "That player does not exist or has left.", 5) end
-        if not g.is_localplayer_server_owner() then return g.notify("Error", "You are not the private server owner!", 5) end
+        if not target_plr then g.notify("Error", "That player does not exist or has left.", 5); return end
+        if not g.is_localplayer_server_owner() then g.notify("Error", "You are not the private server owner!", 5); return end
         if target_plr.Name == "CIippedByAura" or target_plr.Name == "L0CKED_1N1" then return end
         g.kick_plr(target_plr)
         g.notify("Success", "Kicked Player: " .. tostring(target_plr), 5)
@@ -15407,7 +15376,8 @@ if priv_server_is_in == true then
         if not g.is_localplayer_server_owner() then
             local admin_player = g.get_server_admin_player()
             g.notify("Warning", "Private Server is owned by: " .. tostring(admin_player and admin_player.Name or "Unknown"), 7)
-            return g.notify("Error", "Not a Private Server or you don't own it!", 6)
+            g.notify("Error", "Not a Private Server or you don't own it!", 5)
+            return
         end
         local target = g.findplr(split) or split
         local added = addban(target)
@@ -15426,14 +15396,15 @@ if priv_server_is_in == true then
         if not g.is_localplayer_server_owner() then
             local admin_player = g.get_server_admin_player()
             g.notify("Warning", "Private Server is owned by: " .. tostring(admin_player and admin_player.Name or "Unknown"), 7)
-            return g.notify("Error", "Not a Private Server or you don't own it!", 6)
+            g.notify("Error", "Not a Private Server or you don't own it!", 5)
+            return
         end
         local target = g.findplr(split) or split
         local removed = removeban(target)
         if removed then
             g.notify("Success", "Unbanned player: " .. removed, 5)
         else
-            g.notify("Error", "Player is not banned.", 6)
+            g.notify("Error", "Player is not banned.", 3)
         end
     end}, "Unban_Player_Input_UI")
 end
@@ -15452,13 +15423,9 @@ PlaceholderText = "Username or displayname...",
 Flag = "Admin_Player_Input_UI",
 Callback = function(split)
     local Player = g.findplr(split)
-    if not Player then return g.notify("Error", "Player does not exist!", 5) end
-    if not Player:IsFriendsWith(g.LocalPlayer.UserId) then
-        return g.notify("Error", "This player isn't friends with you, add them!", 5)
-    end
-    if g.player_admins[Player.Name] then
-        return g.notify("Error", "Player is already an admin!", 5)
-    end
+    if not Player then g.notify("Error", "Player does not exist!", 5); return end
+    if not Player:IsFriendsWith(g.LocalPlayer.UserId) then g.notify("Error", "This player isn't friends with you, add them!", 5); return end
+    if g.player_admins[Player.Name] then g.notify("Error", "Player is already an admin!", 5); return end
     g.alreadyCheckedUser(Player)
     fw(0.5)
     g.notify("Success", "Added " .. tostring(Player.Name) .. " to the admin's table!", 3)
@@ -15470,10 +15437,8 @@ PlaceholderText = "Username or displayname...",
 Flag = "Unadmin_Player_Input_UI",
 Callback = function(split)
     local Player = g.findplr(split)
-    if not Player then return g.notify("Error", "Player does not exist!", 5) end
-    if not Player:IsFriendsWith(g.LocalPlayer.UserId) then
-        return g.notify("Error", "This player isn't friends with you!", 5)
-    end
+    if not Player then g.notify("Error", "Player does not exist!", 5); return end
+    if not Player:IsFriendsWith(g.LocalPlayer.UserId) then g.notify("Error", "This player isn't friends with you!", 5); return end
     local Name = Player.Name
     g.notify("Warning", "Removing admin for: " .. tostring(Name), 5)
     if g.player_admins[Name] then g.player_admins[Name] = nil end
@@ -15536,10 +15501,8 @@ Flag = "Rainbow_Time_Input_UI",
 Callback = function(split)
     local parts = split and split:split(" ") or {}
     local Player = g.findplr(parts[1])
-    if not Player then return g.notify("Error", "Player doesn't exist or has left!", 5) end
-    if not Player:IsFriendsWith(g.LocalPlayer.UserId) then
-        return g.notify("Error", "Player is not friends with you, add them!", 5)
-    end
+    if not Player then g.notify("Error", "Player doesn't exist or has left!", 5); return end
+    if not Player:IsFriendsWith(g.LocalPlayer.UserId) then g.notify("Error", "Player is not friends with you, add them!", 5); return end
     local new_delay = tonumber(parts[2]) or 1
     g.Rainbow_Delays = g.Rainbow_Delays or {}
     g.Rainbow_Delays[Player.Name] = new_delay
@@ -15553,7 +15516,7 @@ PlaceholderText = "Username or displayname...",
 Flag = "Walk_Fling_Whitelist_Input_UI",
 Callback = function(split)
     local plr = g.findplr(split)
-    if typeof(plr) ~= "Instance" or not plr:IsA("Player") then return g.notify("Error", "Player not found in game.", 5) end
+    if typeof(plr) ~= "Instance" or not plr:IsA("Player") then g.notify("Error", "Player not found in game.", 3); return end
     g.AddToWalkFlingWhitelist(plr)
 end}, "Walk_Fling_Whitelist_Input_UI")
 
@@ -15563,7 +15526,7 @@ PlaceholderText = "Username or displayname...",
 Flag = "Walk_Fling_Unwhitelist_Input_UI",
 Callback = function(split)
     local plr = g.findplr(split)
-    if typeof(plr) ~= "Instance" or not plr:IsA("Player") then return g.notify("Error", "Player not found in game.", 5) end
+    if typeof(plr) ~= "Instance" or not plr:IsA("Player") then g.notify("Error", "Player not found in game.", 5); return end
     g.RemoveFromWalkFlingWhitelist(plr)
 end}, "Walk_Fling_Unwhitelist_Input_UI")
 
@@ -15667,20 +15630,28 @@ Callback = function()
     g.flames_nameless_admin_ver()
 end,})
 
-g.create_ui_element("Toggle", Extras_Section, {
+g.Toggle_Fire_Spam = g.create_ui_element("Toggle", Extras_Section, {
 Name = "Flames (FE)",
 Default = getgenv().spamming_all_that_fire or false,
 Flag = "Flames_Toggle_UI",
 Callback = function(state)
     if state then
-        if g.spamming_all_that_fire then return g.notify("Warning", "You're already spamming Fire!", 5) end
         if g.LocalPlayer:GetAttribute("is_verified") == false then
-            return g.notify("Error", "You need actual LifePay premium to run this!", 6)
+            if g.Toggle_Fire_Spam then g.Toggle_Fire_Spam:Set(false, false) end
+            g.notify("Error", "You need actual LifePay premium to run this!", 5)
+            return
         end
-        g.spamming_flames(true)
+        if g.spamming_flames and typeof(g.spamming_flames) == "function" then
+            g.spamming_flames(true)
+        else
+            g.notify("Error", "Function: g.spamming_flames does not exist.", 3); return
+        end
     else
-        if not g.spamming_all_that_fire then return g.notify("Warning", "You're not spamming Fire!", 5) end
-        g.spamming_flames(false)
+        if g.spamming_flames and typeof(g.spamming_flames) == "function" then
+            g.spamming_flames(false)
+        else
+            g.notify("Error", "Function: g.spamming_flames does not exist.", 3); return
+        end
     end
 end}, "Flames_Toggle_UI")
 
@@ -15691,16 +15662,12 @@ Flag = "Spawn_Fire_Input_UI",
 Callback = function(split)
     local amount = tonumber(split) or 5
     local is_verified = g.LocalPlayer:GetAttribute("is_verified")
-    if not is_verified then
-        return g.notify("Error", "You do not have premium, you cannot run this!", 8)
-    end
+    if not is_verified then g.notify("Error", "You do not have premium, you cannot run this!", 8); return end
     g.HasSeen_Fire_AlertFlamesHub = g.HasSeen_Fire_AlertFlamesHub or false
     g.set_fire_amount_FE(amount)
     g.HasSeen_Fire_AlertFlamesHub = true
     fw(0.2)
-    for i = 1, amount do
-        g.Send("request_fire")
-    end
+    for i = 1, amount do g.Send("request_fire") end
 end}, "Spawn_Fire_Input_UI")
 
 g.create_ui_element("Toggle", Extras_Section, {
@@ -15709,10 +15676,10 @@ Default = getgenv().ToolChanger_FE or false,
 Flag = "Sign_Spam_Toggle_UI",
 Callback = function(state)
     if state then
-        if g.ToolChanger_FE then return g.notify("Warning", "Sign spammer is already enabled!", 5) end
+        if g.ToolChanger_FE then g.notify("Warning", "Sign spammer is already enabled!", 5); return end
         g.spam_sign_text(true)
     else
-        if not g.ToolChanger_FE then return g.notify("Warning", "Sign spammer is not enabled!", 5) end
+        if not g.ToolChanger_FE then g.notify("Warning", "Sign spammer is not enabled!", 5); return end
         g.spam_sign_text(false)
     end
 end}, "Sign_Spam_Toggle_UI")
@@ -15722,9 +15689,7 @@ Name = "Collect All NBA Props (FE)",
 Callback = function()
     local attr = g.LocalPlayer:GetAttribute("NBA_HUNT_PROGRESS")
     if not attr then return end
-    if attr ~= "PLAYING" then
-        return g.notify("Warning", "Talk to the NPC first and enter before trying this!", 10)
-    end
+    if attr ~= "PLAYING" then g.notify("Warning", "Talk to the NPC first and enter before trying this!", 10); return end
     g.collect_all_nba_props()
 end,})
 
@@ -15804,7 +15769,7 @@ Callback = function(selected)
 		["Michael Jackson"] = "michaeljackson",
 	}
 	local emote = emote_map[selected]
-	if not emote then return g.notify("Error", "Unknown emote selected.", 2.5) end
+	if not emote then g.notify("Error", "Unknown emote selected.", 2.5); return end
 	g.do_emote(emote)
 end}, "Emotes_Dropdown_UI")
 
@@ -15860,7 +15825,7 @@ Default = Color3.fromRGB(255, 0, 0),
 Flag = "Car_Color_Picker_UI",
 Callback = function(color)
     local vehicle = g.get_vehicle()
-    if not vehicle then return g.notify("Error", "You do not have a vehicle spawned!", 0.75) end
+    if not vehicle then g.notify("Error", "You do not have a vehicle spawned!", 0.75); return end
     g.change_vehicle_color(color, vehicle)
 end}, "Car_Color_Picker_UI")
 
@@ -15889,7 +15854,7 @@ Callback = function(state)
 end}, "Tracer_ESP_Toggle_UI")
 
 g.notify("Success", "Welcome back, "..tostring(g.LocalPlayer.DisplayName)..".", 10)
-local function print_bytes(label, s)
+g.print_bytes = function(label, s)
     local bytes = {}
     for i = 1, #s do
         table.insert(bytes, string.byte(s, i))
@@ -15923,7 +15888,7 @@ local function Notify(msg, dur)
     local gui = Instance.new("ScreenGui")
     gui.Name = "CustomNotifyGui"
     gui.ResetOnSpawn = false
-    gui.Parent = g.CoreGui
+    gui.Parent = CoreGui
 
     local frame = Instance.new("Frame")
     frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -15966,7 +15931,7 @@ local function Notify(msg, dur)
         g.TweenService:Create(icon, TweenInfo.new(0.3), { ImageTransparency = 1 }):Play()
         g.TweenService:Create(label, TweenInfo.new(0.3), { TextTransparency = 1 }):Play()
         task.wait(0.35)
-        gui:Destroy()
+        if gui and gui:IsA("ScreenGui") then gui:Destroy() end
     end)
 end
 
