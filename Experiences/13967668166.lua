@@ -14,7 +14,7 @@ end
 local g = getgenv()
 local http_game = (getgenv()["game"] or game)["HttpGet"]
 getgenv().http_get = function(url) return http_game(game, url) end
-local Raw_Version = "V9.2.3"
+local Raw_Version = "V9.2.6"
 getgenv().Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
 local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
@@ -5271,7 +5271,7 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
 end
 
 local holiday = g.getholiday() or ""
-local Announcement_Message = "[discord.gg/MTYKxQfpNJ]: Join our Discord server, also, it looks like Life Together RP patched Laser + Pistol."
+local Announcement_Message = "Updated entire structure and Framework, also updated internals + published an update regarding the new DAISE update."
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
 g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.
