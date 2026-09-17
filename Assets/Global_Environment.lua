@@ -129,6 +129,7 @@ local TextChatService      = getgenv().TextChatService
 local Chat                 = getgenv().Chat
 local LocalPlayer          = g.LocalPlayer or Players.LocalPlayer
 local TextService          = getgenv().TextService
+local UIS                  = getgenv().UserInputService
 g.wait_until = function(condition, interval, max_tries)
     interval = tonumber(interval) or 0.05
     if typeof(max_tries) == "string" then
@@ -2034,6 +2035,16 @@ g.minigame_difficulty = {
     safe = "Medium",
     wire = "Medium",
     simon = "Medium",
+    morse = "Medium",
+    frequency = "Medium",
+    overload = "Medium",
+    terminal = "Medium",
+    decryption = "Medium",
+    voltage = "Medium",
+    shadow = "Medium",
+    bank_drill = "Medium",
+    fingerprint = "Medium",
+    dead_drop = "Medium",
 }
 
 g.minigame_difficulty_presets = {
@@ -2071,6 +2082,91 @@ g.minigame_difficulty_presets = {
         Easy   = {rounds_to_win = 3, flash_duration = 0.5, gap_duration = 0.25},
         Medium = {rounds_to_win = 5, flash_duration = 0.4, gap_duration = 0.15},
         Hard   = {rounds_to_win = 8, flash_duration = 0.25, gap_duration = 0.08},
+    },
+    lockpick = {
+        Easy   = {pin_count = 3, sweet_width = 26, tension_max = 140, tension_rate = 6, dial_speed = 70},
+        Medium = {pin_count = 4, sweet_width = 18, tension_max = 120, tension_rate = 9, dial_speed = 100},
+        Hard   = {pin_count = 5, sweet_width = 12, tension_max = 100, tension_rate = 13, dial_speed = 140},
+    },
+    laser = {
+        Easy   = {row_count = 4, beam_speed = 1.0, hazard_margin = 0.10, time_limit = 35},
+        Medium = {row_count = 6, beam_speed = 1.5, hazard_margin = 0.16, time_limit = 25},
+        Hard   = {row_count = 8, beam_speed = 2.2, hazard_margin = 0.24, time_limit = 18},
+    },
+    signal = {
+        Easy   = {tolerance = 8, time_limit = 35, drift_speed = 0},
+        Medium = {tolerance = 5, time_limit = 25, drift_speed = 6},
+        Hard   = {tolerance = 3, time_limit = 18, drift_speed = 12},
+    },
+    pipe = {
+        Easy   = {grid_size = 3, locked_count = 1, time_limit = 40},
+        Medium = {grid_size = 4, locked_count = 2, time_limit = 30},
+        Hard   = {grid_size = 5, locked_count = 3, time_limit = 22},
+    },
+    steady = {
+        Easy   = {drift_force = 40, zone_width = 0.30, hold_duration = 3, time_limit = 30},
+        Medium = {drift_force = 70, zone_width = 0.20, hold_duration = 4, time_limit = 25},
+        Hard   = {drift_force = 110, zone_width = 0.12, hold_duration = 5, time_limit = 20},
+    },
+    rhythm = {
+        Easy   = {note_count = 10, note_speed = 220, hit_window = 0.14, max_misses = 4},
+        Medium = {note_count = 14, note_speed = 300, hit_window = 0.10, max_misses = 3},
+        Hard   = {note_count = 18, note_speed = 400, hit_window = 0.07, max_misses = 2},
+    },
+    recall = {
+        Easy   = {card_count = 4, show_time = 0.8, grid_cols = 4},
+        Medium = {card_count = 6, show_time = 0.6, grid_cols = 4},
+        Hard   = {card_count = 8, show_time = 0.45, grid_cols = 4},
+    },
+    morse = {
+        Easy   = {sequence_length = 4, dit_duration = 0.5, gap_duration = 0.3, time_limit = 40},
+        Medium = {sequence_length = 6, dit_duration = 0.35, gap_duration = 0.2, time_limit = 30},
+        Hard   = {sequence_length = 8, dit_duration = 0.22, gap_duration = 0.12, time_limit = 22},
+    },
+    frequency = {
+        Easy   = {band_count = 3, drift_speed = 0.04, tolerance = 0.07, time_limit = 35},
+        Medium = {band_count = 4, drift_speed = 0.09, tolerance = 0.05, time_limit = 25},
+        Hard   = {band_count = 5, drift_speed = 0.16, tolerance = 0.03, time_limit = 18},
+    },
+    overload = {
+        Easy   = {node_count = 4, surge_interval = 2.4, max_overloads = 3, time_limit = 40},
+        Medium = {node_count = 6, surge_interval = 1.6, max_overloads = 2, time_limit = 30},
+        Hard   = {node_count = 8, surge_interval = 1.0, max_overloads = 1, time_limit = 22},
+    },
+    terminal = {
+        Easy   = {word_length = 4, max_attempts = 6, word_count = 6},
+        Medium = {word_length = 5, max_attempts = 4, word_count = 8},
+        Hard   = {word_length = 6, max_attempts = 3, word_count = 10},
+    },
+    decryption = {
+        Easy   = {segments = 3, rot_speed = 40,  time_limit = 35, key_count = 2},
+        Medium = {segments = 4, rot_speed = 65,  time_limit = 25, key_count = 3},
+        Hard   = {segments = 5, rot_speed = 100, time_limit = 18, key_count = 4},
+    },
+    voltage = {
+        Easy   = {step_count = 3, tolerance = 0.12, speed = 0.5,  time_limit = 40},
+        Medium = {step_count = 5, tolerance = 0.07, speed = 0.85, time_limit = 28},
+        Hard   = {step_count = 7, tolerance = 0.04, speed = 1.3,  time_limit = 20},
+    },
+    shadow = {
+        Easy   = {shape_count = 4, display_time = 1.2, pool_size = 5},
+        Medium = {shape_count = 6, display_time = 0.8, pool_size = 7},
+        Hard   = {shape_count = 8, display_time = 0.5, pool_size = 9},
+    },
+    bank_drill = {
+        Easy   = {heat_zones = 3, overheat_rate = 8,  cooldown_rate = 12, sweet_zone = 0.28, time_limit = 45},
+        Medium = {heat_zones = 5, overheat_rate = 14, cooldown_rate = 9,  sweet_zone = 0.18, time_limit = 32},
+        Hard   = {heat_zones = 7, overheat_rate = 22, cooldown_rate = 6,  sweet_zone = 0.10, time_limit = 22},
+    },
+    fingerprint = {
+        Easy   = {layers = 1, drift_speed = 0,    tolerance = 0.08, time_limit = 40},
+        Medium = {layers = 2, drift_speed = 0.012, tolerance = 0.05, time_limit = 28},
+        Hard   = {layers = 2, drift_speed = 0.025, tolerance = 0.03, time_limit = 18},
+    },
+    dead_drop = {
+        Easy   = {grid_cols = 2, grid_rows = 2, hop_interval = 3.5, max_misses = 4, signal_duration = 1.2, decoys = false},
+        Medium = {grid_cols = 3, grid_rows = 2, hop_interval = 2.4, max_misses = 3, signal_duration = 0.8, decoys = false},
+        Hard   = {grid_cols = 3, grid_rows = 3, hop_interval = 1.6, max_misses = 2, signal_duration = 0.5, decoys = true},
     },
 }
 
@@ -3666,11 +3762,363 @@ g.simon_says_minigame = function()
     end
 
     cancel.MouseButton1Click:Connect(function()
-        if g.notify then g.notify("Info", "Simon Says cancelled.", 3) end
+        if g.notify and typeof(g.notify) == "function" then g.notify("Info", "Simon Says cancelled.", 3) end
         cleanup()
     end)
 
     start_round()
+end
+
+g.dead_drop_minigame = function()
+    if g.dead_drop_minigame_cooldown and tick() - g.dead_drop_minigame_cooldown < 30 then
+        local remaining = math.ceil(30 - (tick() - g.dead_drop_minigame_cooldown))
+        if g.notify then g.notify("Warning", "Wait " .. remaining .. "s.", 5) end
+        return
+    end
+
+    local preset     = get_preset("dead_drop")
+    local DARK       = Color3.fromRGB(8, 8, 10)
+    local WHITE      = Color3.fromRGB(240, 240, 240)
+    local MUTED      = Color3.fromRGB(80, 80, 95)
+    local GREEN      = Color3.fromRGB(60, 200, 100)
+    local RED        = Color3.fromRGB(200, 60, 60)
+    local SIGNAL_COL = Color3.fromRGB(60, 230, 160)
+    local DECOY_COL  = Color3.fromRGB(230, 180, 40)
+    local SCREEN_BG  = Color3.fromRGB(12, 14, 12)
+    local STATIC_LO  = Color3.fromRGB(18, 20, 18)
+    local STATIC_HI  = Color3.fromRGB(38, 42, 38)
+    local GRID_COLS       = preset.grid_cols
+    local GRID_ROWS       = preset.grid_rows
+    local HOP_INTERVAL    = preset.hop_interval
+    local MAX_MISSES      = preset.max_misses
+    local SIGNAL_DURATION = preset.signal_duration
+    local DECOYS          = preset.decoys
+    local FEED_COUNT      = GRID_COLS * GRID_ROWS
+    local ROUNDS_TO_WIN   = 6
+    local signal_feed    = math.random(1, FEED_COUNT)
+    local signal_visible = false
+    local misses         = 0
+    local rounds_won     = 0
+    local game_over      = false
+    local hop_elapsed    = 0
+    local signal_elapsed = 0
+    local static_elapsed = 0
+    local render_conn    = nil
+    local feed_frames    = {}
+    local feed_cells     = {}
+    local scanline_frames = {}
+    local CELL_COLS      = 10
+    local CELL_ROWS      = 8
+    if CoreGui:FindFirstChild("DeadDropGUI") then CoreGui.DeadDropGUI:Destroy() end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "DeadDropGUI"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.Parent = CoreGui
+
+    getgenv().Keybind_Input_Disabled_For_Mini_Game = true
+
+    local CELL_SIZE  = 54
+    local GRID_W     = GRID_COLS * (CELL_SIZE + 8) + 8
+    local GRID_H     = GRID_ROWS * (CELL_SIZE + 8) + 8
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, math.max(340, GRID_W + 40), 0, GRID_H + 160)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.fromScale(0.5, 0.5)
+    frame.BackgroundColor3 = DARK
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+    local fstroke = Instance.new("UIStroke", frame)
+    fstroke.Color = Color3.fromRGB(40, 50, 40)
+    fstroke.Thickness = 1.5
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(0.75, 0, 0, 36)
+    title.Position = UDim2.new(0, 12, 0, 6)
+    title.BackgroundTransparency = 1
+    title.Text = "// DEAD DROP //"
+    title.TextColor3 = SIGNAL_COL
+    title.Font = Enum.Font.Code
+    title.TextSize = 15
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = frame
+
+    local timer_label = Instance.new("TextLabel")
+    timer_label.Size = UDim2.new(0.22, 0, 0, 36)
+    timer_label.Position = UDim2.new(0.7, 0, 0, 6)
+    timer_label.BackgroundTransparency = 1
+    timer_label.Text = "INTERCEPTS: 0/" .. ROUNDS_TO_WIN
+    timer_label.TextColor3 = WHITE
+    timer_label.Font = Enum.Font.Code
+    timer_label.TextSize = 10
+    timer_label.TextXAlignment = Enum.TextXAlignment.Right
+    timer_label.Parent = frame
+
+    local cancel = Instance.new("TextButton")
+    cancel.Size = UDim2.new(0, 28, 0, 28)
+    cancel.Position = UDim2.new(1, -34, 0, 8)
+    cancel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    cancel.Text = "X"
+    cancel.TextScaled = true
+    cancel.Font = Enum.Font.GothamBold
+    cancel.TextColor3 = WHITE
+    cancel.BorderSizePixel = 0
+    cancel.Parent = frame
+    Instance.new("UICorner", cancel).CornerRadius = UDim.new(0, 6)
+
+    local miss_lbl = Instance.new("TextLabel")
+    miss_lbl.Size = UDim2.new(1, -20, 0, 16)
+    miss_lbl.Position = UDim2.new(0, 10, 0, 44)
+    miss_lbl.BackgroundTransparency = 1
+    miss_lbl.Text = "Misses: 0 / " .. MAX_MISSES .. "   —   Watch for the signal flicker."
+    miss_lbl.TextColor3 = MUTED
+    miss_lbl.Font = Enum.Font.Code
+    miss_lbl.TextSize = 10
+    miss_lbl.TextXAlignment = Enum.TextXAlignment.Left
+    miss_lbl.Parent = frame
+
+    local grid_frame = Instance.new("Frame")
+    grid_frame.Size = UDim2.new(0, GRID_W, 0, GRID_H)
+    grid_frame.AnchorPoint = Vector2.new(0.5, 0)
+    grid_frame.Position = UDim2.new(0.5, 0, 0, 66)
+    grid_frame.BackgroundTransparency = 1
+    grid_frame.Parent = frame
+
+    local function cleanup()
+        if render_conn then render_conn:Disconnect() end
+        if gui then gui:Destroy() end
+        getgenv().Keybind_Input_Disabled_For_Mini_Game = false
+    end
+
+    local function win()
+        game_over = true
+        g.dead_drop_minigame_cooldown = tick()
+        if g.notify then g.notify("Success", "Signal intercepted!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    local function fail(msg)
+        game_over = true
+        if g.notify then g.notify("Error", msg or "Signal lost!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    local function hop_signal()
+        signal_visible = false
+        local prev = signal_feed
+        repeat signal_feed = math.random(1, FEED_COUNT) until signal_feed ~= prev
+        hop_elapsed    = 0
+        signal_elapsed = 0
+        signal_visible = false
+    end
+
+    local decoy_feeds  = {}
+    local function build_static(cells, intensity)
+        for r = 1, CELL_ROWS do
+            for c = 1, CELL_COLS do
+                local v = math.random()
+                local bright = v < intensity
+                cells[r][c].BackgroundColor3 = bright and STATIC_HI or STATIC_LO
+            end
+        end
+    end
+
+    local function build_signal_pattern(cells, col)
+        for r = 1, CELL_ROWS do
+            for c = 1, CELL_COLS do
+                local cx = (c - 0.5) / CELL_COLS
+                local cy = (r - 0.5) / CELL_ROWS
+                local dist = math.sqrt((cx - 0.5)^2 + (cy - 0.5)^2)
+                local ring = math.sin(dist * math.pi * 8) > 0.3
+                local v = math.random()
+                if ring and v > 0.3 then
+                    cells[r][c].BackgroundColor3 = col
+                else
+                    cells[r][c].BackgroundColor3 = v < 0.25 and STATIC_HI or STATIC_LO
+                end
+            end
+        end
+    end
+
+    for i = 1, FEED_COUNT do
+        local row = math.floor((i - 1) / GRID_COLS)
+        local col = (i - 1) % GRID_COLS
+        local px  = col * (CELL_SIZE + 8) + 8
+        local py  = row * (CELL_SIZE + 8) + 8
+
+        local feed = Instance.new("Frame")
+        feed.Size = UDim2.new(0, CELL_SIZE, 0, CELL_SIZE)
+        feed.Position = UDim2.new(0, px, 0, py)
+        feed.BackgroundColor3 = SCREEN_BG
+        feed.BorderSizePixel = 0
+        feed.ClipsDescendants = true
+        feed.Parent = grid_frame
+        Instance.new("UICorner", feed).CornerRadius = UDim.new(0, 6)
+        local feed_stroke = Instance.new("UIStroke", feed)
+        feed_stroke.Color = Color3.fromRGB(30, 35, 30)
+        feed_stroke.Thickness = 1
+
+        local cam_lbl = Instance.new("TextLabel")
+        cam_lbl.Size = UDim2.new(1, 0, 0, 8)
+        cam_lbl.Position = UDim2.new(0, 0, 0, 1)
+        cam_lbl.BackgroundTransparency = 1
+        cam_lbl.Text = "CAM " .. string.format("%02d", i)
+        cam_lbl.Font = Enum.Font.Code
+        cam_lbl.TextSize = 7
+        cam_lbl.TextColor3 = Color3.fromRGB(50, 70, 50)
+        cam_lbl.TextXAlignment = Enum.TextXAlignment.Left
+        cam_lbl.Parent = feed
+
+        local cell_grid = Instance.new("Frame")
+        cell_grid.Size = UDim2.new(1, 0, 1, -9)
+        cell_grid.Position = UDim2.new(0, 0, 0, 9)
+        cell_grid.BackgroundTransparency = 1
+        cell_grid.ClipsDescendants = true
+        cell_grid.Parent = feed
+
+        feed_cells[i] = {}
+        for r = 1, CELL_ROWS do
+            feed_cells[i][r] = {}
+            for c = 1, CELL_COLS do
+                local cell = Instance.new("Frame")
+                cell.Size = UDim2.new(1 / CELL_COLS, 0, 1 / CELL_ROWS, 0)
+                cell.Position = UDim2.new((c - 1) / CELL_COLS, 0, (r - 1) / CELL_ROWS, 0)
+                cell.BackgroundColor3 = STATIC_LO
+                cell.BorderSizePixel = 0
+                cell.Parent = cell_grid
+                feed_cells[i][r][c] = cell
+            end
+        end
+
+        local scanline = Instance.new("Frame")
+        scanline.Size = UDim2.new(1, 0, 0, 2)
+        scanline.Position = UDim2.new(0, 0, 0, 0)
+        scanline.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        scanline.BackgroundTransparency = 0.88
+        scanline.BorderSizePixel = 0
+        scanline.ZIndex = 4
+        scanline.Parent = feed
+        scanline_frames[i] = scanline
+
+        local click_btn = Instance.new("TextButton")
+        click_btn.Size = UDim2.fromScale(1, 1)
+        click_btn.BackgroundTransparency = 1
+        click_btn.Text = ""
+        click_btn.ZIndex = 5
+        click_btn.Parent = feed
+        feed_frames[i] = {frame = feed, stroke = feed_stroke, cam_lbl = cam_lbl}
+
+        local feed_idx = i
+        click_btn.MouseButton1Click:Connect(function()
+            if game_over then return end
+            if not signal_visible then return end
+            if feed_idx == signal_feed then
+                feed_stroke.Color = GREEN
+                feed_stroke.Thickness = 2
+                cam_lbl.TextColor3 = GREEN
+                rounds_won = rounds_won + 1
+                timer_label.Text = "INTERCEPTS: " .. rounds_won .. "/" .. ROUNDS_TO_WIN
+                signal_visible = false
+                if rounds_won >= ROUNDS_TO_WIN then
+                    win()
+                    return
+                end
+                task.delay(0.15, function()
+                    if game_over then return end
+                    feed_stroke.Color = Color3.fromRGB(30, 35, 30)
+                    feed_stroke.Thickness = 1
+                    cam_lbl.TextColor3 = Color3.fromRGB(50, 70, 50)
+                    hop_signal()
+                end)
+            else
+                local is_decoy = false
+                for _, di in ipairs(decoy_feeds) do
+                    if di == feed_idx then is_decoy = true; break end
+                end
+                if not is_decoy then
+                    misses = misses + 1
+                    miss_lbl.Text = "Misses: " .. misses .. " / " .. MAX_MISSES .. "   —   Watch for the signal flicker."
+                    feed_stroke.Color = RED
+                    feed_stroke.Thickness = 2
+                    task.delay(0.3, function()
+                        if game_over then return end
+                        feed_stroke.Color = Color3.fromRGB(30, 35, 30)
+                        feed_stroke.Thickness = 1
+                    end)
+                    if misses >= MAX_MISSES then
+                        fail("Too many wrong feeds!")
+                    end
+                end
+            end
+        end)
+    end
+
+    local scanline_pos = {}
+    for i = 1, FEED_COUNT do scanline_pos[i] = math.random() end
+
+    render_conn = RunService.Heartbeat:Connect(function(dt)
+        if game_over then return end
+        static_elapsed = static_elapsed + dt
+        hop_elapsed    = hop_elapsed    + dt
+        signal_elapsed = signal_elapsed + dt
+
+        if hop_elapsed >= HOP_INTERVAL then
+            misses = misses + 1
+            miss_lbl.Text = "Misses: " .. misses .. " / " .. MAX_MISSES .. "   —   Watch for the signal flicker."
+            if misses >= MAX_MISSES then
+                fail("Signal lost — too slow!")
+                return
+            end
+            hop_signal()
+        end
+
+        local show_signal = signal_elapsed <= SIGNAL_DURATION
+        signal_visible = show_signal
+
+        if DECOYS and show_signal then
+            decoy_feeds = {}
+            if math.random() > 0.6 then
+                local d = math.random(1, FEED_COUNT)
+                if d ~= signal_feed then
+                    table.insert(decoy_feeds, d)
+                end
+            end
+        else
+            decoy_feeds = {}
+        end
+
+        if static_elapsed > 0.05 then
+            static_elapsed = 0
+            for i = 1, FEED_COUNT do
+                local is_signal = (i == signal_feed and show_signal)
+                local is_decoy  = false
+                for _, di in ipairs(decoy_feeds) do if di == i then is_decoy = true; break end end
+
+                if is_signal then
+                    build_signal_pattern(feed_cells[i], SIGNAL_COL)
+                    feed_frames[i].stroke.Color = SIGNAL_COL
+                    feed_frames[i].stroke.Thickness = 2
+                elseif is_decoy then
+                    build_signal_pattern(feed_cells[i], DECOY_COL)
+                    feed_frames[i].stroke.Color = DECOY_COL
+                    feed_frames[i].stroke.Thickness = 1.5
+                else
+                    build_static(feed_cells[i], 0.18)
+                    feed_frames[i].stroke.Color = Color3.fromRGB(30, 35, 30)
+                    feed_frames[i].stroke.Thickness = 1
+                end
+
+                scanline_pos[i] = (scanline_pos[i] + dt * 0.4) % 1
+                scanline_frames[i].Position = UDim2.new(0, 0, scanline_pos[i], 0)
+            end
+        end
+    end)
+
+    cancel.MouseButton1Click:Connect(function()
+        if g.notify then g.notify("Info", "Dead drop cancelled.", 3) end
+        cleanup()
+    end)
 end
 
 g.open_difficulty_editor = function()
@@ -3699,6 +4147,15 @@ g.open_difficulty_editor = function()
         {key = "steady", name = "Steady Hand"},
         {key = "rhythm", name = "Rhythm Splice"},
         {key = "recall", name = "Vault Recall"},
+        {key = "morse",      name = "Morse Decoder"},
+        {key = "frequency",  name = "Frequency Tuner"},
+        {key = "overload",   name = "Overload"},
+        {key = "terminal",   name = "Terminal Hack"},
+        {key = "voltage",    name = "Voltage Regulator"},
+        {key = "shadow",     name = "Shadow Recall"},
+        {key = "bank_drill", name = "Vault Drill"},
+        {key = "fingerprint", name = "Fingerprint Scanner"},
+        {key = "dead_drop", name = "Dead Drop"},
     }
 
     local gui = Instance.new("ScreenGui")
@@ -3886,55 +4343,6 @@ g.open_difficulty_editor = function()
     Instance.new("UICorner", randomize_all_btn).CornerRadius = UDim.new(0, 8)
     randomize_all_btn.MouseButton1Click:Connect(function() for _, entry in ipairs(GAME_LABELS) do randomize_one(entry.key) end end)
 end
-
-g.minigame_difficulty.lockpick = "Medium"
-g.minigame_difficulty.laser = "Medium"
-g.minigame_difficulty.signal = "Medium"
-g.minigame_difficulty.pipe = "Medium"
-g.minigame_difficulty.steady = "Medium"
-g.minigame_difficulty.rhythm = "Medium"
-g.minigame_difficulty.recall = "Medium"
-g.minigame_difficulty_presets.lockpick = {
-    Easy   = {pin_count = 3, sweet_width = 26, tension_max = 140, tension_rate = 6, dial_speed = 70},
-    Medium = {pin_count = 4, sweet_width = 18, tension_max = 120, tension_rate = 9, dial_speed = 100},
-    Hard   = {pin_count = 5, sweet_width = 12, tension_max = 100, tension_rate = 13, dial_speed = 140},
-}
-
-g.minigame_difficulty_presets.laser = {
-    Easy   = {row_count = 4, beam_speed = 1.0, hazard_margin = 0.10, time_limit = 35},
-    Medium = {row_count = 6, beam_speed = 1.5, hazard_margin = 0.16, time_limit = 25},
-    Hard   = {row_count = 8, beam_speed = 2.2, hazard_margin = 0.24, time_limit = 18},
-}
-
-g.minigame_difficulty_presets.signal = {
-    Easy   = {tolerance = 8, time_limit = 35, drift_speed = 0},
-    Medium = {tolerance = 5, time_limit = 25, drift_speed = 6},
-    Hard   = {tolerance = 3, time_limit = 18, drift_speed = 12},
-}
-
-g.minigame_difficulty_presets.pipe = {
-    Easy   = {grid_size = 3, locked_count = 1, time_limit = 40},
-    Medium = {grid_size = 4, locked_count = 2, time_limit = 30},
-    Hard   = {grid_size = 5, locked_count = 3, time_limit = 22},
-}
-
-g.minigame_difficulty_presets.steady = {
-    Easy   = {drift_force = 40, zone_width = 0.30, hold_duration = 3, time_limit = 30},
-    Medium = {drift_force = 70, zone_width = 0.20, hold_duration = 4, time_limit = 25},
-    Hard   = {drift_force = 110, zone_width = 0.12, hold_duration = 5, time_limit = 20},
-}
-
-g.minigame_difficulty_presets.rhythm = {
-    Easy   = {note_count = 10, note_speed = 220, hit_window = 0.14, max_misses = 4},
-    Medium = {note_count = 14, note_speed = 300, hit_window = 0.10, max_misses = 3},
-    Hard   = {note_count = 18, note_speed = 400, hit_window = 0.07, max_misses = 2},
-}
-
-g.minigame_difficulty_presets.recall = {
-    Easy   = {card_count = 4, show_time = 0.8, grid_cols = 4},
-    Medium = {card_count = 6, show_time = 0.6, grid_cols = 4},
-    Hard   = {card_count = 8, show_time = 0.45, grid_cols = 4},
-}
 
 g.lockpick_minigame = function()
     if g.lockpick_minigame_cooldown and tick() - g.lockpick_minigame_cooldown < 30 then
@@ -5453,6 +5861,2338 @@ g.card_recall_minigame = function()
     task.delay(0.6, function() show_sequence(1) end)
 end
 
+g.morse_minigame = function()
+    if g.morse_minigame_cooldown and tick() - g.morse_minigame_cooldown < 30 then
+        local remaining = math.ceil(30 - (tick() - g.morse_minigame_cooldown))
+        if g.notify then g.notify("Warning", "Wait " .. remaining .. "s.", 5) end
+        return
+    end
+
+    local preset = get_preset("morse")
+    local DARK  = Color3.fromRGB(12, 12, 16)
+    local AMBER = Color3.fromRGB(230, 160, 40)
+    local DIM   = Color3.fromRGB(60, 45, 10)
+    local WHITE = Color3.fromRGB(240, 240, 240)
+    local RED   = Color3.fromRGB(200, 60, 60)
+    local MUTED = Color3.fromRGB(100, 100, 110)
+    local MORSE_TABLE = {
+        A=".-",  B="-...", C="-.-.", D="-..",  E=".",    F="..-.",
+        G="--.",  H="....", I="..",   J=".---", K="-.-",  L=".-..",
+        M="--",   N="-.",   O="---",  P=".--.", Q="--.-", R=".-.",
+        S="...",  T="-",    U="..-",  V="...-", W=".--",  X="-..-",
+        Y="-.--", Z="--..",
+    }
+    local ALPHA = {}
+    for k in pairs(MORSE_TABLE) do table.insert(ALPHA, k) end
+    local sequence = {}
+    for i = 1, preset.sequence_length do
+        local letter = ALPHA[math.random(1, #ALPHA)]
+        table.insert(sequence, {letter = letter, code = MORSE_TABLE[letter]})
+    end
+
+    local current_letter = 1
+    local player_input   = ""
+    local game_over      = false
+    local playing        = false
+    local timer_conn     = nil
+    local dot_btn_ref    = nil
+    local dash_btn_ref   = nil
+    local submit_btn_ref = nil
+
+    if CoreGui:FindFirstChild("MorseGUI") then CoreGui.MorseGUI:Destroy() end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "MorseGUI"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.Parent = CoreGui
+
+    getgenv().Keybind_Input_Disabled_For_Mini_Game = true
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 360, 0, 300)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.fromScale(0.5, 0.5)
+    frame.BackgroundColor3 = DARK
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+    local fstroke = Instance.new("UIStroke", frame)
+    fstroke.Color = AMBER
+    fstroke.Thickness = 1.5
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(0.75, 0, 0, 36)
+    title.Position = UDim2.new(0, 12, 0, 6)
+    title.BackgroundTransparency = 1
+    title.Text = "// MORSE DECODER //"
+    title.TextColor3 = AMBER
+    title.Font = Enum.Font.Code
+    title.TextSize = 15
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = frame
+
+    local timer_label = Instance.new("TextLabel")
+    timer_label.Size = UDim2.new(0.2, 0, 0, 36)
+    timer_label.Position = UDim2.new(0.72, 0, 0, 6)
+    timer_label.BackgroundTransparency = 1
+    timer_label.Text = "00:" .. string.format("%02d", preset.time_limit)
+    timer_label.TextColor3 = WHITE
+    timer_label.Font = Enum.Font.Code
+    timer_label.TextSize = 15
+    timer_label.TextXAlignment = Enum.TextXAlignment.Right
+    timer_label.Parent = frame
+
+    local cancel = Instance.new("TextButton")
+    cancel.Size = UDim2.new(0, 28, 0, 28)
+    cancel.Position = UDim2.new(1, -34, 0, 8)
+    cancel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    cancel.Text = "X"
+    cancel.TextScaled = true
+    cancel.Font = Enum.Font.GothamBold
+    cancel.TextColor3 = WHITE
+    cancel.BorderSizePixel = 0
+    cancel.Parent = frame
+    Instance.new("UICorner", cancel).CornerRadius = UDim.new(0, 6)
+
+    local progress_lbl = Instance.new("TextLabel")
+    progress_lbl.Size = UDim2.new(1, -20, 0, 20)
+    progress_lbl.Position = UDim2.new(0, 10, 0, 44)
+    progress_lbl.BackgroundTransparency = 1
+    progress_lbl.Text = "Letter 1 of " .. preset.sequence_length
+    progress_lbl.TextColor3 = MUTED
+    progress_lbl.Font = Enum.Font.Code
+    progress_lbl.TextSize = 12
+    progress_lbl.TextXAlignment = Enum.TextXAlignment.Left
+    progress_lbl.Parent = frame
+
+    local flash_indicator = Instance.new("Frame")
+    flash_indicator.Size = UDim2.new(0, 60, 0, 60)
+    flash_indicator.AnchorPoint = Vector2.new(0.5, 0)
+    flash_indicator.Position = UDim2.new(0.5, 0, 0, 72)
+    flash_indicator.BackgroundColor3 = DIM
+    flash_indicator.BorderSizePixel = 0
+    flash_indicator.Parent = frame
+    Instance.new("UICorner", flash_indicator).CornerRadius = UDim.new(0.5, 0)
+
+    local input_display = Instance.new("TextLabel")
+    input_display.Size = UDim2.new(1, -20, 0, 28)
+    input_display.Position = UDim2.new(0, 10, 0, 146)
+    input_display.BackgroundTransparency = 1
+    input_display.Text = "Input: "
+    input_display.TextColor3 = AMBER
+    input_display.Font = Enum.Font.Code
+    input_display.TextSize = 20
+    input_display.TextXAlignment = Enum.TextXAlignment.Center
+    input_display.Parent = frame
+
+    local function cleanup()
+        if timer_conn then timer_conn:Disconnect() end
+        if gui then gui:Destroy() end
+        getgenv().Keybind_Input_Disabled_For_Mini_Game = false
+    end
+
+    local function win()
+        game_over = true
+        g.morse_minigame_cooldown = tick()
+        if g.notify then g.notify("Success", "Morse decoded!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    local function fail(msg)
+        game_over = true
+        if g.notify then g.notify("Error", msg or "Decode failed!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    local function set_input_locked(locked)
+        if dot_btn_ref then dot_btn_ref.Active = not locked; dot_btn_ref.BackgroundTransparency = locked and 0.6 or 0 end
+        if dash_btn_ref then dash_btn_ref.Active = not locked; dash_btn_ref.BackgroundTransparency = locked and 0.6 or 0 end
+        if submit_btn_ref then submit_btn_ref.Active = not locked; submit_btn_ref.BackgroundTransparency = locked and 0.6 or 0 end
+    end
+
+    local function play_letter(idx, callback)
+        if game_over then return end
+        playing = true
+        set_input_locked(true)
+        local code = sequence[idx].code
+        local function play_symbol(s_idx)
+            if game_over then return end
+            if s_idx > #code then
+                playing = false
+                set_input_locked(false)
+                if callback then callback() end
+                return
+            end
+            local sym = code:sub(s_idx, s_idx)
+            local duration = sym == "." and preset.dit_duration or preset.dit_duration * 3
+            flash_indicator.BackgroundColor3 = AMBER
+            task.delay(duration, function()
+                if game_over then return end
+                flash_indicator.BackgroundColor3 = DIM
+                task.delay(preset.gap_duration, function()
+                    play_symbol(s_idx + 1)
+                end)
+            end)
+        end
+        play_symbol(1)
+    end
+
+    local btn_row = Instance.new("Frame")
+    btn_row.Size = UDim2.new(1, -20, 0, 40)
+    btn_row.Position = UDim2.new(0, 10, 0, 184)
+    btn_row.BackgroundTransparency = 1
+    btn_row.Parent = frame
+
+    local btn_layout = Instance.new("UIListLayout")
+    btn_layout.FillDirection = Enum.FillDirection.Horizontal
+    btn_layout.Padding = UDim.new(0, 8)
+    btn_layout.SortOrder = Enum.SortOrder.LayoutOrder
+    btn_layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    btn_layout.Parent = btn_row
+
+    local function make_btn(text, color, order)
+        local b = Instance.new("TextButton")
+        b.Size = UDim2.new(0, 80, 1, 0)
+        b.BackgroundColor3 = color
+        b.Text = text
+        b.Font = Enum.Font.GothamBold
+        b.TextSize = 18
+        b.TextColor3 = WHITE
+        b.BorderSizePixel = 0
+        b.LayoutOrder = order
+        b.Parent = btn_row
+        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+        return b
+    end
+
+    local dot_btn  = make_btn("•", Color3.fromRGB(60, 100, 180), 1)
+    local dash_btn = make_btn("—", Color3.fromRGB(100, 60, 180), 2)
+    dot_btn_ref  = dot_btn
+    dash_btn_ref = dash_btn
+
+    local clear_btn = Instance.new("TextButton")
+    clear_btn.Size = UDim2.new(0, 60, 0, 26)
+    clear_btn.Position = UDim2.new(0, 10, 0, 234)
+    clear_btn.BackgroundColor3 = Color3.fromRGB(50, 30, 30)
+    clear_btn.Text = "CLR"
+    clear_btn.Font = Enum.Font.GothamBold
+    clear_btn.TextSize = 12
+    clear_btn.TextColor3 = WHITE
+    clear_btn.BorderSizePixel = 0
+    clear_btn.Parent = frame
+    Instance.new("UICorner", clear_btn).CornerRadius = UDim.new(0, 6)
+
+    local replay_btn = Instance.new("TextButton")
+    replay_btn.Size = UDim2.new(0, 80, 0, 26)
+    replay_btn.AnchorPoint = Vector2.new(0.5, 0)
+    replay_btn.Position = UDim2.new(0.5, 0, 0, 234)
+    replay_btn.BackgroundColor3 = Color3.fromRGB(30, 50, 40)
+    replay_btn.Text = "REPLAY"
+    replay_btn.Font = Enum.Font.GothamBold
+    replay_btn.TextSize = 12
+    replay_btn.TextColor3 = WHITE
+    replay_btn.BorderSizePixel = 0
+    replay_btn.Parent = frame
+    Instance.new("UICorner", replay_btn).CornerRadius = UDim.new(0, 6)
+
+    local submit_btn = Instance.new("TextButton")
+    submit_btn.Size = UDim2.new(0, 80, 0, 26)
+    submit_btn.AnchorPoint = Vector2.new(1, 0)
+    submit_btn.Position = UDim2.new(1, -10, 0, 234)
+    submit_btn.BackgroundColor3 = Color3.fromRGB(30, 60, 30)
+    submit_btn.Text = "SUBMIT"
+    submit_btn.Font = Enum.Font.GothamBold
+    submit_btn.TextSize = 12
+    submit_btn.TextColor3 = WHITE
+    submit_btn.BorderSizePixel = 0
+    submit_btn.Parent = frame
+    Instance.new("UICorner", submit_btn).CornerRadius = UDim.new(0, 6)
+    submit_btn_ref = submit_btn
+
+    local function update_display()
+        input_display.Text = "Input: " .. player_input
+    end
+
+    dot_btn.MouseButton1Click:Connect(function()
+        if game_over or playing then return end
+        player_input = player_input .. "."
+        update_display()
+    end)
+
+    dash_btn.MouseButton1Click:Connect(function()
+        if game_over or playing then return end
+        player_input = player_input .. "-"
+        update_display()
+    end)
+
+    clear_btn.MouseButton1Click:Connect(function()
+        if game_over or playing then return end
+        player_input = ""
+        update_display()
+    end)
+
+    replay_btn.MouseButton1Click:Connect(function()
+        if game_over or playing then return end
+        player_input = ""
+        update_display()
+        play_letter(current_letter, nil)
+    end)
+
+    submit_btn.MouseButton1Click:Connect(function()
+        if game_over or playing then return end
+        local expected = sequence[current_letter].code
+        if player_input == expected then
+            current_letter = current_letter + 1
+            player_input = ""
+            update_display()
+            if current_letter > preset.sequence_length then
+                win()
+            else
+                progress_lbl.Text = "Letter " .. current_letter .. " of " .. preset.sequence_length
+                task.delay(0.3, function() play_letter(current_letter, nil) end)
+            end
+        else
+            fail("Wrong code! Expected: " .. expected)
+        end
+    end)
+
+    cancel.MouseButton1Click:Connect(function()
+        if g.notify then g.notify("Info", "Morse cancelled.", 3) end
+        cleanup()
+    end)
+
+    local time_elapsed = 0
+    timer_conn = RunService.Heartbeat:Connect(function(dt)
+        if game_over then return end
+        time_elapsed = time_elapsed + dt
+        local left = preset.time_limit - time_elapsed
+        if left <= 0 then timer_label.Text = "00:00"; fail("Time's up!"); return end
+        timer_label.Text = string.format("%02d:%02d", math.floor(left / 60), math.floor(left % 60))
+        if left <= 5 then timer_label.TextColor3 = RED end
+    end)
+
+    play_letter(1, nil)
+end
+
+g.frequency_minigame = function()
+    if g.frequency_minigame_cooldown and tick() - g.frequency_minigame_cooldown < 30 then
+        local remaining = math.ceil(30 - (tick() - g.frequency_minigame_cooldown))
+        if g.notify then g.notify("Warning", "Wait " .. remaining .. "s.", 5) end
+        return
+    end
+
+    local preset = get_preset("frequency")
+    local DARK  = Color3.fromRGB(10, 14, 18)
+    local CYAN  = Color3.fromRGB(60, 210, 230)
+    local WHITE = Color3.fromRGB(240, 240, 240)
+    local RED   = Color3.fromRGB(200, 60, 60)
+    local GREEN = Color3.fromRGB(60, 200, 100)
+    local MUTED = Color3.fromRGB(90, 100, 110)
+    local DIM   = Color3.fromRGB(20, 30, 35)
+
+    local BAND_COUNT  = preset.band_count
+    local DRIFT_SPEED = preset.drift_speed
+    local TOLERANCE   = preset.tolerance
+    local TIME_LIMIT  = preset.time_limit
+
+    local bands = {}
+    for i = 1, BAND_COUNT do
+        bands[i] = {
+            target = math.random(15, 85) / 100,
+            handle = 0.5,
+            drift  = (math.random() > 0.5 and 1 or -1),
+            locked = false,
+        }
+    end
+
+    local game_over   = false
+    local timer_conn  = nil
+    local dragging    = nil
+    local handle_refs = {}
+    local UIS = cloneref and cloneref(game:GetService("UserInputService")) or game:GetService("UserInputService")
+
+    if CoreGui:FindFirstChild("FrequencyGUI") then CoreGui.FrequencyGUI:Destroy() end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "FrequencyGUI"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.Parent = CoreGui
+
+    getgenv().Keybind_Input_Disabled_For_Mini_Game = true
+
+    local ROW_H = 58
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 380, 0, BAND_COUNT * ROW_H + 130)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.fromScale(0.5, 0.5)
+    frame.BackgroundColor3 = DARK
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+    local fstroke = Instance.new("UIStroke", frame)
+    fstroke.Color = CYAN
+    fstroke.Thickness = 1
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(0.7, 0, 0, 36)
+    title.Position = UDim2.new(0, 12, 0, 6)
+    title.BackgroundTransparency = 1
+    title.Text = "// FREQUENCY TUNER //"
+    title.TextColor3 = CYAN
+    title.Font = Enum.Font.Code
+    title.TextSize = 14
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = frame
+
+    local timer_label = Instance.new("TextLabel")
+    timer_label.Size = UDim2.new(0.2, 0, 0, 36)
+    timer_label.Position = UDim2.new(0.72, 0, 0, 6)
+    timer_label.BackgroundTransparency = 1
+    timer_label.Text = "00:" .. string.format("%02d", TIME_LIMIT)
+    timer_label.TextColor3 = WHITE
+    timer_label.Font = Enum.Font.Code
+    timer_label.TextSize = 15
+    timer_label.TextXAlignment = Enum.TextXAlignment.Right
+    timer_label.Parent = frame
+
+    local cancel = Instance.new("TextButton")
+    cancel.Size = UDim2.new(0, 28, 0, 28)
+    cancel.Position = UDim2.new(1, -34, 0, 8)
+    cancel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    cancel.Text = "X"
+    cancel.TextScaled = true
+    cancel.Font = Enum.Font.GothamBold
+    cancel.TextColor3 = WHITE
+    cancel.BorderSizePixel = 0
+    cancel.Parent = frame
+    Instance.new("UICorner", cancel).CornerRadius = UDim.new(0, 6)
+
+    local hint = Instance.new("TextLabel")
+    hint.Size = UDim2.new(1, -20, 0, 18)
+    hint.Position = UDim2.new(0, 10, 0, 44)
+    hint.BackgroundTransparency = 1
+    hint.Text = "Drag all bands into the green zone, then LOCK."
+    hint.TextColor3 = MUTED
+    hint.Font = Enum.Font.Code
+    hint.TextSize = 11
+    hint.TextXAlignment = Enum.TextXAlignment.Left
+    hint.Parent = frame
+
+    local rows_holder = Instance.new("Frame")
+    rows_holder.Size = UDim2.new(1, -20, 0, BAND_COUNT * ROW_H)
+    rows_holder.Position = UDim2.new(0, 10, 0, 66)
+    rows_holder.BackgroundTransparency = 1
+    rows_holder.Parent = frame
+
+    local function cleanup()
+        if timer_conn then timer_conn:Disconnect() end
+        if gui then gui:Destroy() end
+        getgenv().Keybind_Input_Disabled_For_Mini_Game = false
+    end
+
+    local function win()
+        game_over = true
+        g.frequency_minigame_cooldown = tick()
+        if g.notify then g.notify("Success", "All frequencies locked!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    local function fail(msg)
+        game_over = true
+        if g.notify then g.notify("Error", msg or "Signal lost!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    local function check_all_locked()
+        for _, b in ipairs(bands) do
+            if not b.locked then return end
+        end
+        win()
+    end
+
+    for i, band in ipairs(bands) do
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1, 0, 0, ROW_H - 10)
+        row.Position = UDim2.new(0, 0, 0, (i - 1) * ROW_H)
+        row.BackgroundColor3 = DIM
+        row.BorderSizePixel = 0
+        row.Parent = rows_holder
+        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(0, 50, 0, 14)
+        lbl.Position = UDim2.new(0, 6, 0, 4)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = "BAND " .. i
+        lbl.Font = Enum.Font.Code
+        lbl.TextSize = 10
+        lbl.TextColor3 = MUTED
+        lbl.Parent = row
+
+        local track_bg = Instance.new("Frame")
+        track_bg.Size = UDim2.new(1, -100, 0, 10)
+        track_bg.Position = UDim2.new(0, 6, 0, 22)
+        track_bg.BackgroundColor3 = Color3.fromRGB(25, 30, 34)
+        track_bg.BorderSizePixel = 0
+        track_bg.Parent = row
+        Instance.new("UICorner", track_bg).CornerRadius = UDim.new(0, 5)
+
+        local zone_marker = Instance.new("Frame")
+        zone_marker.Size = UDim2.new(TOLERANCE * 2, 0, 1, 4)
+        zone_marker.AnchorPoint = Vector2.new(0.5, 0.5)
+        zone_marker.Position = UDim2.new(band.target, 0, 0.5, 0)
+        zone_marker.BackgroundColor3 = GREEN
+        zone_marker.BackgroundTransparency = 0.5
+        zone_marker.BorderSizePixel = 0
+        zone_marker.Parent = track_bg
+        Instance.new("UICorner", zone_marker).CornerRadius = UDim.new(0, 4)
+
+        local handle = Instance.new("TextButton")
+        handle.Size = UDim2.new(0, 16, 0, 18)
+        handle.AnchorPoint = Vector2.new(0.5, 0.5)
+        handle.Position = UDim2.new(band.handle, 0, 0.5, 0)
+        handle.BackgroundColor3 = WHITE
+        handle.Text = ""
+        handle.BorderSizePixel = 0
+        handle.Parent = track_bg
+        Instance.new("UICorner", handle).CornerRadius = UDim.new(0, 4)
+
+        local lock_btn = Instance.new("TextButton")
+        lock_btn.Size = UDim2.new(0, 70, 0, 26)
+        lock_btn.AnchorPoint = Vector2.new(1, 0.5)
+        lock_btn.Position = UDim2.new(1, -4, 0.5, 4)
+        lock_btn.BackgroundColor3 = Color3.fromRGB(30, 40, 30)
+        lock_btn.Text = "LOCK"
+        lock_btn.Font = Enum.Font.GothamBold
+        lock_btn.TextSize = 11
+        lock_btn.TextColor3 = CYAN
+        lock_btn.BorderSizePixel = 0
+        lock_btn.Parent = row
+        Instance.new("UICorner", lock_btn).CornerRadius = UDim.new(0, 6)
+        Instance.new("UIStroke", lock_btn).Color = CYAN
+
+        handle_refs[i] = {handle = handle, track = track_bg, band = band, lock_btn = lock_btn}
+
+        local band_idx = i
+        handle.InputBegan:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+                dragging = band_idx
+            end
+        end)
+
+        lock_btn.MouseButton1Click:Connect(function()
+            if game_over or band.locked then return end
+            if math.abs(band.handle - band.target) <= TOLERANCE then
+                band.locked = true
+                handle.BackgroundColor3 = GREEN
+                lock_btn.Text = "✓ LOCKED"
+                lock_btn.TextColor3 = GREEN
+                check_all_locked()
+            else
+                if g.notify then g.notify("Warning", "Band " .. band_idx .. " not in range.", 3) end
+            end
+        end)
+    end
+
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging = nil
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(inp)
+        if not dragging or game_over then return end
+        if inp.UserInputType ~= Enum.UserInputType.MouseMovement and inp.UserInputType ~= Enum.UserInputType.Touch then return end
+        local ref = handle_refs[dragging]
+        if not ref or ref.band.locked then return end
+        local bar_pos  = ref.track.AbsolutePosition.X
+        local bar_size = ref.track.AbsoluteSize.X
+        local new_scale = math.clamp((inp.Position.X - bar_pos) / bar_size, 0, 1)
+        ref.band.handle = new_scale
+        ref.handle.Position = UDim2.new(new_scale, 0, 0.5, 0)
+    end)
+
+    cancel.MouseButton1Click:Connect(function()
+        if g.notify then g.notify("Info", "Frequency tuner cancelled.", 3) end
+        cleanup()
+    end)
+
+    local time_elapsed = 0
+    timer_conn = RunService.Heartbeat:Connect(function(dt)
+        if game_over then return end
+        time_elapsed = time_elapsed + dt
+        local left = TIME_LIMIT - time_elapsed
+        if left <= 0 then timer_label.Text = "00:00"; fail("Time's up!"); return end
+        for i, ref in ipairs(handle_refs) do
+            if not ref.band.locked then
+                ref.band.handle = math.clamp(ref.band.handle + ref.band.drift * DRIFT_SPEED * dt, 0, 1)
+                ref.handle.Position = UDim2.new(ref.band.handle, 0, 0.5, 0)
+                if ref.band.handle >= 0.99 or ref.band.handle <= 0.01 then ref.band.drift = -ref.band.drift end
+            end
+        end
+        timer_label.Text = string.format("%02d:%02d", math.floor(left / 60), math.floor(left % 60))
+        if left <= 5 then timer_label.TextColor3 = RED end
+    end)
+end
+
+g.overload_minigame = function()
+    if g.overload_minigame_cooldown and tick() - g.overload_minigame_cooldown < 30 then
+        local remaining = math.ceil(30 - (tick() - g.overload_minigame_cooldown))
+        if g.notify then g.notify("Warning", "Wait " .. remaining .. "s.", 5) end
+        return
+    end
+
+    local preset = get_preset("overload")
+    local DARK   = Color3.fromRGB(10, 10, 14)
+    local YELLOW = Color3.fromRGB(240, 200, 40)
+    local WHITE  = Color3.fromRGB(240, 240, 240)
+    local RED    = Color3.fromRGB(220, 60, 60)
+    local GREEN  = Color3.fromRGB(60, 200, 100)
+    local MUTED  = Color3.fromRGB(90, 90, 100)
+    local DIM    = Color3.fromRGB(28, 28, 34)
+    local NODE_COUNT     = preset.node_count
+    local SURGE_INTERVAL = preset.surge_interval
+    local MAX_OVERLOADS  = preset.max_overloads
+    local TIME_LIMIT     = preset.time_limit
+    local nodes        = {}
+    local overloads    = 0
+    local game_over    = false
+    local timer_conn   = nil
+    local surge_conn   = nil
+    if CoreGui:FindFirstChild("OverloadGUI") then CoreGui.OverloadGUI:Destroy() end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "OverloadGUI"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.Parent = CoreGui
+    getgenv().Keybind_Input_Disabled_For_Mini_Game = true
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 360, 0, 400)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.fromScale(0.5, 0.5)
+    frame.BackgroundColor3 = DARK
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+    local fstroke = Instance.new("UIStroke", frame)
+    fstroke.Color = YELLOW
+    fstroke.Thickness = 1
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(0.75, 0, 0, 36)
+    title.Position = UDim2.new(0, 12, 0, 6)
+    title.BackgroundTransparency = 1
+    title.Text = "// OVERLOAD //"
+    title.TextColor3 = YELLOW
+    title.Font = Enum.Font.Code
+    title.TextSize = 15
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = frame
+
+    local timer_label = Instance.new("TextLabel")
+    timer_label.Size = UDim2.new(0.2, 0, 0, 36)
+    timer_label.Position = UDim2.new(0.72, 0, 0, 6)
+    timer_label.BackgroundTransparency = 1
+    timer_label.Text = "00:" .. string.format("%02d", TIME_LIMIT)
+    timer_label.TextColor3 = WHITE
+    timer_label.Font = Enum.Font.Code
+    timer_label.TextSize = 15
+    timer_label.TextXAlignment = Enum.TextXAlignment.Right
+    timer_label.Parent = frame
+
+    local cancel = Instance.new("TextButton")
+    cancel.Size = UDim2.new(0, 28, 0, 28)
+    cancel.Position = UDim2.new(1, -34, 0, 8)
+    cancel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    cancel.Text = "X"
+    cancel.TextScaled = true
+    cancel.Font = Enum.Font.GothamBold
+    cancel.TextColor3 = WHITE
+    cancel.BorderSizePixel = 0
+    cancel.Parent = frame
+    Instance.new("UICorner", cancel).CornerRadius = UDim.new(0, 6)
+
+    local overload_lbl = Instance.new("TextLabel")
+    overload_lbl.Size = UDim2.new(1, -20, 0, 20)
+    overload_lbl.Position = UDim2.new(0, 10, 0, 44)
+    overload_lbl.BackgroundTransparency = 1
+    overload_lbl.Text = "Overloads: 0 / " .. MAX_OVERLOADS
+    overload_lbl.TextColor3 = MUTED
+    overload_lbl.Font = Enum.Font.Code
+    overload_lbl.TextSize = 12
+    overload_lbl.TextXAlignment = Enum.TextXAlignment.Left
+    overload_lbl.Parent = frame
+
+    local hint = Instance.new("TextLabel")
+    hint.Size = UDim2.new(1, -20, 0, 16)
+    hint.Position = UDim2.new(0, 10, 0, 62)
+    hint.BackgroundTransparency = 1
+    hint.Text = "Click surging nodes before they overload."
+    hint.TextColor3 = MUTED
+    hint.Font = Enum.Font.Code
+    hint.TextSize = 11
+    hint.TextXAlignment = Enum.TextXAlignment.Left
+    hint.Parent = frame
+
+    local grid_frame = Instance.new("Frame")
+    grid_frame.Size = UDim2.new(1, -20, 0, 300)
+    grid_frame.Position = UDim2.new(0, 10, 0, 84)
+    grid_frame.BackgroundTransparency = 1
+    grid_frame.Parent = frame
+
+    local grid_layout = Instance.new("UIGridLayout")
+    grid_layout.CellSize = UDim2.new(0, 80, 0, 80)
+    grid_layout.CellPadding = UDim2.new(0, 10, 0, 10)
+    grid_layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    grid_layout.VerticalAlignment = Enum.VerticalAlignment.Center
+    grid_layout.SortOrder = Enum.SortOrder.LayoutOrder
+    grid_layout.Parent = grid_frame
+
+    local function cleanup()
+        if timer_conn then timer_conn:Disconnect() end
+        if surge_conn then surge_conn:Disconnect() end
+        if gui then gui:Destroy() end
+        getgenv().Keybind_Input_Disabled_For_Mini_Game = false
+    end
+
+    local function win()
+        game_over = true
+        g.overload_minigame_cooldown = tick()
+        if g.notify then g.notify("Success", "Grid stabilized!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    local function fail(msg)
+        game_over = true
+        if g.notify then g.notify("Error", msg or "Grid overloaded!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    for i = 1, NODE_COUNT do
+        local node_frame = Instance.new("Frame")
+        node_frame.BackgroundColor3 = DIM
+        node_frame.BorderSizePixel = 0
+        node_frame.LayoutOrder = i
+        node_frame.Parent = grid_frame
+        Instance.new("UICorner", node_frame).CornerRadius = UDim.new(0, 12)
+        Instance.new("UIStroke", node_frame).Color = Color3.fromRGB(50, 50, 60)
+
+        local charge_bar_bg = Instance.new("Frame")
+        charge_bar_bg.Size = UDim2.new(0.8, 0, 0, 8)
+        charge_bar_bg.AnchorPoint = Vector2.new(0.5, 1)
+        charge_bar_bg.Position = UDim2.new(0.5, 0, 1, -8)
+        charge_bar_bg.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+        charge_bar_bg.BorderSizePixel = 0
+        charge_bar_bg.Parent = node_frame
+        Instance.new("UICorner", charge_bar_bg).CornerRadius = UDim.new(0, 4)
+
+        local charge_fill = Instance.new("Frame")
+        charge_fill.Size = UDim2.new(0, 0, 1, 0)
+        charge_fill.BackgroundColor3 = GREEN
+        charge_fill.BorderSizePixel = 0
+        charge_fill.Parent = charge_bar_bg
+        Instance.new("UICorner", charge_fill).CornerRadius = UDim.new(0, 4)
+
+        local node_lbl = Instance.new("TextLabel")
+        node_lbl.Size = UDim2.new(1, 0, 0.6, 0)
+        node_lbl.Position = UDim2.new(0, 0, 0, 6)
+        node_lbl.BackgroundTransparency = 1
+        node_lbl.Text = "⚡"
+        node_lbl.TextScaled = true
+        node_lbl.Font = Enum.Font.GothamBold
+        node_lbl.TextColor3 = MUTED
+        node_lbl.Parent = node_frame
+
+        local click_btn = Instance.new("TextButton")
+        click_btn.Size = UDim2.fromScale(1, 1)
+        click_btn.BackgroundTransparency = 1
+        click_btn.Text = ""
+        click_btn.Parent = node_frame
+
+        local node_data = {
+            frame      = node_frame,
+            fill       = charge_fill,
+            lbl        = node_lbl,
+            charge     = 0,
+            surging    = false,
+            surge_rate = 0,
+        }
+        nodes[i] = node_data
+
+        local node_idx = i
+        click_btn.MouseButton1Click:Connect(function()
+            if game_over then return end
+            local nd = nodes[node_idx]
+            if nd.surging then
+                nd.surging    = false
+                nd.charge     = 0
+                nd.surge_rate = 0
+                nd.fill.Size  = UDim2.new(0, 0, 1, 0)
+                nd.fill.BackgroundColor3 = GREEN
+                nd.lbl.TextColor3 = MUTED
+                node_frame.BackgroundColor3 = DIM
+            end
+        end)
+    end
+
+    local time_elapsed  = 0
+    local surge_elapsed = 0
+    local surging_count = 0
+    local function pick_new_surge()
+        local candidates = {}
+        for i, nd in ipairs(nodes) do
+            if not nd.surging then table.insert(candidates, i) end
+        end
+        if #candidates == 0 then return end
+        local pick = candidates[math.random(1, #candidates)]
+        local nd = nodes[pick]
+        nd.surging    = true
+        nd.charge     = 0
+        nd.surge_rate = math.random(18, 35) / 100
+        nd.lbl.TextColor3 = YELLOW
+        surging_count = surging_count + 1
+    end
+
+    surge_conn = RunService.Heartbeat:Connect(function(dt)
+        if game_over then return end
+        time_elapsed  = time_elapsed  + dt
+        surge_elapsed = surge_elapsed + dt
+
+        if surge_elapsed >= SURGE_INTERVAL then
+            surge_elapsed = 0
+            pick_new_surge()
+        end
+
+        for _, nd in ipairs(nodes) do
+            if nd.surging then
+                nd.charge = nd.charge + nd.surge_rate * dt
+                local pct = math.clamp(nd.charge, 0, 1)
+                nd.fill.Size = UDim2.new(pct, 0, 1, 0)
+                nd.fill.BackgroundColor3 = pct < 0.5 and GREEN or (pct < 0.8 and YELLOW or RED)
+                nd.frame.BackgroundColor3 = pct > 0.8 and Color3.fromRGB(50, 10, 10) or DIM
+                if nd.charge >= 1 then
+                    nd.surging = false
+                    overloads  = overloads + 1
+                    nd.charge  = 0
+                    nd.fill.Size = UDim2.new(0, 0, 1, 0)
+                    nd.lbl.TextColor3 = MUTED
+                    nd.frame.BackgroundColor3 = DIM
+                    overload_lbl.Text = "Overloads: " .. overloads .. " / " .. MAX_OVERLOADS
+                    if overloads >= MAX_OVERLOADS then
+                        fail("Grid overloaded!")
+                        return
+                    end
+                end
+            end
+        end
+
+        local left = TIME_LIMIT - time_elapsed
+        if left <= 0 then timer_label.Text = "00:00"; win(); return end
+        timer_label.Text = string.format("%02d:%02d", math.floor(left / 60), math.floor(left % 60))
+        if left <= 5 then timer_label.TextColor3 = RED end
+    end)
+
+    cancel.MouseButton1Click:Connect(function()
+        if g.notify then g.notify("Info", "Overload cancelled.", 3) end
+        cleanup()
+    end)
+end
+
+g.terminal_minigame = function()
+    if g.terminal_minigame_cooldown and tick() - g.terminal_minigame_cooldown < 30 then
+        local remaining = math.ceil(30 - (tick() - g.terminal_minigame_cooldown))
+        if g.notify then g.notify("Warning", "Wait " .. remaining .. "s.", 5) end
+        return
+    end
+
+    local preset = get_preset("terminal")
+    local DARK   = Color3.fromRGB(10, 14, 10)
+    local GREEN  = Color3.fromRGB(60, 220, 80)
+    local DIM    = Color3.fromRGB(25, 35, 25)
+    local WHITE  = Color3.fromRGB(240, 240, 240)
+    local RED    = Color3.fromRGB(200, 60, 60)
+    local YELLOW = Color3.fromRGB(230, 200, 50)
+    local MUTED  = Color3.fromRGB(80, 110, 80)
+
+    local WORD_LENGTH  = preset.word_length
+    local MAX_ATTEMPTS = preset.max_attempts
+    local WORD_COUNT   = preset.word_count
+
+    local WORD_POOL_RAW = {
+        "ALPHA","BRAVO","CHAIN","DELTA","EAGLE","FLARE","GHOST","HYDRA",
+        "INPUT","JOKER","KNIFE","LANCE","MICRO","NERVE","ORBIT","PILOT",
+        "QUAKE","RADON","SCOPE","TIGER","ULTRA","VAPOR","WITCH","XENON",
+        "YIELD","ZONES","BLAST","CLOAK","DRONE","EMBER","FROST","GLIDE",
+        "HAUNT","IONIC","JADED","KNEEL","LUMEN","MECHA","NEXUS","OZONE",
+        "PARSE","QUERY","RELAY","SURGE","TRACE","UMBRA","VALVE","WIRED",
+        "XERIC","YARNS","ZILCH","ABBOT","BARON","CEDAR","DIGIT","ENVOY",
+    }
+
+    local filtered = {}
+    for _, w in ipairs(WORD_POOL_RAW) do
+        if #w == WORD_LENGTH then table.insert(filtered, w) end
+    end
+
+    if #filtered < WORD_COUNT then
+        local all_alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        while #filtered < WORD_COUNT + 5 do
+            local w = ""
+            for i = 1, WORD_LENGTH do
+                local idx = math.random(1, 26)
+                w = w .. all_alpha:sub(idx, idx)
+            end
+            local dup = false
+            for _, fw in ipairs(filtered) do if fw == w then dup = true; break end end
+            if not dup then table.insert(filtered, w) end
+        end
+    end
+
+    local shuffled = {}
+    for i = #filtered, 1, -1 do
+        local j = math.random(1, i)
+        filtered[i], filtered[j] = filtered[j], filtered[i]
+    end
+    for i = 1, WORD_COUNT do shuffled[i] = filtered[i] end
+
+    local answer      = shuffled[math.random(1, #shuffled)]
+    local attempts    = 0
+    local game_over   = false
+    local btn_refs    = {}
+
+    if CoreGui:FindFirstChild("TerminalGUI") then CoreGui.TerminalGUI:Destroy() end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "TerminalGUI"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.Parent = CoreGui
+
+    getgenv().Keybind_Input_Disabled_For_Mini_Game = true
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 360, 0, math.max(400, WORD_COUNT * 36 + 160))
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.fromScale(0.5, 0.5)
+    frame.BackgroundColor3 = DARK
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+    local fstroke = Instance.new("UIStroke", frame)
+    fstroke.Color = GREEN
+    fstroke.Thickness = 1
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(0.75, 0, 0, 36)
+    title.Position = UDim2.new(0, 12, 0, 6)
+    title.BackgroundTransparency = 1
+    title.Text = "// TERMINAL HACK //"
+    title.TextColor3 = GREEN
+    title.Font = Enum.Font.Code
+    title.TextSize = 15
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = frame
+
+    local cancel = Instance.new("TextButton")
+    cancel.Size = UDim2.new(0, 28, 0, 28)
+    cancel.Position = UDim2.new(1, -34, 0, 8)
+    cancel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    cancel.Text = "X"
+    cancel.TextScaled = true
+    cancel.Font = Enum.Font.GothamBold
+    cancel.TextColor3 = WHITE
+    cancel.BorderSizePixel = 0
+    cancel.Parent = frame
+    Instance.new("UICorner", cancel).CornerRadius = UDim.new(0, 6)
+
+    local attempts_lbl = Instance.new("TextLabel")
+    attempts_lbl.Size = UDim2.new(1, -20, 0, 20)
+    attempts_lbl.Position = UDim2.new(0, 10, 0, 44)
+    attempts_lbl.BackgroundTransparency = 1
+    attempts_lbl.Text = "Attempts remaining: " .. MAX_ATTEMPTS
+    attempts_lbl.TextColor3 = MUTED
+    attempts_lbl.Font = Enum.Font.Code
+    attempts_lbl.TextSize = 12
+    attempts_lbl.TextXAlignment = Enum.TextXAlignment.Left
+    attempts_lbl.Parent = frame
+
+    local feedback_lbl = Instance.new("TextLabel")
+    feedback_lbl.Size = UDim2.new(1, -20, 0, 20)
+    feedback_lbl.Position = UDim2.new(0, 10, 0, 64)
+    feedback_lbl.BackgroundTransparency = 1
+    feedback_lbl.Text = "Select the correct access word."
+    feedback_lbl.TextColor3 = MUTED
+    feedback_lbl.Font = Enum.Font.Code
+    feedback_lbl.TextSize = 11
+    feedback_lbl.TextXAlignment = Enum.TextXAlignment.Left
+    feedback_lbl.Parent = frame
+
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(1, -20, 1, -100)
+    scroll.Position = UDim2.new(0, 10, 0, 90)
+    scroll.BackgroundTransparency = 1
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 3
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    scroll.Parent = frame
+
+    local list = Instance.new("UIListLayout")
+    list.Padding = UDim.new(0, 6)
+    list.SortOrder = Enum.SortOrder.LayoutOrder
+    list.Parent = scroll
+
+    local function cleanup()
+        if gui then gui:Destroy() end
+        getgenv().Keybind_Input_Disabled_For_Mini_Game = false
+    end
+
+    local function win()
+        game_over = true
+        g.terminal_minigame_cooldown = tick()
+        if g.notify then g.notify("Success", "Access granted!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    local function fail(msg)
+        game_over = true
+        if g.notify then g.notify("Error", msg or "Locked out!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    local function get_likeness(a, b)
+        local count = 0
+        for i = 1, #a do
+            if a:sub(i, i) == b:sub(i, i) then count = count + 1 end
+        end
+        return count
+    end
+
+    for i, word in ipairs(shuffled) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 0, 30)
+        btn.BackgroundColor3 = DIM
+        btn.Text = "> " .. word
+        btn.Font = Enum.Font.Code
+        btn.TextSize = 14
+        btn.TextColor3 = GREEN
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.BorderSizePixel = 0
+        btn.LayoutOrder = i
+        btn.Parent = scroll
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+        local pad = Instance.new("UIPadding")
+        pad.PaddingLeft = UDim.new(0, 10)
+        pad.Parent = btn
+
+        btn_refs[word] = btn
+
+        btn.MouseButton1Click:Connect(function()
+            if game_over then return end
+            if word == answer then
+                btn.BackgroundColor3 = Color3.fromRGB(20, 60, 20)
+                btn.TextColor3 = Color3.fromRGB(100, 255, 100)
+                win()
+                return
+            end
+            attempts = attempts + 1
+            local likeness = get_likeness(word, answer)
+            btn.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
+            btn.TextColor3 = MUTED
+            btn.Text = "> " .. word .. "  [" .. likeness .. "/" .. WORD_LENGTH .. "]"
+            btn.Active = false
+            attempts_lbl.Text = "Attempts remaining: " .. (MAX_ATTEMPTS - attempts)
+            feedback_lbl.Text = likeness .. " character" .. (likeness == 1 and "" or "s") .. " match."
+            feedback_lbl.TextColor3 = likeness > 0 and YELLOW or RED
+            if attempts >= MAX_ATTEMPTS then
+                fail("Locked out!")
+            end
+        end)
+    end
+
+    cancel.MouseButton1Click:Connect(function()
+        if g.notify then g.notify("Info", "Terminal cancelled.", 3) end
+        cleanup()
+    end)
+end
+
+g.voltage_minigame = function()
+    if g.voltage_minigame_cooldown and tick() - g.voltage_minigame_cooldown < 30 then
+        local remaining = math.ceil(30 - (tick() - g.voltage_minigame_cooldown))
+        if g.notify then g.notify("Warning", "Wait " .. remaining .. "s.", 5) end
+        return
+    end
+    local preset = get_preset("voltage")
+    local DARK   = Color3.fromRGB(10, 10, 16)
+    local BLUE   = Color3.fromRGB(80, 140, 240)
+    local WHITE  = Color3.fromRGB(240, 240, 240)
+    local RED    = Color3.fromRGB(200, 60, 60)
+    local GREEN  = Color3.fromRGB(60, 200, 100)
+    local MUTED  = Color3.fromRGB(90, 90, 110)
+    local STEP_COUNT  = preset.step_count
+    local TOLERANCE   = preset.tolerance
+    local SPEED       = preset.speed
+    local TIME_LIMIT  = preset.time_limit
+    local targets = {}
+    for i = 1, STEP_COUNT do targets[i] = math.random(15, 85) / 100 end
+    local current_step = 1
+    local needle_pos   = 0.5
+    local needle_dir   = 1
+    local game_over    = false
+    local timer_conn   = nil
+    local render_conn  = nil
+    if CoreGui:FindFirstChild("VoltageGUI") then CoreGui.VoltageGUI:Destroy() end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "VoltageGUI"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.Parent = CoreGui
+
+    getgenv().Keybind_Input_Disabled_For_Mini_Game = true
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 360, 0, 280)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.fromScale(0.5, 0.5)
+    frame.BackgroundColor3 = DARK
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+    local fstroke = Instance.new("UIStroke", frame)
+    fstroke.Color = BLUE
+    fstroke.Thickness = 1
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(0.75, 0, 0, 36)
+    title.Position = UDim2.new(0, 12, 0, 6)
+    title.BackgroundTransparency = 1
+    title.Text = "// VOLTAGE REGULATOR //"
+    title.TextColor3 = BLUE
+    title.Font = Enum.Font.Code
+    title.TextSize = 14
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = frame
+
+    local timer_label = Instance.new("TextLabel")
+    timer_label.Size = UDim2.new(0.2, 0, 0, 36)
+    timer_label.Position = UDim2.new(0.72, 0, 0, 6)
+    timer_label.BackgroundTransparency = 1
+    timer_label.Text = "00:" .. string.format("%02d", TIME_LIMIT)
+    timer_label.TextColor3 = WHITE
+    timer_label.Font = Enum.Font.Code
+    timer_label.TextSize = 15
+    timer_label.TextXAlignment = Enum.TextXAlignment.Right
+    timer_label.Parent = frame
+
+    local cancel = Instance.new("TextButton")
+    cancel.Size = UDim2.new(0, 28, 0, 28)
+    cancel.Position = UDim2.new(1, -34, 0, 8)
+    cancel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    cancel.Text = "X"
+    cancel.TextScaled = true
+    cancel.Font = Enum.Font.GothamBold
+    cancel.TextColor3 = WHITE
+    cancel.BorderSizePixel = 0
+    cancel.Parent = frame
+    Instance.new("UICorner", cancel).CornerRadius = UDim.new(0, 6)
+
+    local step_lbl = Instance.new("TextLabel")
+    step_lbl.Size = UDim2.new(1, -20, 0, 20)
+    step_lbl.Position = UDim2.new(0, 10, 0, 44)
+    step_lbl.BackgroundTransparency = 1
+    step_lbl.Text = "Step 1 of " .. STEP_COUNT
+    step_lbl.TextColor3 = MUTED
+    step_lbl.Font = Enum.Font.Code
+    step_lbl.TextSize = 12
+    step_lbl.TextXAlignment = Enum.TextXAlignment.Left
+    step_lbl.Parent = frame
+
+    local bar_bg = Instance.new("Frame")
+    bar_bg.Size = UDim2.new(1, -40, 0, 24)
+    bar_bg.Position = UDim2.new(0, 20, 0, 78)
+    bar_bg.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    bar_bg.BorderSizePixel = 0
+    bar_bg.Parent = frame
+    Instance.new("UICorner", bar_bg).CornerRadius = UDim.new(0, 8)
+
+    local target_marker = Instance.new("Frame")
+    target_marker.Size = UDim2.new(TOLERANCE * 2, 0, 1, 8)
+    target_marker.AnchorPoint = Vector2.new(0.5, 0.5)
+    target_marker.Position = UDim2.new(targets[1], 0, 0.5, 0)
+    target_marker.BackgroundColor3 = GREEN
+    target_marker.BackgroundTransparency = 0.5
+    target_marker.BorderSizePixel = 0
+    target_marker.Parent = bar_bg
+    Instance.new("UICorner", target_marker).CornerRadius = UDim.new(0, 6)
+
+    local needle = Instance.new("Frame")
+    needle.Size = UDim2.new(0, 6, 1, 10)
+    needle.AnchorPoint = Vector2.new(0.5, 0.5)
+    needle.Position = UDim2.new(needle_pos, 0, 0.5, 0)
+    needle.BackgroundColor3 = BLUE
+    needle.BorderSizePixel = 0
+    needle.Parent = bar_bg
+    Instance.new("UICorner", needle).CornerRadius = UDim.new(0, 3)
+
+    local tap_btn = Instance.new("TextButton")
+    tap_btn.Size = UDim2.new(0, 160, 0, 44)
+    tap_btn.AnchorPoint = Vector2.new(0.5, 0)
+    tap_btn.Position = UDim2.new(0.5, 0, 0, 126)
+    tap_btn.BackgroundColor3 = Color3.fromRGB(20, 28, 50)
+    tap_btn.Text = "REGULATE"
+    tap_btn.Font = Enum.Font.GothamBold
+    tap_btn.TextSize = 14
+    tap_btn.TextColor3 = BLUE
+    tap_btn.BorderSizePixel = 0
+    tap_btn.Parent = frame
+    Instance.new("UICorner", tap_btn).CornerRadius = UDim.new(0, 10)
+    Instance.new("UIStroke", tap_btn).Color = BLUE
+
+    local feedback_lbl = Instance.new("TextLabel")
+    feedback_lbl.Size = UDim2.new(1, -20, 0, 20)
+    feedback_lbl.Position = UDim2.new(0, 10, 0, 182)
+    feedback_lbl.BackgroundTransparency = 1
+    feedback_lbl.Text = ""
+    feedback_lbl.TextColor3 = GREEN
+    feedback_lbl.Font = Enum.Font.Code
+    feedback_lbl.TextSize = 13
+    feedback_lbl.TextXAlignment = Enum.TextXAlignment.Center
+    feedback_lbl.Parent = frame
+
+    local function cleanup()
+        if timer_conn then timer_conn:Disconnect() end
+        if render_conn then render_conn:Disconnect() end
+        if gui then gui:Destroy() end
+        getgenv().Keybind_Input_Disabled_For_Mini_Game = false
+    end
+
+    local function win()
+        game_over = true
+        g.voltage_minigame_cooldown = tick()
+        if g.notify then g.notify("Success", "Voltage regulated!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    local function fail(msg)
+        game_over = true
+        if g.notify then g.notify("Error", msg or "Voltage spiked!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    tap_btn.MouseButton1Click:Connect(function()
+        if game_over then return end
+        local diff = math.abs(needle_pos - targets[current_step])
+        if diff <= TOLERANCE then
+            feedback_lbl.Text = "✓ Step " .. current_step .. " locked"
+            feedback_lbl.TextColor3 = GREEN
+            current_step = current_step + 1
+            if current_step > STEP_COUNT then
+                win()
+                return
+            end
+            step_lbl.Text = "Step " .. current_step .. " of " .. STEP_COUNT
+            target_marker.Position = UDim2.new(targets[current_step], 0, 0.5, 0)
+            SPEED = SPEED + 0.15
+        else
+            feedback_lbl.Text = "✗ Missed"
+            feedback_lbl.TextColor3 = RED
+            fail("Voltage spiked!")
+        end
+    end)
+
+    cancel.MouseButton1Click:Connect(function()
+        if g.notify then g.notify("Info", "Voltage cancelled.", 3) end
+        cleanup()
+    end)
+
+    render_conn = RunService.RenderStepped:Connect(function(dt)
+        if game_over then return end
+        needle_pos = needle_pos + SPEED * dt * needle_dir
+        if needle_pos >= 1 then needle_dir = -1 end
+        if needle_pos <= 0 then needle_dir = 1 end
+        needle.Position = UDim2.new(math.clamp(needle_pos, 0, 1), 0, 0.5, 0)
+    end)
+
+    local time_elapsed = 0
+    timer_conn = RunService.Heartbeat:Connect(function(dt)
+        if game_over then return end
+        time_elapsed = time_elapsed + dt
+        local left = TIME_LIMIT - time_elapsed
+        if left <= 0 then timer_label.Text = "00:00"; fail("Time's up!"); return end
+        timer_label.Text = string.format("%02d:%02d", math.floor(left / 60), math.floor(left % 60))
+        if left <= 5 then timer_label.TextColor3 = RED end
+    end)
+end
+
+g.shadow_minigame = function()
+    if g.shadow_minigame_cooldown and tick() - g.shadow_minigame_cooldown < 30 then
+        local remaining = math.ceil(30 - (tick() - g.shadow_minigame_cooldown))
+        if g.notify then g.notify("Warning", "Wait " .. remaining .. "s.", 5) end
+        return
+    end
+
+    local preset = get_preset("shadow")
+    local DARK   = Color3.fromRGB(10, 10, 12)
+    local PURPLE = Color3.fromRGB(160, 80, 240)
+    local WHITE  = Color3.fromRGB(240, 240, 240)
+    local MUTED  = Color3.fromRGB(80, 80, 100)
+    local DIM    = Color3.fromRGB(28, 26, 36)
+    local SHAPE_COUNT   = preset.shape_count
+    local DISPLAY_TIME  = preset.display_time
+    local POOL_SIZE     = preset.pool_size
+    local SHAPES = {"▲","■","●","◆","★","▼","▶","◀","♦","♠"}
+    local sequence = {}
+    for i = 1, SHAPE_COUNT do table.insert(sequence, SHAPES[math.random(1, #SHAPES)]) end
+    local player_index  = 1
+    local show_phase    = true
+    local game_over     = false
+
+    if CoreGui:FindFirstChild("ShadowGUI") then CoreGui.ShadowGUI:Destroy() end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "ShadowGUI"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.Parent = CoreGui
+
+    getgenv().Keybind_Input_Disabled_For_Mini_Game = true
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 360, 0, 340)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.fromScale(0.5, 0.5)
+    frame.BackgroundColor3 = DARK
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+    local fstroke = Instance.new("UIStroke", frame)
+    fstroke.Color = PURPLE
+    fstroke.Thickness = 1
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(0.75, 0, 0, 36)
+    title.Position = UDim2.new(0, 12, 0, 6)
+    title.BackgroundTransparency = 1
+    title.Text = "// SHADOW RECALL //"
+    title.TextColor3 = PURPLE
+    title.Font = Enum.Font.Code
+    title.TextSize = 15
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = frame
+
+    local cancel = Instance.new("TextButton")
+    cancel.Size = UDim2.new(0, 28, 0, 28)
+    cancel.Position = UDim2.new(1, -34, 0, 8)
+    cancel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    cancel.Text = "X"
+    cancel.TextScaled = true
+    cancel.Font = Enum.Font.GothamBold
+    cancel.TextColor3 = WHITE
+    cancel.BorderSizePixel = 0
+    cancel.Parent = frame
+    Instance.new("UICorner", cancel).CornerRadius = UDim.new(0, 6)
+
+    local status_lbl = Instance.new("TextLabel")
+    status_lbl.Size = UDim2.new(1, -20, 0, 22)
+    status_lbl.Position = UDim2.new(0, 10, 0, 44)
+    status_lbl.BackgroundTransparency = 1
+    status_lbl.Text = "Memorize the sequence..."
+    status_lbl.TextColor3 = MUTED
+    status_lbl.Font = Enum.Font.Code
+    status_lbl.TextSize = 12
+    status_lbl.TextXAlignment = Enum.TextXAlignment.Center
+    status_lbl.Parent = frame
+
+    local display_frame = Instance.new("Frame")
+    display_frame.Size = UDim2.new(1, -20, 0, 80)
+    display_frame.Position = UDim2.new(0, 10, 0, 70)
+    display_frame.BackgroundColor3 = DIM
+    display_frame.BorderSizePixel = 0
+    display_frame.Parent = frame
+    Instance.new("UICorner", display_frame).CornerRadius = UDim.new(0, 10)
+
+    local display_lbl = Instance.new("TextLabel")
+    display_lbl.Size = UDim2.fromScale(1, 1)
+    display_lbl.BackgroundTransparency = 1
+    display_lbl.Text = ""
+    display_lbl.TextScaled = true
+    display_lbl.Font = Enum.Font.GothamBold
+    display_lbl.TextColor3 = PURPLE
+    display_lbl.Parent = display_frame
+
+    local btn_grid = Instance.new("Frame")
+    btn_grid.Size = UDim2.new(1, -20, 0, 160)
+    btn_grid.Position = UDim2.new(0, 10, 0, 162)
+    btn_grid.BackgroundTransparency = 1
+    btn_grid.Parent = frame
+
+    local grid_layout = Instance.new("UIGridLayout")
+    grid_layout.CellSize = UDim2.new(0, 60, 0, 60)
+    grid_layout.CellPadding = UDim2.new(0, 8, 0, 8)
+    grid_layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    grid_layout.VerticalAlignment = Enum.VerticalAlignment.Center
+    grid_layout.SortOrder = Enum.SortOrder.LayoutOrder
+    grid_layout.Parent = btn_grid
+
+    local pool = {}
+    local used = {}
+    for _, s in ipairs(sequence) do used[s] = true end
+    for _, s in ipairs(sequence) do
+        if not pool[s] then pool[s] = true; table.insert(pool, s) end
+    end
+    while #pool < POOL_SIZE do
+        local pick = SHAPES[math.random(1, #SHAPES)]
+        if not used[pick] then
+            used[pick] = true
+            table.insert(pool, pick)
+        end
+    end
+    for i = #pool, 2, -1 do
+        local j = math.random(1, i)
+        pool[i], pool[j] = pool[j], pool[i]
+    end
+
+    local function cleanup()
+        if gui then gui:Destroy() end
+        getgenv().Keybind_Input_Disabled_For_Mini_Game = false
+    end
+
+    local function win()
+        game_over = true
+        g.shadow_minigame_cooldown = tick()
+        if g.notify then g.notify("Success", "Sequence recalled!", 5) end
+        task.delay(0.4, cleanup)
+    end
+
+    local function fail(msg)
+        game_over = true
+        if g.notify then g.notify("Error", msg or "Wrong shape!", 5) end
+        task.delay(0.4, cleanup)
+    end
+
+    local btn_refs_shadow = {}
+    for i, shape in ipairs(pool) do
+        local btn = Instance.new("TextButton")
+        btn.BackgroundColor3 = DIM
+        btn.Text = shape
+        btn.Font = Enum.Font.GothamBold
+        btn.TextScaled = true
+        btn.TextColor3 = WHITE
+        btn.BorderSizePixel = 0
+        btn.LayoutOrder = i
+        btn.Active = false
+        btn.Parent = btn_grid
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+        Instance.new("UIStroke", btn).Color = Color3.fromRGB(50, 40, 70)
+        btn_refs_shadow[i] = {btn = btn, shape = shape}
+
+        btn.MouseButton1Click:Connect(function()
+            if game_over or show_phase then return end
+            if shape == sequence[player_index] then
+                btn.BackgroundColor3 = Color3.fromRGB(20, 50, 20)
+                player_index = player_index + 1
+                if player_index > #sequence then win() end
+            else
+                btn.BackgroundColor3 = Color3.fromRGB(50, 10, 10)
+                fail("Wrong shape!")
+            end
+        end)
+    end
+
+    local function show_sequence(idx, callback)
+        if idx > #sequence then
+            display_lbl.Text = "?"
+            display_lbl.TextColor3 = MUTED
+            show_phase = false
+            status_lbl.Text = "Repeat the sequence"
+            status_lbl.TextColor3 = WHITE
+            for _, ref in ipairs(btn_refs_shadow) do ref.btn.Active = true end
+            if callback then callback() end
+            return
+        end
+        display_lbl.Text = sequence[idx]
+        display_lbl.TextColor3 = PURPLE
+        task.delay(DISPLAY_TIME, function()
+            if game_over then return end
+            display_lbl.Text = ""
+            task.delay(0.15, function()
+                show_sequence(idx + 1, callback)
+            end)
+        end)
+    end
+
+    cancel.MouseButton1Click:Connect(function()
+        if g.notify then g.notify("Info", "Shadow recall cancelled.", 3) end
+        cleanup()
+    end)
+
+    task.delay(0.5, function() show_sequence(1, nil) end)
+end
+
+g.bank_drill_minigame = function()
+    if g.bank_drill_minigame_cooldown and tick() - g.bank_drill_minigame_cooldown < 30 then
+        local remaining = math.ceil(30 - (tick() - g.bank_drill_minigame_cooldown))
+        if g.notify then g.notify("Warning", "Wait " .. remaining .. "s.", 5) end
+        return
+    end
+
+    local preset = get_preset("bank_drill")
+    local DARK        = Color3.fromRGB(8, 8, 10)
+    local WHITE       = Color3.fromRGB(240, 240, 240)
+    local MUTED       = Color3.fromRGB(90, 90, 100)
+    local COLD        = Color3.fromRGB(60, 160, 255)
+    local WARM        = Color3.fromRGB(255, 200, 50)
+    local HOT         = Color3.fromRGB(255, 100, 30)
+    local CRITICAL    = Color3.fromRGB(220, 40, 40)
+    local GREEN       = Color3.fromRGB(60, 200, 100)
+    local STEEL       = Color3.fromRGB(80, 90, 100)
+
+    local HEAT_ZONES    = preset.heat_zones
+    local OVERHEAT_RATE = preset.overheat_rate
+    local COOLDOWN_RATE = preset.cooldown_rate
+    local SWEET_ZONE    = preset.sweet_zone
+    local TIME_LIMIT    = preset.time_limit
+
+    local zones = {}
+    for i = 1, HEAT_ZONES do
+        zones[i] = {
+            target   = math.random(20, 80) / 100,
+            cleared  = false,
+        }
+    end
+
+    local current_zone    = 1
+    local heat            = 0
+    local drilling        = false
+    local game_over       = false
+    local timer_conn      = nil
+    local render_conn     = nil
+    local sparks_conn     = nil
+
+    if CoreGui:FindFirstChild("BankDrillGUI") then CoreGui.BankDrillGUI:Destroy() end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "BankDrillGUI"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.Parent = CoreGui
+
+    getgenv().Keybind_Input_Disabled_For_Mini_Game = true
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 400, 0, 480)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.fromScale(0.5, 0.5)
+    frame.BackgroundColor3 = DARK
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+    local fstroke = Instance.new("UIStroke", frame)
+    fstroke.Color = STEEL
+    fstroke.Thickness = 1.5
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(0.75, 0, 0, 36)
+    title.Position = UDim2.new(0, 12, 0, 6)
+    title.BackgroundTransparency = 1
+    title.Text = "// VAULT DRILL //"
+    title.TextColor3 = STEEL
+    title.Font = Enum.Font.Code
+    title.TextSize = 15
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = frame
+
+    local timer_label = Instance.new("TextLabel")
+    timer_label.Size = UDim2.new(0.2, 0, 0, 36)
+    timer_label.Position = UDim2.new(0.72, 0, 0, 6)
+    timer_label.BackgroundTransparency = 1
+    timer_label.Text = "00:" .. string.format("%02d", TIME_LIMIT)
+    timer_label.TextColor3 = WHITE
+    timer_label.Font = Enum.Font.Code
+    timer_label.TextSize = 15
+    timer_label.TextXAlignment = Enum.TextXAlignment.Right
+    timer_label.Parent = frame
+
+    local cancel = Instance.new("TextButton")
+    cancel.Size = UDim2.new(0, 28, 0, 28)
+    cancel.Position = UDim2.new(1, -34, 0, 8)
+    cancel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    cancel.Text = "X"
+    cancel.TextScaled = true
+    cancel.Font = Enum.Font.GothamBold
+    cancel.TextColor3 = WHITE
+    cancel.BorderSizePixel = 0
+    cancel.Parent = frame
+    Instance.new("UICorner", cancel).CornerRadius = UDim.new(0, 6)
+
+    local zone_lbl = Instance.new("TextLabel")
+    zone_lbl.Size = UDim2.new(1, -20, 0, 20)
+    zone_lbl.Position = UDim2.new(0, 10, 0, 44)
+    zone_lbl.BackgroundTransparency = 1
+    zone_lbl.Text = "Drill Point 1 of " .. HEAT_ZONES
+    zone_lbl.TextColor3 = MUTED
+    zone_lbl.Font = Enum.Font.Code
+    zone_lbl.TextSize = 12
+    zone_lbl.TextXAlignment = Enum.TextXAlignment.Left
+    zone_lbl.Parent = frame
+
+    local hint_lbl = Instance.new("TextLabel")
+    hint_lbl.Size = UDim2.new(1, -20, 0, 16)
+    hint_lbl.Position = UDim2.new(0, 10, 0, 62)
+    hint_lbl.BackgroundTransparency = 1
+    hint_lbl.Text = "Hold DRILL in the green heat zone. Release to cool down."
+    hint_lbl.TextColor3 = MUTED
+    hint_lbl.Font = Enum.Font.Code
+    hint_lbl.TextSize = 10
+    hint_lbl.TextXAlignment = Enum.TextXAlignment.Left
+    hint_lbl.Parent = frame
+
+    local vault_frame = Instance.new("Frame")
+    vault_frame.Size = UDim2.new(1, -40, 0, 160)
+    vault_frame.Position = UDim2.new(0, 20, 0, 84)
+    vault_frame.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+    vault_frame.BorderSizePixel = 0
+    vault_frame.Parent = frame
+    Instance.new("UICorner", vault_frame).CornerRadius = UDim.new(0, 10)
+    Instance.new("UIStroke", vault_frame).Color = STEEL
+
+    local heat_gradient_bg = Instance.new("Frame")
+    heat_gradient_bg.Size = UDim2.new(1, -20, 0, 28)
+    heat_gradient_bg.Position = UDim2.new(0, 10, 0, 16)
+    heat_gradient_bg.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    heat_gradient_bg.BorderSizePixel = 0
+    heat_gradient_bg.Parent = vault_frame
+    Instance.new("UICorner", heat_gradient_bg).CornerRadius = UDim.new(0, 8)
+
+    local sweet_zone_frame = Instance.new("Frame")
+    sweet_zone_frame.Size = UDim2.new(SWEET_ZONE, 0, 1, 0)
+    sweet_zone_frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    sweet_zone_frame.Position = UDim2.new(zones[1].target, 0, 0.5, 0)
+    sweet_zone_frame.BackgroundColor3 = GREEN
+    sweet_zone_frame.BackgroundTransparency = 0.55
+    sweet_zone_frame.BorderSizePixel = 0
+    sweet_zone_frame.Parent = heat_gradient_bg
+    Instance.new("UICorner", sweet_zone_frame).CornerRadius = UDim.new(0, 6)
+
+    local heat_needle = Instance.new("Frame")
+    heat_needle.Size = UDim2.new(0, 5, 1, 8)
+    heat_needle.AnchorPoint = Vector2.new(0.5, 0.5)
+    heat_needle.Position = UDim2.new(heat, 0, 0.5, 0)
+    heat_needle.BackgroundColor3 = COLD
+    heat_needle.BorderSizePixel = 0
+    heat_needle.Parent = heat_gradient_bg
+    Instance.new("UICorner", heat_needle).CornerRadius = UDim.new(0, 3)
+
+    local heat_fill = Instance.new("Frame")
+    heat_fill.Size = UDim2.new(0, 0, 1, 0)
+    heat_fill.BackgroundColor3 = COLD
+    heat_fill.BackgroundTransparency = 0.7
+    heat_fill.BorderSizePixel = 0
+    heat_fill.Parent = heat_gradient_bg
+    Instance.new("UICorner", heat_fill).CornerRadius = UDim.new(0, 8)
+
+    local heat_label = Instance.new("TextLabel")
+    heat_label.Size = UDim2.new(1, 0, 0, 20)
+    heat_label.Position = UDim2.new(0, 0, 0, 50)
+    heat_label.BackgroundTransparency = 1
+    heat_label.Text = "HEAT: 0%"
+    heat_label.TextColor3 = COLD
+    heat_label.Font = Enum.Font.Code
+    heat_label.TextSize = 13
+    heat_label.TextXAlignment = Enum.TextXAlignment.Center
+    heat_label.Parent = vault_frame
+
+    local vision_frame = Instance.new("Frame")
+    vision_frame.Size = UDim2.new(1, -20, 0, 70)
+    vision_frame.Position = UDim2.new(0, 10, 0, 78)
+    vision_frame.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+    vision_frame.BorderSizePixel = 0
+    vision_frame.ClipsDescendants = true
+    vision_frame.Parent = vault_frame
+    Instance.new("UICorner", vision_frame).CornerRadius = UDim.new(0, 8)
+    Instance.new("UIStroke", vision_frame).Color = Color3.fromRGB(40, 40, 50)
+
+    local vision_lbl = Instance.new("TextLabel")
+    vision_lbl.Size = UDim2.new(0, 60, 0, 14)
+    vision_lbl.Position = UDim2.new(0, 6, 0, 4)
+    vision_lbl.BackgroundTransparency = 1
+    vision_lbl.Text = "HEAT-CAM"
+    vision_lbl.Font = Enum.Font.Code
+    vision_lbl.TextSize = 9
+    vision_lbl.TextColor3 = Color3.fromRGB(60, 60, 70)
+    vision_lbl.Parent = vision_frame
+
+    local CELL_COLS = 18
+    local CELL_ROWS = 5
+    local heat_cells = {}
+    for r = 1, CELL_ROWS do
+        heat_cells[r] = {}
+        for c = 1, CELL_COLS do
+            local cell = Instance.new("Frame")
+            cell.Size = UDim2.new(1 / CELL_COLS, -1, 1 / CELL_ROWS, -1)
+            cell.Position = UDim2.new((c - 1) / CELL_COLS, 0, (r - 1) / CELL_ROWS, 0)
+            cell.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+            cell.BorderSizePixel = 0
+            cell.Parent = vision_frame
+            heat_cells[r][c] = cell
+        end
+    end
+
+    local spark_pool = {}
+    local spark_frame = Instance.new("Frame")
+    spark_frame.Size = UDim2.fromScale(1, 1)
+    spark_frame.BackgroundTransparency = 1
+    spark_frame.Parent = vision_frame
+
+    local function get_heat_color(t)
+        if t < 0.3 then
+            return COLD:Lerp(WARM, t / 0.3)
+        elseif t < 0.7 then
+            return WARM:Lerp(HOT, (t - 0.3) / 0.4)
+        else
+            return HOT:Lerp(CRITICAL, (t - 0.7) / 0.3)
+        end
+    end
+
+    local function update_heat_vision(t)
+        local zone_target = zones[current_zone] and zones[current_zone].target or 0.5
+        for r = 1, CELL_ROWS do
+            for c = 1, CELL_COLS do
+                local col_scale = (c - 0.5) / CELL_COLS
+                local dist = math.abs(col_scale - zone_target)
+                local proximity = math.clamp(1 - dist * 3, 0, 1)
+                local local_heat = math.clamp(t * proximity + math.random() * 0.06 - 0.03, 0, 1)
+                heat_cells[r][c].BackgroundColor3 = get_heat_color(local_heat)
+            end
+        end
+    end
+
+    local function spawn_spark()
+        local s = Instance.new("Frame")
+        s.Size = UDim2.new(0, math.random(2, 5), 0, math.random(2, 5))
+        s.Position = UDim2.new(math.random(20, 80) / 100, 0, math.random(20, 80) / 100, 0)
+        s.BackgroundColor3 = math.random() > 0.5 and WARM or WHITE
+        s.BorderSizePixel = 0
+        s.Parent = spark_frame
+        Instance.new("UICorner", s).CornerRadius = UDim.new(0.5, 0)
+        table.insert(spark_pool, {frame = s, life = 0, max_life = math.random(6, 14) / 100})
+    end
+
+    local drill_btn = Instance.new("TextButton")
+    drill_btn.Size = UDim2.new(0, 180, 0, 52)
+    drill_btn.AnchorPoint = Vector2.new(0.5, 0)
+    drill_btn.Position = UDim2.new(0.5, 0, 0, 264)
+    drill_btn.BackgroundColor3 = Color3.fromRGB(30, 28, 24)
+    drill_btn.Text = "⚙ DRILL"
+    drill_btn.Font = Enum.Font.GothamBold
+    drill_btn.TextSize = 16
+    drill_btn.TextColor3 = STEEL
+    drill_btn.BorderSizePixel = 0
+    drill_btn.Parent = frame
+    Instance.new("UICorner", drill_btn).CornerRadius = UDim.new(0, 12)
+    Instance.new("UIStroke", drill_btn).Color = STEEL
+
+    local drill_status = Instance.new("TextLabel")
+    drill_status.Size = UDim2.new(1, -20, 0, 20)
+    drill_status.Position = UDim2.new(0, 10, 0, 326)
+    drill_status.BackgroundTransparency = 1
+    drill_status.Text = "IDLE"
+    drill_status.TextColor3 = MUTED
+    drill_status.Font = Enum.Font.Code
+    drill_status.TextSize = 13
+    drill_status.TextXAlignment = Enum.TextXAlignment.Center
+    drill_status.Parent = frame
+
+    local progress_row = Instance.new("Frame")
+    progress_row.Size = UDim2.new(1, -20, 0, 22)
+    progress_row.Position = UDim2.new(0, 10, 0, 354)
+    progress_row.BackgroundTransparency = 1
+    progress_row.Parent = frame
+
+    local progress_layout = Instance.new("UIListLayout")
+    progress_layout.FillDirection = Enum.FillDirection.Horizontal
+    progress_layout.Padding = UDim.new(0, 6)
+    progress_layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    progress_layout.VerticalAlignment = Enum.VerticalAlignment.Center
+    progress_layout.Parent = progress_row
+
+    local zone_indicators = {}
+    for i = 1, HEAT_ZONES do
+        local dot = Instance.new("Frame")
+        dot.Size = UDim2.new(0, 18, 0, 18)
+        dot.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+        dot.BorderSizePixel = 0
+        dot.LayoutOrder = i
+        dot.Parent = progress_row
+        Instance.new("UICorner", dot).CornerRadius = UDim.new(0.5, 0)
+        Instance.new("UIStroke", dot).Color = STEEL
+        zone_indicators[i] = dot
+    end
+
+    local function update_indicators()
+        for i, dot in ipairs(zone_indicators) do
+            if zones[i].cleared then
+                dot.BackgroundColor3 = GREEN
+            elseif i == current_zone then
+                dot.BackgroundColor3 = WARM
+            else
+                dot.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+            end
+        end
+    end
+
+    update_indicators()
+
+    local function cleanup()
+        if timer_conn then timer_conn:Disconnect() end
+        if render_conn then render_conn:Disconnect() end
+        if sparks_conn then sparks_conn:Disconnect() end
+        if gui then gui:Destroy() end
+        getgenv().Keybind_Input_Disabled_For_Mini_Game = false
+    end
+
+    local function win()
+        game_over = true
+        g.bank_drill_minigame_cooldown = tick()
+        if g.notify then g.notify("Success", "Vault breached!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    local function fail(msg)
+        game_over = true
+        if g.notify then g.notify("Error", msg or "Drill overheated!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    drill_btn.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+            drilling = true
+        end
+    end)
+
+    drill_btn.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+            drilling = false
+        end
+    end)
+
+    cancel.MouseButton1Click:Connect(function()
+        if g.notify then g.notify("Info", "Drill cancelled.", 3) end
+        cleanup()
+    end)
+
+    render_conn = RunService.RenderStepped:Connect(function(dt)
+        if game_over then return end
+
+        if drilling then
+            heat = math.clamp(heat + OVERHEAT_RATE * dt * 0.01, 0, 1)
+        else
+            heat = math.clamp(heat - COOLDOWN_RATE * dt * 0.01, 0, 1)
+        end
+
+        local zone_target = zones[current_zone].target
+        local in_sweet = math.abs(heat - zone_target) <= SWEET_ZONE / 2
+
+        heat_needle.Position = UDim2.new(heat, 0, 0.5, 0)
+        heat_fill.Size = UDim2.new(heat, 0, 1, 0)
+
+        local h_color = get_heat_color(heat)
+        heat_needle.BackgroundColor3 = h_color
+        heat_fill.BackgroundColor3 = h_color
+
+        heat_label.Text = "HEAT: " .. math.floor(heat * 100) .. "%"
+        heat_label.TextColor3 = h_color
+
+        if drilling then
+            drill_btn.BackgroundColor3 = in_sweet and Color3.fromRGB(20, 40, 20) or Color3.fromRGB(50, 20, 10)
+            drill_btn.TextColor3 = in_sweet and GREEN or HOT
+            drill_status.Text = in_sweet and "✓ OPTIMAL ZONE" or "⚠ ADJUST HEAT"
+            drill_status.TextColor3 = in_sweet and GREEN or HOT
+        else
+            drill_btn.BackgroundColor3 = Color3.fromRGB(30, 28, 24)
+            drill_btn.TextColor3 = STEEL
+            drill_status.Text = "COOLING..."
+            drill_status.TextColor3 = COLD
+        end
+
+        update_heat_vision(heat)
+
+        if heat >= 1 then
+            fail("Drill overheated! Bit destroyed.")
+            return
+        end
+
+        if drilling and in_sweet then
+            zones[current_zone].cleared = true
+            current_zone = current_zone + 1
+            update_indicators()
+            if current_zone > HEAT_ZONES then
+                win()
+                return
+            end
+            sweet_zone_frame.Position = UDim2.new(zones[current_zone].target, 0, 0.5, 0)
+            zone_lbl.Text = "Drill Point " .. current_zone .. " of " .. HEAT_ZONES
+            heat = 0
+        end
+    end)
+
+    local spark_elapsed = 0
+    sparks_conn = RunService.Heartbeat:Connect(function(dt)
+        if game_over then return end
+        spark_elapsed = spark_elapsed + dt
+        if drilling and heat > 0.3 and spark_elapsed > 0.04 then
+            spark_elapsed = 0
+            spawn_spark()
+        end
+        for i = #spark_pool, 1, -1 do
+            local sp = spark_pool[i]
+            sp.life = sp.life + dt
+            local alpha = 1 - (sp.life / sp.max_life)
+            sp.frame.BackgroundTransparency = 1 - alpha
+            sp.frame.Position = sp.frame.Position + UDim2.new(
+                (math.random() - 0.5) * 0.02, 0,
+                -0.01, 0
+            )
+            if sp.life >= sp.max_life then
+                sp.frame:Destroy()
+                table.remove(spark_pool, i)
+            end
+        end
+    end)
+
+    local time_elapsed = 0
+    timer_conn = RunService.Heartbeat:Connect(function(dt)
+        if game_over then return end
+        time_elapsed = time_elapsed + dt
+        local left = TIME_LIMIT - time_elapsed
+        if left <= 0 then timer_label.Text = "00:00"; fail("Time's up!"); return end
+        timer_label.Text = string.format("%02d:%02d", math.floor(left / 60), math.floor(left % 60))
+        if left <= 5 then timer_label.TextColor3 = Color3.fromRGB(200, 60, 60) end
+    end)
+end
+
+g.fingerprint_minigame = function()
+    if g.fingerprint_minigame_cooldown and tick() - g.fingerprint_minigame_cooldown < 30 then
+        local remaining = math.ceil(30 - (tick() - g.fingerprint_minigame_cooldown))
+        if g.notify then g.notify("Warning", "Wait " .. remaining .. "s.", 5) end
+        return
+    end
+
+    local preset = get_preset("fingerprint")
+    local DARK    = Color3.fromRGB(10, 10, 14)
+    local WHITE   = Color3.fromRGB(240, 240, 240)
+    local MUTED   = Color3.fromRGB(90, 90, 110)
+    local COLD    = Color3.fromRGB(60, 140, 255)
+    local WARM    = Color3.fromRGB(255, 200, 50)
+    local HOT     = Color3.fromRGB(255, 100, 30)
+    local GREEN   = Color3.fromRGB(60, 200, 100)
+    local RED     = Color3.fromRGB(200, 60, 60)
+    local STEEL   = Color3.fromRGB(100, 110, 130)
+
+    local LAYERS      = preset.layers
+    local DRIFT_SPEED = preset.drift_speed
+    local TOLERANCE   = preset.tolerance
+    local TIME_LIMIT  = preset.time_limit
+
+    local targets = {}
+    local handles = {}
+    local drifts  = {}
+    local locked  = {}
+
+    for i = 1, LAYERS do
+        targets[i] = math.random(10, 90) / 100
+        handles[i] = math.random(10, 90) / 100
+        drifts[i]  = (math.random() > 0.5 and 1 or -1)
+        locked[i]  = false
+    end
+
+    local game_over  = false
+    local timer_conn = nil
+    local hb_conn    = nil
+    local dragging   = nil
+
+    if CoreGui:FindFirstChild("FingerprintGUI") then CoreGui.FingerprintGUI:Destroy() end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "FingerprintGUI"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.Parent = CoreGui
+
+    getgenv().Keybind_Input_Disabled_For_Mini_Game = true
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 400, 0, LAYERS * 120 + 220)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.fromScale(0.5, 0.5)
+    frame.BackgroundColor3 = DARK
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+    local fstroke = Instance.new("UIStroke", frame)
+    fstroke.Color = STEEL
+    fstroke.Thickness = 1.5
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(0.75, 0, 0, 36)
+    title.Position = UDim2.new(0, 12, 0, 6)
+    title.BackgroundTransparency = 1
+    title.Text = "// FINGERPRINT SCAN //"
+    title.TextColor3 = STEEL
+    title.Font = Enum.Font.Code
+    title.TextSize = 14
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = frame
+
+    local timer_label = Instance.new("TextLabel")
+    timer_label.Size = UDim2.new(0.2, 0, 0, 36)
+    timer_label.Position = UDim2.new(0.72, 0, 0, 6)
+    timer_label.BackgroundTransparency = 1
+    timer_label.Text = "00:" .. string.format("%02d", TIME_LIMIT)
+    timer_label.TextColor3 = WHITE
+    timer_label.Font = Enum.Font.Code
+    timer_label.TextSize = 15
+    timer_label.TextXAlignment = Enum.TextXAlignment.Right
+    timer_label.Parent = frame
+
+    local cancel = Instance.new("TextButton")
+    cancel.Size = UDim2.new(0, 28, 0, 28)
+    cancel.Position = UDim2.new(1, -34, 0, 8)
+    cancel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    cancel.Text = "X"
+    cancel.TextScaled = true
+    cancel.Font = Enum.Font.GothamBold
+    cancel.TextColor3 = WHITE
+    cancel.BorderSizePixel = 0
+    cancel.Parent = frame
+    Instance.new("UICorner", cancel).CornerRadius = UDim.new(0, 6)
+
+    local hint = Instance.new("TextLabel")
+    hint.Size = UDim2.new(1, -20, 0, 16)
+    hint.Position = UDim2.new(0, 10, 0, 44)
+    hint.BackgroundTransparency = 1
+    hint.Text = "Align all scan layers to the target, then LOCK."
+    hint.TextColor3 = MUTED
+    hint.Font = Enum.Font.Code
+    hint.TextSize = 11
+    hint.TextXAlignment = Enum.TextXAlignment.Left
+    hint.Parent = frame
+
+    local CELL_COLS = 20
+    local CELL_ROWS = 6
+
+    local function get_match_color(match)
+        if match < 0.4 then
+            return COLD:Lerp(WARM, match / 0.4)
+        elseif match < 0.85 then
+            return WARM:Lerp(HOT, (match - 0.4) / 0.45)
+        else
+            return HOT:Lerp(GREEN, (match - 0.85) / 0.15)
+        end
+    end
+
+    local function build_fp_pattern(seed, offset)
+        local pattern = {}
+        for r = 1, CELL_ROWS do
+            pattern[r] = {}
+            for c = 1, CELL_COLS do
+                local x = (c - 0.5) / CELL_COLS
+                local y = (r - 0.5) / CELL_ROWS
+                local cx = 0.5 + offset
+                local dist = math.sqrt((x - cx)^2 + (y - 0.5)^2)
+                local ring = math.sin(dist * math.pi * (6 + seed * 2) - seed) 
+                pattern[r][c] = ring > 0.1
+            end
+        end
+        return pattern
+    end
+
+    local scan_cells     = {}
+    local target_cells   = {}
+    local match_labels   = {}
+    local lock_btns      = {}
+    local layer_sliders  = {}
+    local layer_handles  = {}
+    local function cleanup()
+        if timer_conn then timer_conn:Disconnect() end
+        if hb_conn    then hb_conn:Disconnect()    end
+        if gui then gui:Destroy() end
+        getgenv().Keybind_Input_Disabled_For_Mini_Game = false
+    end
+
+    local function win()
+        game_over = true
+        g.fingerprint_minigame_cooldown = tick()
+        if g.notify then g.notify("Success", "Identity confirmed!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    local function fail(msg)
+        game_over = true
+        if g.notify then g.notify("Error", msg or "Scan failed!", 5) end
+        task.delay(0.5, cleanup)
+    end
+
+    local function check_all_locked()
+        for i = 1, LAYERS do
+            if not locked[i] then return end
+        end
+        win()
+    end
+
+    local function get_match(layer_idx)
+        local diff = math.abs(handles[layer_idx] - targets[layer_idx])
+        return math.clamp(1 - diff / 0.5, 0, 1)
+    end
+
+    local function update_scan_grid(layer_idx)
+        local offset = handles[layer_idx] - 0.5
+        local seed   = layer_idx * 1.7
+        local pat    = build_fp_pattern(seed, offset * 0.3)
+        local cells  = scan_cells[layer_idx]
+        local match  = get_match(layer_idx)
+        local col    = get_match_color(match)
+        for r = 1, CELL_ROWS do
+            for c = 1, CELL_COLS do
+                local active = pat[r][c]
+                cells[r][c].BackgroundColor3 = active and col or Color3.fromRGB(14, 14, 18)
+                cells[r][c].BackgroundTransparency = active and 0 or 0
+            end
+        end
+        match_labels[layer_idx].Text = "MATCH: " .. math.floor(match * 100) .. "%"
+        match_labels[layer_idx].TextColor3 = col
+    end
+
+    for li = 1, LAYERS do
+        local layer_y = 66 + (li - 1) * 120
+
+        local layer_lbl = Instance.new("TextLabel")
+        layer_lbl.Size = UDim2.new(1, -20, 0, 14)
+        layer_lbl.Position = UDim2.new(0, 10, 0, layer_y)
+        layer_lbl.BackgroundTransparency = 1
+        layer_lbl.Text = "LAYER " .. li
+        layer_lbl.Font = Enum.Font.Code
+        layer_lbl.TextSize = 10
+        layer_lbl.TextColor3 = MUTED
+        layer_lbl.TextXAlignment = Enum.TextXAlignment.Left
+        layer_lbl.Parent = frame
+
+        local fp_row = Instance.new("Frame")
+        fp_row.Size = UDim2.new(1, -20, 0, 60)
+        fp_row.Position = UDim2.new(0, 10, 0, layer_y + 16)
+        fp_row.BackgroundColor3 = Color3.fromRGB(14, 14, 18)
+        fp_row.BorderSizePixel = 0
+        fp_row.ClipsDescendants = true
+        fp_row.Parent = frame
+        Instance.new("UICorner", fp_row).CornerRadius = UDim.new(0, 6)
+        Instance.new("UIStroke", fp_row).Color = Color3.fromRGB(35, 35, 45)
+
+        local target_seed   = li * 1.7
+        local target_offset = (targets[li] - 0.5) * 0.3
+        local tpat = build_fp_pattern(target_seed, target_offset)
+
+        local tgt_panel = Instance.new("Frame")
+        tgt_panel.Size = UDim2.new(0.5, -2, 1, 0)
+        tgt_panel.Position = UDim2.new(0, 0, 0, 0)
+        tgt_panel.BackgroundTransparency = 1
+        tgt_panel.ClipsDescendants = true
+        tgt_panel.Parent = fp_row
+
+        local tgt_lbl = Instance.new("TextLabel")
+        tgt_lbl.Size = UDim2.new(1, 0, 0, 10)
+        tgt_lbl.Position = UDim2.new(0, 0, 0, 0)
+        tgt_lbl.BackgroundTransparency = 1
+        tgt_lbl.Text = "TARGET"
+        tgt_lbl.Font = Enum.Font.Code
+        tgt_lbl.TextSize = 8
+        tgt_lbl.TextColor3 = MUTED
+        tgt_lbl.TextXAlignment = Enum.TextXAlignment.Center
+        tgt_lbl.Parent = tgt_panel
+
+        target_cells[li] = {}
+        for r = 1, CELL_ROWS do
+            target_cells[li][r] = {}
+            for c = 1, CELL_COLS do
+                local cell = Instance.new("Frame")
+                cell.Size = UDim2.new(1 / CELL_COLS, -1, 1 / CELL_ROWS, -1)
+                cell.Position = UDim2.new((c - 1) / CELL_COLS, 0, (r - 1) / CELL_ROWS, 10)
+                cell.BackgroundColor3 = tpat[r][c] and Color3.fromRGB(60, 160, 255) or Color3.fromRGB(14, 14, 18)
+                cell.BorderSizePixel = 0
+                cell.Parent = tgt_panel
+                target_cells[li][r][c] = cell
+            end
+        end
+
+        local divider = Instance.new("Frame")
+        divider.Size = UDim2.new(0, 1, 1, 0)
+        divider.Position = UDim2.new(0.5, 0, 0, 0)
+        divider.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        divider.BorderSizePixel = 0
+        divider.Parent = fp_row
+
+        local scan_panel = Instance.new("Frame")
+        scan_panel.Size = UDim2.new(0.5, -2, 1, 0)
+        scan_panel.Position = UDim2.new(0.5, 2, 0, 0)
+        scan_panel.BackgroundTransparency = 1
+        scan_panel.ClipsDescendants = true
+        scan_panel.Parent = fp_row
+
+        local scan_lbl = Instance.new("TextLabel")
+        scan_lbl.Size = UDim2.new(1, 0, 0, 10)
+        scan_lbl.Position = UDim2.new(0, 0, 0, 0)
+        scan_lbl.BackgroundTransparency = 1
+        scan_lbl.Text = "SCAN"
+        scan_lbl.Font = Enum.Font.Code
+        scan_lbl.TextSize = 8
+        scan_lbl.TextColor3 = MUTED
+        scan_lbl.TextXAlignment = Enum.TextXAlignment.Center
+        scan_lbl.Parent = scan_panel
+
+        scan_cells[li] = {}
+        for r = 1, CELL_ROWS do
+            scan_cells[li][r] = {}
+            for c = 1, CELL_COLS do
+                local cell = Instance.new("Frame")
+                cell.Size = UDim2.new(1 / CELL_COLS, -1, 1 / CELL_ROWS, -1)
+                cell.Position = UDim2.new((c - 1) / CELL_COLS, 0, (r - 1) / CELL_ROWS, 10)
+                cell.BackgroundColor3 = Color3.fromRGB(14, 14, 18)
+                cell.BorderSizePixel = 0
+                cell.Parent = scan_panel
+                scan_cells[li][r][c] = cell
+            end
+        end
+
+        local slider_row = Instance.new("Frame")
+        slider_row.Size = UDim2.new(1, -20, 0, 22)
+        slider_row.Position = UDim2.new(0, 10, 0, layer_y + 80)
+        slider_row.BackgroundTransparency = 1
+        slider_row.Parent = frame
+
+        local track = Instance.new("Frame")
+        track.Size = UDim2.new(1, -90, 0, 8)
+        track.AnchorPoint = Vector2.new(0, 0.5)
+        track.Position = UDim2.new(0, 0, 0.5, 0)
+        track.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+        track.BorderSizePixel = 0
+        track.Parent = slider_row
+        Instance.new("UICorner", track).CornerRadius = UDim.new(0, 4)
+
+        local handle = Instance.new("TextButton")
+        handle.Size = UDim2.new(0, 18, 0, 18)
+        handle.AnchorPoint = Vector2.new(0.5, 0.5)
+        handle.Position = UDim2.new(handles[li], 0, 0.5, 0)
+        handle.BackgroundColor3 = WHITE
+        handle.Text = ""
+        handle.BorderSizePixel = 0
+        handle.Parent = track
+        Instance.new("UICorner", handle).CornerRadius = UDim.new(0.5, 0)
+
+        local match_lbl = Instance.new("TextLabel")
+        match_lbl.Size = UDim2.new(0, 80, 1, 0)
+        match_lbl.AnchorPoint = Vector2.new(1, 0.5)
+        match_lbl.Position = UDim2.new(1, 0, 0.5, 0)
+        match_lbl.BackgroundTransparency = 1
+        match_lbl.Text = "MATCH: 0%"
+        match_lbl.Font = Enum.Font.Code
+        match_lbl.TextSize = 11
+        match_lbl.TextColor3 = COLD
+        match_lbl.TextXAlignment = Enum.TextXAlignment.Right
+        match_lbl.Parent = slider_row
+
+        local lock_btn = Instance.new("TextButton")
+        lock_btn.Size = UDim2.new(0, 70, 0, 20)
+        lock_btn.AnchorPoint = Vector2.new(0.5, 0)
+        lock_btn.Position = UDim2.new(0.5, 0, 0, layer_y + 104)
+        lock_btn.BackgroundColor3 = Color3.fromRGB(20, 34, 20)
+        lock_btn.Text = "LOCK"
+        lock_btn.Font = Enum.Font.GothamBold
+        lock_btn.TextSize = 11
+        lock_btn.TextColor3 = GREEN
+        lock_btn.BorderSizePixel = 0
+        lock_btn.Parent = frame
+        Instance.new("UICorner", lock_btn).CornerRadius = UDim.new(0, 6)
+        Instance.new("UIStroke", lock_btn).Color = GREEN
+
+        match_labels[li]  = match_lbl
+        layer_sliders[li]  = track
+        layer_handles[li]  = handle
+        lock_btns[li]      = lock_btn
+
+        local layer_idx = li
+        handle.InputBegan:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+                dragging = layer_idx
+            end
+        end)
+
+        lock_btn.MouseButton1Click:Connect(function()
+            if game_over or locked[layer_idx] then return end
+            if get_match(layer_idx) >= 1 - TOLERANCE then
+                locked[layer_idx] = true
+                handle.BackgroundColor3 = GREEN
+                lock_btn.Text = "✓ LOCKED"
+                lock_btn.TextColor3 = GREEN
+                check_all_locked()
+            else
+                if g.notify then g.notify("Warning", "Layer " .. layer_idx .. " not aligned.", 3) end
+            end
+        end)
+
+        update_scan_grid(li)
+    end
+
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging = nil
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(inp)
+        if not dragging or game_over then return end
+        if inp.UserInputType ~= Enum.UserInputType.MouseMovement and inp.UserInputType ~= Enum.UserInputType.Touch then return end
+        if locked[dragging] then return end
+        local track    = layer_sliders[dragging]
+        local bar_pos  = track.AbsolutePosition.X
+        local bar_size = track.AbsoluteSize.X
+        local new_scale = math.clamp((inp.Position.X - bar_pos) / bar_size, 0, 1)
+        handles[dragging] = new_scale
+        layer_handles[dragging].Position = UDim2.new(new_scale, 0, 0.5, 0)
+        update_scan_grid(dragging)
+    end)
+
+    cancel.MouseButton1Click:Connect(function()
+        if g.notify then g.notify("Info", "Fingerprint scan cancelled.", 3) end
+        cleanup()
+    end)
+
+    local time_elapsed = 0
+    timer_conn = RunService.Heartbeat:Connect(function(dt)
+        if game_over then return end
+        time_elapsed = time_elapsed + dt
+        local left = TIME_LIMIT - time_elapsed
+        if left <= 0 then timer_label.Text = "00:00"; fail("Time's up!"); return end
+        timer_label.Text = string.format("%02d:%02d", math.floor(left / 60), math.floor(left % 60))
+        if left <= 5 then timer_label.TextColor3 = RED end
+    end)
+
+    hb_conn = RunService.Heartbeat:Connect(function(dt)
+        if game_over then return end
+        for i = 1, LAYERS do
+            if not locked[i] and DRIFT_SPEED > 0 then
+                targets[i] = targets[i] + drifts[i] * DRIFT_SPEED * dt
+                if targets[i] >= 0.92 then drifts[i] = -1 end
+                if targets[i] <= 0.08 then drifts[i] =  1 end
+                local target_seed   = i * 1.7
+                local target_offset = (targets[i] - 0.5) * 0.3
+                local tpat = build_fp_pattern(target_seed, target_offset)
+                for r = 1, CELL_ROWS do
+                    for c = 1, CELL_COLS do
+                        target_cells[i][r][c].BackgroundColor3 = tpat[r][c] and COLD or Color3.fromRGB(14, 14, 18)
+                    end
+                end
+                update_scan_grid(i)
+            end
+        end
+    end)
+end
+
 g.open_minigame_menu = function()
     if CoreGui:FindFirstChild("MinigameMenuGUI") and CoreGui:FindFirstChild("MinigameMenuGUI"):IsA("ScreenGui") then CoreGui.MinigameMenuGUI.Enabled = true; return end
     local DARK        = Color3.fromRGB(18, 18, 18)
@@ -5544,6 +8284,51 @@ g.open_minigame_menu = function()
             key = "recall", name = "Vault Recall", sub = "Reproduce the flash order on the card grid",
             desc = "Cards flash in a hidden order. Watch closely, then click them back in the same sequence. Difficulty changes card count and flash speed.",
             fn = function() g.card_recall_minigame() end,
+        },
+        {
+            key = "morse", name = "Morse Decoder", sub = "Decode the flashing morse sequence",
+            desc = "A sequence of letters plays out in dots and dashes. Watch the flash, then input the correct morse code using the dot and dash buttons before time runs out. Difficulty changes sequence length and flash speed.",
+            fn = function() g.morse_minigame() end,
+        },
+        {
+            key = "frequency", name = "Frequency Tuner", sub = "Drag all bands into their green zones",
+            desc = "Multiple signal bands drift on their own. Drag each handle into its green target zone then lock it in. All bands must be locked to win. Difficulty changes band count, drift speed, and tolerance.",
+            fn = function() g.frequency_minigame() end,
+        },
+        {
+            key = "overload", name = "Overload", sub = "Click surging nodes before they blow",
+            desc = "Nodes randomly begin surging and fill up over time. Click them to vent the charge before they overload. Survive until the timer runs out. Difficulty changes node count, surge speed, and overload tolerance.",
+            fn = function() g.overload_minigame() end,
+        },
+        {
+            key = "terminal", name = "Terminal Hack", sub = "Find the correct access word",
+            desc = "A list of words is shown. One is the correct password. Each wrong guess tells you how many characters match positionally. Use the feedback to narrow it down before attempts run out. Difficulty changes word length and attempt count.",
+            fn = function() g.terminal_minigame() end,
+        },
+        {
+            key = "voltage", name = "Voltage Regulator", sub = "Tap when the needle hits the target",
+            desc = "A needle bounces back and forth at increasing speed. Hit REGULATE when it lines up with the green target zone each step. Difficulty changes step count, needle speed, and hit tolerance.",
+            fn = function() g.voltage_minigame() end,
+        },
+        {
+            key = "shadow", name = "Shadow Recall", sub = "Memorize and repeat the shape sequence",
+            desc = "Shapes flash one by one in a sequence. After they disappear, click them back in the correct order from a shuffled pool. Difficulty changes shape count and how fast they flash.",
+            fn = function() g.shadow_minigame() end,
+        },
+        {
+            key = "bank_drill", name = "Vault Drill", sub = "Hold the drill in the heat sweet zone",
+            desc = "Hold DRILL to raise the heat. Guide it into the green sweet zone on the heat-cam display for each drill point. Release to cool down. Overheat and the bit's gone. Difficulty changes zone count, overheat rate, and zone width.",
+            fn = function() g.bank_drill_minigame() end,
+        },
+        {
+            key = "fingerprint", name = "Fingerprint Scanner", sub = "Align the scan layers to the target print",
+            desc = "Each layer shows a target fingerprint and a live scan. Drag the slider to align the scan pattern until the match percentage hits 100%, then lock it in. On harder difficulties the target drifts. All layers must be locked to win.",
+            fn = function() g.fingerprint_minigame() end,
+        },
+        {
+            key = "dead_drop", name = "Dead Drop", sub = "Spot the signal feed before it hops",
+            desc = "A grid of surveillance camera feeds cycle through static. One camera briefly flickers a hidden signal pattern. Click it before the signal hops to another feed. Miss too many times and the transmission is lost. Hard difficulty adds decoy flickers on wrong cameras.",
+            fn = function() g.dead_drop_minigame() end,
         },
     }
 
