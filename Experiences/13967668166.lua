@@ -11247,7 +11247,7 @@ Callback = function(state)
         g.Invisible_Flash = true
         if Is_Invis then g.InvisibleMode.enabled.set(false) end
         fw(0.1)
-        g.FlamesLibrary.spawn("flames_flash_invis", "spawn", function()
+        FlamesLibrary.spawn("flames_flash_invis", "spawn", function()
             while g.Invisible_Flash == true do
                 g.InvisibleMode.enabled.set(true)
                 fw(0.05)
@@ -11258,6 +11258,7 @@ Callback = function(state)
         end)
     else
         g.Invisible_Flash = false
+        FlamesLibrary.disconnect("flames_flash_invis")
     end
 end}, "Flash_Invis_Toggle_UI")
 
