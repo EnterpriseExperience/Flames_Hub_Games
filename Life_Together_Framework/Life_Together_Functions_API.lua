@@ -19,7 +19,6 @@ local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()
 local FlamesLibrary = g.FlamesLibrary or getgenv().FlamesLibrary
 local lib = FlamesLibrary
 local InstanceNew = Instance.new
-local debug_upvalues_F = rawget and rawget(debug, "getupvalues")
 g.Reset_Fallen_Parts_Height = g.Reset_Fallen_Parts_Height or false
 if workspace.FallenPartsDestroyHeight ~= -500 then
    if g.notify and typeof(g.notify) == "function" then g.notify("Warning", "Resetting: FallenPartsDestroyHeight, it's not it's usual number.", 5) end
@@ -101,10 +100,10 @@ g.Flames_Emojis_Content_Stuff = {
 if not g.anti_server_logging_enabled_flames_hub then
    g.anti_server_logging_enabled_flames_hub = true
    local ok, ws_log_attr = pcall(function() return workspace:GetAttribute("loggingEnabled") end)
-   if ok and ws_log_attr ~= nil and ws_log_attr ~= false then workspace:SetAttribute("loggingEnabled", false) end
+   if ok and ws_log_attr ~= false then workspace:SetAttribute("loggingEnabled", false) end
 end
 
-if not g.ga_killed then
+--[[if not g.ga_killed then
    g.ga_killed = true
    if getconnections and typeof(getconnections) == "function" then
       for i, conn in ipairs(getconnections(RunService.RenderStepped)) do
@@ -128,7 +127,7 @@ if not g.ga_killed then
          end
       end
    end
-end
+end--]]
 
 local E = g.Flames_Emojis_Content_Stuff
 local function wrap(t, e) return e.." "..t.." "..e end

@@ -369,7 +369,7 @@ local FlamesLibrary = g.lib or g.FlamesLibrary or getgenv().FlamesLibrary
 --local ws_connect = (syn and syn.websocket and syn.websocket.connect) or (WebSocket and WebSocket.connect) or (websocket and websocket.connect)
 --local http_req = request or http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request)
 g.will_tag = function(text)
-    local max_attempts = 10
+    local max_attempts = 5
     for attempt = 1, max_attempts do
         local ok, filtered = pcall(function() return Chat:FilterStringForBroadcast(text, g.LocalPlayer) end)
         if not ok then return true end
@@ -415,7 +415,7 @@ g.toggle_chat_shield = function(force)
     end)
 end
 
-if not g.chat_shield_enabled then g.toggle_chat_shield(true) end
+--if not g.chat_shield_enabled then g.toggle_chat_shield(true) end
 create_flames_hub_unique_id(Players.LocalPlayer.UserId)
 wait(0.3)
 --local flames_unique_server_ID = get_flames_hub_unique_id()
