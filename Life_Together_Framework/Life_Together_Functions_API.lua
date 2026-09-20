@@ -19,6 +19,7 @@ local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()
 local FlamesLibrary = g.FlamesLibrary or getgenv().FlamesLibrary
 local lib = FlamesLibrary
 local InstanceNew = Instance.new
+local debug_upvalues_F = rawget and rawget(debug, "getupvalues")
 g.Reset_Fallen_Parts_Height = g.Reset_Fallen_Parts_Height or false
 if workspace.FallenPartsDestroyHeight ~= -500 then
    if g.notify and typeof(g.notify) == "function" then g.notify("Warning", "Resetting: FallenPartsDestroyHeight, it's not it's usual number.", 5) end
@@ -97,13 +98,36 @@ g.Flames_Emojis_Content_Stuff = {
    ["Coin"] = "🪙"
 }
 
-if getgenv().anti_server_logging_enabled_flames_hub then
-   getgenv().anti_server_logging_enabled_flames_hub = true
-   local ok, ws_log_attr = pcall(function()
-      return workspace:GetAttribute("loggingEnabled")
-   end)
+if not g.anti_server_logging_enabled_flames_hub then
+   g.anti_server_logging_enabled_flames_hub = true
+   local ok, ws_log_attr = pcall(function() return workspace:GetAttribute("loggingEnabled") end)
+   if ok and ws_log_attr ~= nil and ws_log_attr ~= false then workspace:SetAttribute("loggingEnabled", false) end
+end
 
-   if ok and ws_log_attr ~= false then workspace:SetAttribute("loggingEnabled", false) end
+if not g.ga_killed then
+   g.ga_killed = true
+   if getconnections and typeof(getconnections) == "function" then
+      for i, conn in ipairs(getconnections(RunService.RenderStepped)) do
+         local c = conn :: any
+         if c and typeof(c) == "RBXScriptConnection" then
+            local ok, fn = pcall(function() return c.Function end)
+            if ok and fn and type(fn) == "function" then
+               local ok2, ups = pcall(debug_upvalues_F, fn)
+               if ok2 and ups and type(ups) == "table" then
+               for _, up in pairs(ups) do
+                     if type(up) == "userdata" then
+                        local ok3, cn = pcall(function() return up.ClassName end)
+                        if ok3 and type(cn) == "string" and cn == "Stats" then
+                           c:Disable()
+                           g.ga_killed_conn = c
+                        end
+                     end
+                  end
+               end
+            end
+         end
+      end
+   end
 end
 
 local E = g.Flames_Emojis_Content_Stuff
@@ -464,7 +488,6 @@ g.cmdsString = [[
    {prefix}rgbphone (🔥HOT🔥) - Enable RGB Phone (flashing Rainbow Phone).
    {prefix}unrgbphone - Disable RGB Phone (flashing Rainbow Phone).
    {prefix}fpsboost - Lag reducer that boosts your FPS (sort of).
-   {prefix}updlogs - Shows you a menu with all the recent updates, making it easier to know what was added/removed/changed.
    {prefix}startrgbtool - Enables RGB Tool (FE, Flashing Rainbow Tool).
    {prefix}stoprgbtool - Disables RGB Tool (FE, Flashing Rainbow Tool).
    {prefix}glitchoutfit - Enables the glitching of your outfit.

@@ -14,7 +14,7 @@ end
 local g = getgenv()
 local http_game = (getgenv()["game"] or game)["HttpGet"]
 getgenv().http_get = function(url) return http_game(game, url) end
-local Raw_Version = "V9.2.6"
+local Raw_Version = "V9.2.9"
 getgenv().Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
 local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
@@ -64,6 +64,7 @@ local me = LocalPlayer or speaker or g.LocalPlayer or Players.LocalPlayer
 local plr = me
 local TextChatService = g.TextChatService or cloneref and cloneref(game:GetService("TextChatService")) or game:GetService("TextChatService")
 local Lighting = g.Lighting or cloneref and cloneref(game:GetService("Lighting")) or game:GetService("Lighting")
+local StarterGui = g.StarterGui or cloneref and cloneref(game:GetService("StarterGui")) or game:GetService("StarterGui")
 local lighting = Lighting
 local work = Workspace
 local player_gui = g.PlayerGui or LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:FindFirstChildWhichIsA("PlayerGui")
@@ -368,12 +369,53 @@ local FlamesLibrary = g.lib or g.FlamesLibrary or getgenv().FlamesLibrary
 --local ws_connect = (syn and syn.websocket and syn.websocket.connect) or (WebSocket and WebSocket.connect) or (websocket and websocket.connect)
 --local http_req = request or http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request)
 g.will_tag = function(text)
-    local filtered
-    local success, response = pcall(function() filtered = Chat:FilterStringForBroadcast(text, g.LocalPlayer) end)
-    if not success then print(tostring(response)); return true end
-    return filtered ~= text
+    local max_attempts = 10
+    for attempt = 1, max_attempts do
+        local ok, filtered = pcall(function() return Chat:FilterStringForBroadcast(text, g.LocalPlayer) end)
+        if not ok then return true end
+        if type(filtered) == "string" and not filtered:match("^#+$") then return filtered ~= text end
+        task.wait(0.5)
+    end
+
+    return true
 end
 
+g.chat_shield_enabled = g.chat_shield_enabled or false
+g.chat_shield_active = g.chat_shield_active or false
+g.toggle_chat_shield = function(force)
+    if force ~= nil then
+        g.chat_shield_enabled = force
+    else
+        g.chat_shield_enabled = not g.chat_shield_enabled
+    end
+
+    if not g.chat_shield_enabled then
+        g.chat_shield_active = false
+        FlamesLibrary.disconnect("chat_shield_loop")
+        pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true) end)
+        g.notify("Success", "Flames Hub | HashTag Protection disabled.", 3)
+        return
+    end
+
+    FlamesLibrary.spawn("chat_shield_loop", "defer", function()
+        while g.chat_shield_enabled do
+            local ok, filtered = pcall(function() return Chat:FilterStringForBroadcast("hello", speaker) end)
+            local is_hashing = not ok or type(filtered) ~= "string" or filtered:match("^#+$")
+            if is_hashing and not g.chat_shield_active then
+                g.chat_shield_active = true
+                pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false) end)
+                g.notify("Warning", "HASHTAG PROTECTION HAS BEEN ENABLED! HASHTAGS (#) DETECTED IN YOUR FILTER (AUTOMATIC), THIS MEANS YOU'RE GETTING AUTOMATICALLY FILTERED (#) FOR NO REASON BY ROBLOX, WE'VE SAVED YOU.", 20)
+            elseif not is_hashing and g.chat_shield_active then
+                g.chat_shield_active = false
+                pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true) end)
+                g.notify("Success", "Flames Hub | Shield going idle. No hashtags have been detected in your filter.", 7)
+            end
+            task.wait(0.5)
+        end
+    end)
+end
+
+if not g.chat_shield_enabled then g.toggle_chat_shield(true) end
 create_flames_hub_unique_id(Players.LocalPlayer.UserId)
 wait(0.3)
 --local flames_unique_server_ID = get_flames_hub_unique_id()
@@ -749,6 +791,9 @@ function low_level_executor()
     if executor_contains("xeno") then return true end
     return false
 end
+wait(0.1)
+local are_we_low_level = low_level_executor()
+if are_we_low_level == true then g.notify("Error", "Your executor cannot run this script, it requires a better executor like: Potassium, Volt, Wave, Delta etc, we apologize!", 60); return end
 
 g.randomString = g.randomString or function()
     local length = math.random(10,20)
@@ -902,8 +947,6 @@ if not g.dragify then
     end
 end
 
-local are_we_low_level = low_level_executor()
-if are_we_low_level == true then return g.notify("Error", "Your executor cannot run this script, it requires a better executor like: Volcano, Potassium, Volt, Wave, Delta etc, we apologize!", 60) end
 local http_requesting = request or http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request)
 g.http_requesting = g.http_requesting or http_requesting
 local function normalize_response(res)
@@ -1507,7 +1550,7 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
 end
 
 local holiday = g.getholiday() or ""
-local Announcement_Message = "Updated entire structure and Framework, also updated internals + published an update regarding the new DAISE update."
+local Announcement_Message = "Added more protection from Life Together RP's data sending system + added automatic hashtag filter detector so you do not get banned for automatic hashtags."
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
 g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.
@@ -4256,12 +4299,12 @@ g.load_workaround_script = g.load_workaround_script or function()
 	end
 
 	local chat_frame = find_chat_frame()
-	if chat_frame then
+	if chat_frame and chat_frame:IsA("Frame") then
 		patch_button(chat_frame)
 	else
 		local conn
 		conn = FL.connect(hidden_gui_main, "ChildAdded", function(child)
-			if child:IsA("ScreenGui") then
+			if child and child:IsA("ScreenGui") then
 				local frame = child:FindFirstChild("Chat System")
 				if frame and frame:IsA("Frame") then
 					FL.disconnect(conn)
@@ -4277,6 +4320,143 @@ g.load_workaround_script = g.load_workaround_script or function()
 			end
 		end)
 	end
+end
+
+g.Get_WildWood_Mansion = function()
+    local cache = g.WildWood_Integration_Mansion_Found
+    if cache and cache:IsA("Folder") and cache.Parent then return cache end
+
+    for _, v in ipairs(Workspace:GetDescendants()) do
+        if v:IsA("Folder") and v.Name:lower():find("pittock") and v.Name:lower():find("mansion") then
+            g.WildWood_Integration_Mansion_Found = v
+            return v
+        end
+    end
+
+    return nil
+end
+wait(0.1)
+if not g.WildWood_Integration_Mansion_Found then pcall(function() g.Get_WildWood_Mansion() end) end
+
+g.Get_Activation_WildWood_Portal = function()
+    local cache = g.WildwoodPortal_Found_Main
+    if cache and cache:IsA("Model") and cache.Parent then return cache end
+
+    for _, v in ipairs(Workspace:GetDescendants()) do
+        if v:IsA("Model") and v.Name:lower():find("wildwood") and v.Name:lower():find("portal") then
+            local attr = v:GetAttribute("portal_color")
+            if attr ~= nil and attr == Color3.fromRGB(151, 126, 91) then
+                g.WildwoodPortal_Found_Main = v
+                return v
+            end
+        end
+    end
+
+    return nil
+end
+wait(0.1)
+if not g.WildwoodPortal_Found_Main then pcall(function() g.Get_Activation_WildWood_Portal() end) end
+
+g.Find_Paper_To_Collect = function()
+    local get_mansion = g.WildWood_Integration_Mansion_Found or g.Get_WildWood_Mansion()
+    if not get_mansion or not get_mansion:IsA("Folder") then return end
+
+    for _, v in ipairs(get_mansion:GetDescendants()) do
+        if v:IsA("Model") and v.Name:lower():find("pig") and v.Name:lower():find("paper") and v.Parent.Name:lower():find("paper") then
+            return v
+        end
+    end
+
+    return nil
+end
+
+g.Automatically_Complete_WildWood_Event = function()
+    local hrp = g.HumanoidRootPart or g.get_root(speaker)
+    if not hrp or not hrp.Parent or not hrp:IsDescendantOf(game) then g.notify("Error", "Your HumanoidRootPart is missing! (please reset).", 3); return end
+    local get_current_zone = g.LocalPlayer:GetAttribute("current_quest_zone")
+    if get_current_zone ~= nil and get_current_zone ~= "pittock_mansion_lobby" then
+        pcall(function() hrp.CFrame = CFrame.new(-27.607975, 9.29240894, -37.3550339) end)
+        wait(0.1)
+        local wild_wood_start_convo = {
+            "wildwood_track",
+            "npc_convo_started",
+            {
+                quest_id = "none",
+                npc_id = "prue",
+                dialogue_variant = "default",
+                first_time = false
+            }
+        }
+        g.Send(unpack(wild_wood_start_convo))
+        wait(0.15)
+        g.Send("spoke_to_prue")
+        wait(0.15)
+        local convo_ended_main = {
+            "wildwood_track",
+            "npc_convo_ended",
+            {
+                completed = true,
+                duration_s = 103.52,
+                lines_shown = 1,
+                npc_id = "prue",
+                lines_total = 1
+            }
+        }
+        g.Send(unpack(convo_ended_main))
+        wait(0.1)
+        g.Send("viewed_mac_abduction")
+        wait(0.1)
+        g.Send("teleport_to_quest", -1)
+        pcall(function() hrp.CFrame = CFrame.new(-0.998277366, 8.96803665, -164.726166) end)
+        wait(0.15)
+        local portal = g.WildwoodPortal_Found_Main or g.Get_Activation_WildWood_Portal()
+        if portal and portal:IsA("Model") and portal:IsDescendantOf(game) then pcall(function() g.Character:PivotTo(portal:GetPivot() + Vector3.new(0, 3, 0)) end) end
+        g.notify("Error", "Please start the quest or go to the Pittock Mansion!")
+    end
+    g.Send("set_wildwood_faction", 3)
+    wait(0.1)
+    g.Send("start_quest", 1)
+    wait(0.1)
+    g.Send("teleport_to_quest", 1)
+    wait(0.1)
+    g.Send("wildwood_track", "npc_convo_started", {
+        quest_id = "q1_pittock_mansion",
+        npc_id = "pig_clerk",
+        dialogue_variant = "default",
+        first_time = true
+    })
+    wait(0.35)
+    g.Send("wildwood_track", "npc_convo_ended", {
+        completed = true,
+        duration_s = 30.23,
+        lines_shown = 3,
+        npc_id = "pig_clerk",
+        lines_total = 3
+    })
+    wait(0.15)
+    g.Send("progress_quest", 1, "meet_pig_clerk")
+    wait(0.1)
+    local paper = g.Find_Paper_To_Collect()
+    if not paper or not paper:IsA("Model") then g.notify("Error", "There appears to be no papers left to collect!", 3); return end
+    local pivot_offset = Vector3.new(0, 3, 0)
+    local function fire_prompts()
+        for _, descendant in ipairs(paper:GetDescendants()) do
+            if descendant:IsA("ProximityPrompt") then
+                pcall(function()
+                    fireproximityprompt(descendant)
+                end)
+            end
+        end
+    end
+
+    for _ = 1, 10 do
+        pcall(function() g.Character:PivotTo(paper:GetPivot() + pivot_offset) end)
+        wait(0.25)
+        fire_prompts()
+        wait(0.1)
+        g.Get("collect_wildwood_item", paper)
+        wait(0.35)
+    end
 end
 
 g.vehicle_fly = g.vehicle_fly or false
@@ -9006,6 +9186,17 @@ g.last_height_scale = g.last_height_scale or nil
 g.prev_height_scale = g.prev_height_scale or nil
 g.last_skin_tone = g.last_skin_tone or nil
 g.prev_skin_tone = g.prev_skin_tone or nil
+g.size_setter_busy = g.size_setter_busy or false
+g.session_original_width = g.session_original_width or nil
+g.session_original_depth = g.session_original_depth or nil
+g.session_original_skin = g.session_original_skin or nil
+g.session_size_active = g.session_size_active or false
+g.last_width_scale = g.last_width_scale or nil
+g.last_depth_scale = g.last_depth_scale or nil
+g.prev_width_scale = g.prev_width_scale or nil
+g.prev_depth_scale = g.prev_depth_scale or nil
+g.last_skin_tone_s = g.last_skin_tone_s or nil
+g.prev_skin_tone_s = g.prev_skin_tone_s or nil
 g.apply_skin_tone = function(color) if not color then return end; pcall(function() g.Send("skin_tone", color) end) end
 g.copy_plr_avatar = function(Player)
     if g.is_copying_avatar_already_flames then g.notify("Warning","Avatar copier already in progress!", 3); return end
@@ -9218,6 +9409,110 @@ g.reapply_prev_skin = g.reapply_prev_skin or function()
     if g.prev_skin_tone then
         g.apply_skin_tone(g.prev_skin_tone)
     end
+end
+
+g.size_func_setter = g.size_func_setter or function(width_input, depth_input)
+    if g.size_setter_busy then return end
+    g.size_setter_busy = true
+    local char = g.Character or speaker.Character or g.get_char(speaker) or g.Char:get()
+    local hum = g.Humanoid or char and char:FindFirstChildOfClass("Humanoid") or g.get_human(speaker)
+    if not hum then g.size_setter_busy = false; return end
+    local desc = hum:GetAppliedDescription()
+    if not desc then
+        g.size_setter_busy = false
+        g.notify("Error", "Failed to grab HumanoidDescription.", 3)
+        return
+    end
+
+    local body_colors = char and char:FindFirstChildOfClass("BodyColors")
+    local current_skin = body_colors and g.avgSkin(body_colors)
+    if not g.session_size_active then
+        g.session_original_width = desc.WidthScale or 1
+        g.session_original_depth = desc.DepthScale or 1
+        g.session_original_skin = g.session_original_skin or current_skin
+        g.session_size_active = true
+    end
+
+    if current_skin then
+        g.prev_skin_tone_s = g.last_skin_tone_s or current_skin
+        g.last_skin_tone_s = current_skin
+    end
+
+    local width = tonumber(width_input) or desc.WidthScale or 1
+    local depth = tonumber(depth_input) or desc.DepthScale or 1
+    g.prev_width_scale = g.last_width_scale or desc.WidthScale or 1
+    g.prev_depth_scale = g.last_depth_scale or desc.DepthScale or 1
+    g.last_width_scale = width
+    g.last_depth_scale = depth
+    local properties = {
+        Head = desc.Head or 0,
+        Torso = desc.Torso or 0,
+        LeftArm = desc.LeftArm or 0,
+        RightArm = desc.RightArm or 0,
+        LeftLeg = desc.LeftLeg or 0,
+        RightLeg = desc.RightLeg or 0,
+        Face = desc.Face or 0,
+        Shirt = desc.Shirt or 0,
+        Pants = desc.Pants or 0,
+        GraphicTShirt = desc.GraphicTShirt or 0,
+        RunAnimation = desc.RunAnimation or 0,
+        WalkAnimation = desc.WalkAnimation or 0,
+        JumpAnimation = desc.JumpAnimation or 0,
+        FallAnimation = desc.FallAnimation or 0,
+        ClimbAnimation = desc.ClimbAnimation or 0,
+        IdleAnimation = desc.IdleAnimation or 0,
+        SwimAnimation = desc.SwimAnimation or 0,
+        HeightScale = desc.HeightScale or 1,
+        WidthScale = width,
+        DepthScale = depth,
+        HeadScale = desc.HeadScale or 1,
+        BodyTypeScale = desc.BodyTypeScale or 0,
+        ProportionScale = desc.ProportionScale or 0,
+    }
+
+    local accessories = {}
+    for _, acc in ipairs(desc:GetAccessories(true)) do
+        table.insert(accessories, {
+            Rotation = "  ",
+            Position = "  ",
+            Scale = "1 1 1",
+            IsLayered = acc.IsLayered,
+            AccessoryType = acc.AccessoryType.Name,
+            AssetId = acc.AssetId,
+            Order = acc.Order,
+            Puffiness = acc.Puffiness
+        })
+    end
+
+    pcall(function()
+        g.Send("wear_outfit_from_desc", {
+            accessories = accessories,
+            properties = properties
+        })
+    end)
+
+    task.delay(0.10, function()
+        g.apply_skin_tone(g.session_original_skin)
+        g.size_setter_busy = false
+    end)
+end
+
+g.reset_to_original_size = g.reset_to_original_size or function()
+    if g.size_setter_busy then return end
+    if not g.session_original_width and not g.session_original_depth then return end
+    g.size_func_setter(g.session_original_width, g.session_original_depth)
+    if g.session_original_skin then
+        task.delay(0.1, function()
+            g.apply_skin_tone(g.session_original_skin)
+        end)
+    end
+
+    task.delay(0.3, function()
+        g.session_original_width = nil
+        g.session_original_depth = nil
+        g.session_original_skin = nil
+        g.session_size_active = false
+    end)
 end
 
 g.anti_sit_enabled = g.anti_sit_enabled or false
@@ -11200,6 +11495,18 @@ Callback = function(val)
     getgenv().Spin_Speed_Value = val
     if g.already_spinning_localplr then g.change_spin_speed(val) end
 end}, "Spin_Speed_Slider_UI")
+
+g.create_ui_element("Button", LocalPlayer_Section, {
+Name = "Cover Map With Your Avatar (FE)",
+Callback = function()
+    g.size_func_setter(85, 85)
+end,})
+
+g.create_ui_element("Button", LocalPlayer_Section, {
+Name = "Reset Size (FE)",
+Callback = function()
+    g.size_func_setter(1, 1)
+end,})
 
 g.create_ui_element("Input", LocalPlayer_Section, {
 Name = "Size Character (FE)",
