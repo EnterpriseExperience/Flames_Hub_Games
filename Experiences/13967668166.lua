@@ -1563,7 +1563,8 @@ if not g.Flames_Hub_Owner_Title_Animated_Initialized then
     local role_to_tag = {
         ["Owner"] = "Owner_Chat_Tag",
         ["Staff"] = "Staff_Chat_Tag",
-        ["Wifey"] = "Wifey_Chat_Tag"
+        ["Wifey"] = "Wifey_Chat_Tag",
+        ["Client"] = "Client_Chat_Tag"
     }
 
     local function resolve_title(player)
@@ -1747,6 +1748,147 @@ if not g.Flames_Hub_Owner_Title_Animated_Initialized then
 
         lib.connect(OWNER_KEY .. "_player_removing", Players.PlayerRemoving:Connect(function(player)
             unwatch_player(player)
+        end))
+    end
+end
+
+if not g.Flames_Hub_Client_Title_Initialized then
+    g.Flames_Hub_Client_Title_Initialized = true
+    local client_billboard_name = "unique_client_title_billboard"
+    local CLIENT_KEY = "client_title"
+    local client_whitelist = {
+        ["Theoneandonlymymy75"] = true,
+        ["YYY_Jayce"] = true,
+        ["pay2pretty4"] = true,
+    }
+
+    g.active_client_title_billboards = setmetatable({}, { __mode = "k" })
+    local function build_client_billboard(character)
+        if not character then return end
+        local head = character:FindFirstChild("Head") or character:WaitForChild("Head", 10)
+        if not head then return end
+        if head:FindFirstChild(client_billboard_name) then return end
+
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = client_billboard_name
+        billboard.Size = UDim2.new(0, 220, 0, 60)
+        billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+        billboard.AlwaysOnTop = true
+        billboard.Parent = head
+
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, 0, 1, 0)
+        frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        frame.BackgroundTransparency = 0
+        frame.BorderSizePixel = 0
+        frame.Parent = billboard
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 12)
+        corner.Parent = frame
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = 2
+        stroke.Color = Color3.fromRGB(255, 255, 255)
+        stroke.Parent = frame
+
+        local label = Instance.new("TextLabel")
+        label.BackgroundTransparency = 1
+        label.Size = UDim2.new(1, -10, 1, -10)
+        label.Position = UDim2.new(0, 5, 0, 5)
+        label.Text = "💨 Flames Hub | Client 🔥"
+        label.Font = Enum.Font.GothamBlack
+        label.TextScaled = true
+        label.TextStrokeTransparency = 0
+        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        label.Parent = frame
+
+        g.active_client_title_billboards[character] = billboard
+    end
+
+    local function destroy_client_billboard(character)
+        local billboard = g.active_client_title_billboards[character]
+        if billboard then
+            pcall(function() billboard:Destroy() end)
+            g.active_client_title_billboards[character] = nil
+        end
+    end
+
+    local function client_is_whitelisted(player) return client_whitelist[player.Name] == true end
+    local function attach_client_billboard(char)
+        local head = char:FindFirstChild("Head")
+        if not head then return end
+        if head:FindFirstChild(client_billboard_name) then return end
+        build_client_billboard(char)
+    end
+
+    local function on_client_char_added(player, char, prev_char_ref)
+        if prev_char_ref[1] then destroy_client_billboard(prev_char_ref[1]) end
+        prev_char_ref[1] = char
+        local char_key = CLIENT_KEY .. "_charadded_" .. tostring(player.UserId)
+        lib.disconnect(char_key .. "_spawn")
+        lib.spawn(char_key .. "_spawn", "spawn", function()
+            if not char:IsDescendantOf(workspace) then
+                local done = false
+                local conn
+                conn = char.AncestryChanged:Connect(function()
+                    done = true
+                    conn:Disconnect()
+                end)
+                local elapsed = 0
+                while not done and elapsed < 10 do
+                    task.wait(0.1)
+                    elapsed += 0.1
+                end
+                if not done then return end
+            end
+            task.wait(0.1)
+            attach_client_billboard(char)
+        end)
+
+        local head_watch_key = char_key .. "_headwatch"
+        lib.connect(head_watch_key, char.ChildAdded:Connect(function(child)
+            if child.Name == "Head" then
+                task.wait(0.1)
+                g.active_client_title_billboards[char] = nil
+                attach_client_billboard(char)
+            end
+        end))
+    end
+
+    local function start_client_watcher(player)
+        if not client_is_whitelisted(player) then return end
+        local char_key = CLIENT_KEY .. "_charadded_" .. tostring(player.UserId)
+        local prev_char_ref = { player.Character }
+        lib.connect(char_key, player.CharacterAdded:Connect(function(char)
+            lib.disconnect(char_key .. "_headwatch")
+            lib.disconnect(char_key .. "_spawn")
+            on_client_char_added(player, char, prev_char_ref)
+        end))
+        if player.Character then on_client_char_added(player, player.Character, prev_char_ref) end
+    end
+
+    local function stop_client_watcher(player)
+        if not client_is_whitelisted(player) then return end
+        local char_key = CLIENT_KEY .. "_charadded_" .. tostring(player.UserId)
+        lib.disconnect(char_key)
+        lib.disconnect(char_key .. "_spawn")
+        lib.disconnect(char_key .. "_headwatch")
+        if player.Character then destroy_client_billboard(player.Character) end
+    end
+
+    for _, player in ipairs(Players:GetPlayers()) do start_client_watcher(player) end
+    if not g.Flames_Client_Title_Player_Checks then
+        g.Flames_Client_Title_Player_Checks = true
+
+        lib.connect(CLIENT_KEY .. "_player_added", Players.PlayerAdded:Connect(function(player)
+            lib.spawn(CLIENT_KEY .. "_watch_" .. tostring(player.UserId), "spawn", function()
+                start_client_watcher(player)
+            end)
+        end))
+
+        lib.connect(CLIENT_KEY .. "_player_removing", Players.PlayerRemoving:Connect(function(player)
+            stop_client_watcher(player)
         end))
     end
 end
