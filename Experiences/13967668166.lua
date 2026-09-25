@@ -1760,6 +1760,8 @@ if not g.Flames_Hub_Client_Title_Initialized then
         ["Theoneandonlymymy75"] = true,
         ["YYY_Jayce"] = true,
         ["pay2pretty4"] = true,
+        ["theyadoree_nunu07"] = true,
+        ["Alexouulc"] = true
     }
 
     g.active_client_title_billboards = setmetatable({}, { __mode = "k" })
