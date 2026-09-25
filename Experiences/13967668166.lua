@@ -14,7 +14,7 @@ end
 local g = getgenv()
 local http_game = (getgenv()["game"] or game)["HttpGet"]
 getgenv().http_get = function(url) return http_game(game, url) end
-local Raw_Version = "V9.2.9"
+local Raw_Version = "V9.3.0"
 getgenv().Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
 local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
@@ -1550,7 +1550,7 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
 end
 
 local holiday = g.getholiday() or ""
-local Announcement_Message = "Added more protection from Life Together RP's data sending system + added automatic hashtag filter detector so you do not get banned for automatic hashtags."
+local Announcement_Message = "Fixed regular player (whitelist) commands not working and also added titles for everyone, if you want one, come and find me in a server sometime and just ask me!"
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
 g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.
@@ -9041,12 +9041,12 @@ g.setup_cmd_handler_plr = function(player)
             local target = g.findplr(checkTargetName)
             if not target then getgenv().notify("Warning", "Could not find: "..tostring(target), 1); return end
             local isVerified = target:GetAttribute("is_verified")
-            local general_channel = g.TextChatService:FindFirstChild("RBXGeneral", true) or g.TextChatService:FindFirstChild("TextChannels"):FindFirstChild("RBXGeneral")
+            local general_channel = TextChatService:FindFirstChild("RBXGeneral", true) or TextChatService:FindFirstChild("TextChannels"):FindFirstChild("RBXGeneral")
             if general_channel then
                 if isVerified == true then
-                    general_channel:SendAsync("Player: " .. target.DisplayName .. " has premium.")
+                    general_channel:SendAsync("Player: " .. tostring(target.DisplayName) .. " has premium.")
                 else
-                    general_channel:SendAsync("Player: " .. target.DisplayName .. " does not have premium.")
+                    general_channel:SendAsync("Player: " .. tostring(target.DisplayName) .. " does not have premium.")
                 end
             end
         elseif g.levenshtein(command, "lambo") <= 2 or g.levenshtein(command, "lamborghini") then
@@ -9062,9 +9062,8 @@ g.setup_cmd_handler_plr = function(player)
             g.Is_OnCooldown = true
             g.Wait_Time_Cooldown = 45
             channel:SendAsync(
-                ";lockcar | ;rgbcar | ;norgbcar | ;unlockcar | ;check Player | ;trailer | ;notrailer", ";lambo", ";sf90", ";charger", ";bugatti"
+                ";lockcar | ;rgbcar | ;norgbcar | ;unlockcar | ;check Player | ;trailer | ;notrailer | ;lambo | ;sf90 | ;charger | ;bugatti"
             )
-
             task.delay(g.Wait_Time_Cooldown, function() g.Is_OnCooldown = false end)
         end
     end)
