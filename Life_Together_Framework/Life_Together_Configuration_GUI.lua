@@ -116,13 +116,43 @@ local originals = getgenv().FreePay_Originals
 local function freepay_func(state)
     if not Data or not Data.initiate then g.notify("Error", "Data module missing.", 3); return end
     if not debug_ext.getupvalue then g.notify("Error", "Executor does not support getupvalue.", 3); return end
-    if not ReplicatedStorage then g.notify("Error", "ReplicatedStorage is missing.", 3); return end
     if state == nil then state = not getgenv().Has_Free_LifePremium end
     if state then
         if getgenv().Has_Free_LifePremium then g.notify("Error", "FreePay is already enabled.", 3); return end
+        local update_datum = debug_ext.getupvalue(Data.initiate, 2)
+        if type(update_datum) ~= "function" then g.notify("Error", "Could not resolve update_datum.", 3); return end
+        local u3 = debug_ext.getupvalue(update_datum, 2)
+        if type(u3) ~= "table" then g.notify("Error", "Could not resolve data store.", 3); return end
+        local patches = {
+            is_verified      = true,
+            invisible_bought = true,
+            max_outfits      = 99,
+        }
+
+        for key, spoof_val in next, patches do
+            local current = u3[key]
+            local should_patch = false
+
+            if type(current) == "boolean" then
+                should_patch = current ~= true
+            elseif type(current) == "number" then
+                should_patch = current < spoof_val
+            else
+                should_patch = current == nil
+            end
+
+            if should_patch then
+                originals[key] = current
+                update_datum(key, spoof_val)
+                print(string.format("[freepay] patched [%s] %s -> %s", key, tostring(current), tostring(spoof_val)))
+            else
+                print(string.format("[freepay] skipped [%s] = %s (already sufficient)", key, tostring(current)))
+            end
+        end
+
         for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
             local val = v:GetAttribute("IsVerifiedOnly")
-            if val ~= nil then
+            if val ~= nil and val ~= false then
                 originals[v] = val
                 v:SetAttribute("IsVerifiedOnly", false)
             end
@@ -130,33 +160,33 @@ local function freepay_func(state)
 
         for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
             local val = v:GetAttribute("IsAirportRestricted")
-            if val ~= nil then
+            if val ~= nil and val ~= false then
                 originals[v] = val
                 v:SetAttribute("IsAirportRestricted", false)
             end
         end
-        pcall(function()
-            local update = debug_ext.getupvalue(Data.initiate, 2)
-            local _, original = Data.initiate("is_verified")
-            originals["_is_verified"] = original
-            update("is_verified", true)
-        end)
+
         getgenv().Has_Free_LifePremium = true
         g.notify("Success", "FreePay is now enabled.", 5)
     else
         if not getgenv().Has_Free_LifePremium then g.notify("Error", "FreePay is not enabled.", 3); return end
-        for obj, val in pairs(originals) do
-            if obj ~= "_is_verified" and typeof(obj) == "Instance" then
-                if obj.Parent and obj:GetAttribute("IsVerifiedOnly") ~= nil then
-                    obj:SetAttribute("IsVerifiedOnly", val)
+        local update_datum = debug_ext.getupvalue(Data.initiate, 2)
+        for key, original_val in next, originals do
+            if typeof(key) == "string" then
+                if type(update_datum) == "function" then
+                    update_datum(key, original_val)
+                    print(string.format("[freepay] restored [%s] -> %s", key, tostring(original_val)))
+                end
+            elseif typeof(key) == "Instance" and key.Parent then
+                if key:GetAttribute("IsVerifiedOnly") ~= nil then
+                    key:SetAttribute("IsVerifiedOnly", original_val)
+                end
+                if key:GetAttribute("IsAirportRestricted") ~= nil then
+                    key:SetAttribute("IsAirportRestricted", original_val)
                 end
             end
         end
 
-        if debug_ext and debug_ext.getupvalue then
-            local update = debug_ext.getupvalue(Data.initiate, 2)
-            update("is_verified", originals["_is_verified"] or false)
-        end
         table.clear(originals)
         getgenv().Has_Free_LifePremium = false
         g.notify("Success", "FreePay is now disabled.", 5)
