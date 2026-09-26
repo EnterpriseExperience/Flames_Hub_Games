@@ -9728,7 +9728,7 @@ g.anti_sit_func = function(toggle)
     if toggle == true then
         if g.Not_Ever_Sitting then g.notify("Warning", "AntiSit is already enabled!", 3); return end
         g.Not_Ever_Sitting = true
-        g.toggle_anti_sit(true)
+        --g.toggle_anti_sit(true)
         g.notify("Success", "Anti-Sit is now enabled!", 3)
         g.show_notification("Success:", "Anti-Sit is now enabled.", "Normal")
         lib.spawn(key, "spawn", function()
@@ -9742,7 +9742,7 @@ g.anti_sit_func = function(toggle)
         if not g.Not_Ever_Sitting then g.notify("Warning", "AntiSit is not enabled!", 3); return end
         g.Not_Ever_Sitting = false
         lib.disconnect(key)
-        g.toggle_anti_sit(false)
+        --g.toggle_anti_sit(false)
         fw(0.2)
         g.Seat.enabled.set(true)
         g.notify("Success", "Anti-Sit is now disabled.", 3)
