@@ -1573,7 +1573,7 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
 end
 
 local holiday = g.getholiday() or ""
-local Announcement_Message = "Fixed regular player (whitelist) commands not working and also added titles for everyone, if you want one, come and find me in a server sometime and just ask me!"
+local Announcement_Message = "Fixed Configuration API / Framework not loading (causing the script to break) + made maximum outfits slots: 99, enjoy."
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
 g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.
