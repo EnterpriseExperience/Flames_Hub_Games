@@ -982,6 +982,19 @@ g.try_load = g.try_load or function(urls)
     return { failed = true, status = "no-response", url = urls[#urls] }
 end
 
+local GITHUB   = "https://raw.githubusercontent.com/EnterpriseExperience/Flames_Hub_Games/main/"
+local GITLAB   = "https://gitlab.com/flames2431233/Starter/-/raw/main/"
+local CODEBERG = "https://codeberg.org/talkinboutlol/FlamesHub/raw/branch/main/"
+local function mirror(path, paste_a, paste_b)
+    return {
+        GITHUB   .. path,
+        GITLAB   .. path .. "?ref_type=heads",
+        CODEBERG .. path,
+        paste_a,
+        paste_b,
+    }
+end
+
 -- [[ you can use these, or you can modify the source code from each one and upload it to your own GitHub. ]] --
 local github_urls = {
     GlobalEnv_Framework = {
@@ -997,46 +1010,56 @@ local github_urls = {
 
 -- [[ you can use these, or you can change them into your own if you want, but if GitHub goes down, they'll work for you, unless somehow GitHub, Pastebin AND Pastefy are down. ]] --
 local fallback_urls = {
-    GlobalEnv_Framework = {
+    GlobalEnv_Framework = mirror(
+        "Assets/Global_Environment.lua",
         "https://pastebin.com/raw/T25mDhBZ",
         "https://pastefy.app/MAylpl1S/raw"
-    },
-    Life_Together_Network = {
-        "https://pastebin.com/raw/GiEmv8Qf",
-        "https://pastefy.app/FT5eU1HK/raw"
-    },
-    Functions_API_LifeTogether = {
+    ),
+    Functions_API_LifeTogether = mirror(
+        "Life_Together_Framework/Life_Together_Functions_API.lua",
         "https://pastebin.com/raw/ksfZM2C4",
         "https://pastefy.app/kQzNQxn0/raw"
-    },
-    LifeTogether_Anti_Staff = {
+    ),
+    Life_Together_Network = mirror(
+        "Life_Together_Framework/Life_Together_Network.lua",
+        "https://pastebin.com/raw/GiEmv8Qf",
+        "https://pastefy.app/FT5eU1HK/raw"
+    ),
+    LifeTogether_Anti_Staff = mirror(
+        "Life_Together_Framework/LifeTogether_Anti_Staff.lua",
         "https://pastebin.com/raw/UiQfWWwY",
         "https://pastefy.app/Se7QQ0KH/raw"
-    },
-    Vehicle_Mapper = {
+    ),
+    Vehicle_Mapper = mirror(
+        "Extra/Vehicle_Mapper.lua",
         "https://pastebin.com/raw/PqLNjqSs",
         "https://pastefy.app/BuZybou2/raw"
-    },
-    LifeTogether_Framework_Base_1 = {
+    ),
+    LifeTogether_Framework_Base_1 = mirror(
+        "Life_Together_Framework/LifeTogether_Framework_Base_1.lua",
         "https://pastebin.com/raw/Pq9cUCXi",
         "https://pastefy.app/UgnGF0pZ/raw"
-    },
-    LifeTogether_Framework_Base_2 = {
+    ),
+    LifeTogether_Framework_Base_2 = mirror(
+        "Life_Together_Framework/LifeTogether_Framework_Base_2.lua",
         "https://pastebin.com/raw/KR05npwT",
         "https://pastefy.app/sjjbUhBl/raw"
-    },
-    Life_Together_Admin = {
+    ),
+    Life_Together_Admin = mirror(
+        "Life_Together_Framework/Life_Together_Admin.lua",
         "https://pastebin.com/raw/azPSzEjH",
-        "https://pastefy.app/SiDMhe47/raw",
-    },
-    grab_file_performance = {
+        "https://pastefy.app/SiDMhe47/raw"
+    ),
+    grab_file_performance = mirror(
+        "Assets/grab_file_performance.lua",
         "https://pastebin.com/raw/DuG2RmjF",
         "https://pastefy.app/nq0BT17K/raw"
-    },
-    Configuration_API = {
+    ),
+    Configuration_API = mirror(
+        "Assets/Configuration_API.lua",
         "https://pastebin.com/raw/9qkZEvjw",
         "https://pastefy.app/JPSCgeB4/raw"
-    }
+    )
 }
 
 g.get_script_text = g.get_script_text or function(name)
@@ -3645,9 +3668,18 @@ if Bindable and Bindable:IsA("BindableEvent") then
 end
 
 if getgenv().get_enrolled_state == nil then
-    g.notify("Info", "Waiting until 'get_enrolled_state' exists...", 6)
-    repeat task.wait() until g.get_enrolled_state and g.get_enrolled_state ~= nil
-    if getgenv().get_enrolled_state then g.notify("Success", "Found get_enrolled_state correctly.", 5) end
+    g.notify("Info", "Waiting until 'get_enrolled_state' exists...", 5)
+    local attempts = 0
+    local max_attempts = 15
+    repeat
+        task.wait()
+        attempts = attempts + 1
+    until (g.get_enrolled_state and g.get_enrolled_state ~= nil) or attempts >= max_attempts
+    if getgenv().get_enrolled_state then
+        g.notify("Success", "Found get_enrolled_state correctly.", 5)
+    else
+        g.notify("Error", "get_enrolled_state not found after "..tostring(max_attempts).." attempts.", 5)
+    end
 end
 
 if CoreGui:FindFirstChild("FlamesAdminGUI", true) and CoreGui:FindFirstChild("FlamesAdminGUI", true):IsA("ScreenGui") then CoreGui:FindFirstChild("FlamesAdminGUI", true).Enabled = true end
