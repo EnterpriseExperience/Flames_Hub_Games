@@ -1644,30 +1644,39 @@ ui.keybind = function(tab, name, flag, key, hold, callback)
 end
 
 ui.destroy_window = function(name)
-   local to_remove = {}
-   for name in pairs(ui.objects.windows) do
-      table.insert(to_remove, name)
+   local function safe_destroy(obj) if typeof(obj) == "Instance" then pcall(function() obj:Destroy() end) end end
+   local function get_hidden_ui()
+      local fn = (typeof(get_hidden_gui) == "function" and get_hidden_gui) or (typeof(gethui) == "function" and gethui)
+      return fn and fn()
    end
 
-   for _, name in ipairs(to_remove) do
-      local window = ui.objects.windows[name]
-      local ok = pcall(function()
-         if window:IsA("ScreenGui") and window.Enabled then
-            window.Enabled = false
-         elseif window:IsA("Frame") and window.Visible then
-            window.Visible = false
-         end
-      end)
-      if not ok then
-         pcall(function()
-            if ui.rayfield:IsA("ScreenGui") and ui.rayfield.Enabled then
-               ui.rayfield.Enabled = false
-            elseif ui.rayfield:IsA("Frame") and ui.rayfield.Visible then
-               ui.rayfield.Visible = false
+   local rayfield_instance = g.Rayfield
+   if typeof(rayfield_instance) == "Instance" then
+      safe_destroy(rayfield_instance)
+   else
+      local hidden = get_hidden_ui()
+      local search_roots = { CoreGui, hidden, speaker:FindFirstChildOfClass("PlayerGui") }
+      for _, root in ipairs(search_roots) do
+         if typeof(root) == "Instance" then
+            for _, child in ipairs(root:GetChildren()) do
+               if child.Name == "Rayfield" or child.Name == "Rayfield-Old" then
+                  safe_destroy(child)
+               end
             end
-         end)
+         end
       end
    end
+
+   local player_gui = g.PlayerGui or speaker:FindFirstChildOfClass("PlayerGui")
+   if player_gui and player_gui:IsA("PlayerGui") then
+      local toggle_ui = player_gui:FindFirstChild("ToggleUIRayfield")
+      if toggle_ui then safe_destroy(toggle_ui) end
+   end
+
+   local ui = g.FlamesUI
+   if ui and type(ui.rayfield) == "table" and type(ui.rayfield.Destroy) == "function" then pcall(function() ui.rayfield:Destroy() end) end
+   g.Rayfield = nil
+   g.FlamesUI = nil
 end
 
 ui.ensure_visibility = function(name)
@@ -1885,7 +1894,7 @@ g.tools_menu_for_life_together_flames_hub = g.tools_menu_for_life_together_flame
    end)
 
    ui.button(tab_1, "Shutdown/Close Menu", function()
-      pcall(function() ui.destroy_window() end)
+      pcall(function() ui:Destroy() end)
    end)
 end
 
