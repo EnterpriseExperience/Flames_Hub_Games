@@ -9139,6 +9139,7 @@ g.start_glitch_script = function()
     local locked_origin = root.CFrame
     local last_flip = 0
     local dir = 1
+    g.SideGlitch_Enabled = true
     FlamesLibrary.connect("SideGlitch_Loop", RunService.RenderStepped:Connect(function()
         if not g.SideGlitch_Enabled then return end
         local now      = tick()
@@ -9173,6 +9174,7 @@ g.start_smooth_glitch_script = function()
     local dir            = 1
     local current_offset = 0
     local target_offset  = 0
+    g.SideGlitch_Enabled  = true
     FlamesLibrary.connect("SideGlitch_Loop", RunService.RenderStepped:Connect(function(dt)
         if not g.SideGlitch_Enabled then return end
         local now      = tick()
@@ -10704,7 +10706,7 @@ g.create_ui_element = g.create_ui_element or function(element_type, parent, conf
     }
 
     local creator = creators[element_type]
-    if not creator then return g.notify("Error", "Unknown element type: " .. tostring(element_type), 10) end
+    if not creator then return g.notify("Error", "Unknown element type: " .. tostring(element_type), 1) end
     local element
     local done = false
     task.defer(function()
@@ -10852,7 +10854,7 @@ end}, "Side_To_Side_Distance_Slider_UI")
 
 g.create_ui_element("Slider", LocalPlayer_Section, {
 Name = "Side To Side Smoothness",
-Min = 0,
+Min = 0.1,
 Max = 1,
 Default = getgenv().SideGlitch_Smooth or 5,
 Flag = "Side_To_Side_Smoothness_UI_Slider",
