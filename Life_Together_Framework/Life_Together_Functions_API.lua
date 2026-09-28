@@ -1414,7 +1414,7 @@ if not g.tool_information_folder_instance then task.spawn(function() g.find_tool
 
 g.load_whitelist_only_title_system = function()
    if g.Flames_Hub_Title_Initialized then return end
-   loadstring(game:HttpGet("https://pastefy.app/3jrY6UXA/raw"))()
+   loadstring(game:HttpGet("https://gitlab.com/flames2431233/Starter/-/raw/main/Assets/Whitelist_Only_Title_System.lua?ref_type=heads"))()
 end
 
 g.FlamesUI = g.FlamesUI or {}
