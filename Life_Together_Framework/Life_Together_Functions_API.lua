@@ -1416,9 +1416,13 @@ g.load_whitelist_only_title_system = function()
    if g.Flames_Hub_Title_Initialized then return end
    loadstring(game:HttpGet("https://gitlab.com/flames2431233/Starter/-/raw/main/Assets/Whitelist_Only_Title_System.lua?ref_type=heads"))()
 end
-wait(0.25)
-if g.client_title_whitelist_system[speaker.Name] then
-   pcall(function() g.load_whitelist_only_title_system() end)
+
+g.load_whitelist_only_title_system()
+task.wait(0.5)
+if g.client_title_whitelist_system and g.client_title_whitelist_system[speaker.Name] then
+   g.notify("Success", "Flames Hub | Title System has been loaded (you are authorized).", 5)
+else
+   warn("[F-H Title System]: "..tostring(speaker and speaker.Name or "?") .. " is not whitelisted or system failed to init.")
 end
 
 g.FlamesUI = g.FlamesUI or {}
