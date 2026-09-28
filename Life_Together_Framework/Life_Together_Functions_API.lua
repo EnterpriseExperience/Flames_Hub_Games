@@ -1418,12 +1418,14 @@ g.load_whitelist_only_title_system = function()
 end
 
 g.load_whitelist_only_title_system()
-task.wait(0.5)
-if g.client_title_whitelist_system and g.client_title_whitelist_system[speaker.Name] then
-   g.notify("Success", "Flames Hub | Title System has been loaded (you are authorized).", 5)
-else
-   warn("[F-H Title System]: "..tostring(speaker and speaker.Name or "?") .. " is not whitelisted or system failed to init.")
-end
+local title_key = "fh_title"
+lib.spawn(title_key .. "_whitelist_check", "delay", 3, function()
+   if g.client_title_whitelist_system and g.client_title_whitelist_system[speaker.Name] then
+      g.notify("Success", "Flames Hub | Title System has been loaded (you are authorized).", 5)
+   else
+      warn("[F-H Title System]: " .. tostring(speaker and speaker.Name or "?") .. " is not whitelisted or system failed to init.")
+   end
+end)
 
 g.FlamesUI = g.FlamesUI or {}
 local ui = g.FlamesUI
