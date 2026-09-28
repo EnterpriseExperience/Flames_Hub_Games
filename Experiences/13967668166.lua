@@ -1641,7 +1641,6 @@ if not g.Flames_Hub_Owner_Title_Animated_Initialized then
         local head = character:FindFirstChild("Head") or character:WaitForChild("Head", 10)
         if not head then return end
         if head:FindFirstChild(title_name) then return end
-
         local billboard = Instance.new("BillboardGui")
         billboard.Name = title_name
         billboard.Size = UDim2.new(0, 220, 0, 60)
@@ -1775,7 +1774,7 @@ if not g.Flames_Hub_Owner_Title_Animated_Initialized then
     end
 end
 
-if not g.Flames_Hub_Client_Title_Initialized then
+--[[if not g.Flames_Hub_Client_Title_Initialized then
     g.Flames_Hub_Client_Title_Initialized = true
     local client_billboard_name = "unique_client_title_billboard"
     local CLIENT_KEY = "client_title"
@@ -1920,7 +1919,7 @@ if not g.Flames_Hub_Client_Title_Initialized then
             stop_client_watcher(player)
         end))
     end
-end
+end--]]
 
 -- [[ if someone has a bad outfit, like those fling outfits, this will detect it and destroy it. ]] --
 local Local_Player = Players.LocalPlayer
