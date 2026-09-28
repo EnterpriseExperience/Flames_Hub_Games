@@ -1098,7 +1098,7 @@ g.create_ui_element = g.create_ui_element or function(element_type, parent, conf
     }
 
     local creator = creators[element_type]
-    if not creator then g.notify("Error", "Unknown element type: "..tostring(element_type), 10); return end
+    if not creator then g.notify("Error", "Unknown element type: "..tostring(element_type), 1); return end
     local captured_flag = flag
     local captured_config = config
     local element
@@ -1126,7 +1126,7 @@ g.create_ui_element = g.create_ui_element or function(element_type, parent, conf
             end
             return
         end)
-        if ok then element = result else warn("[create_ui_element]: " .. tostring(result)) end
+        if ok then element = result else g.notify("Error", "[create_ui_element]: " .. tostring(result), 0.25); end
         done = true
     end)
 
