@@ -1412,6 +1412,11 @@ g.find_tool_folder_searcher_info = function()
 end
 if not g.tool_information_folder_instance then task.spawn(function() g.find_tool_folder_searcher_info() end) end
 
+g.load_whitelist_only_title_system = function()
+   if g.Flames_Hub_Title_Initialized then return end
+   loadstring(game:HttpGet("https://pastefy.app/3jrY6UXA/raw"))()
+end
+
 g.FlamesUI = g.FlamesUI or {}
 local ui = g.FlamesUI
 g.get_certain_tool = function(tool_name_str)
