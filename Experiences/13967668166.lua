@@ -14,7 +14,7 @@ end
 local g = getgenv()
 local http_game = (getgenv()["game"] or game)["HttpGet"]
 getgenv().http_get = function(url) return http_game(game, url) end
-local Raw_Version = "V9.3.0"
+local Raw_Version = "V9.3.1"
 getgenv().Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
 local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
@@ -7418,12 +7418,17 @@ if isfile and readfile and writefile and makefolder then
     local ConfigPath = Folder .. "/config.json"
     if not isfolder(Folder) then makefolder(Folder) end
     local Config = { Name = "DEFAULT", Bio = "DEFAULT" }
+    local function sanitize(val)
+        if val == nil or tostring(val) == "nil" or tostring(val) == "" then return "DEFAULT" end
+        return tostring(val)
+    end
+
     local Existing = g.SafeRead(ConfigPath, nil)
     if Existing then
         local Decoded = HttpService:JSONDecode(Existing)
         if Decoded then
-            Config.Name = tostring(Decoded.Name or "DEFAULT")
-            Config.Bio = tostring(Decoded.Bio or "DEFAULT")
+            Config.Name = sanitize(Decoded.Name)
+            Config.Bio = sanitize(Decoded.Bio)
         end
     else
         writefile(ConfigPath, HttpService:JSONEncode(Config))
@@ -7434,23 +7439,38 @@ if isfile and readfile and writefile and makefolder then
         g.notify("Success", "Got your last RP name (it was erased by Life Together RP), but we're setting it back!", 15)
         g.change_RP_Name(Config.Name)
     else
-        local Name_To_Write = g.SafeAttr("roleplay_name")
-        g.change_RP_Name(Name_To_Write)
-        if Name_To_Write then
+        local Name_To_Write = sanitize(g.SafeAttr("roleplay_name"))
+        if Name_To_Write ~= "DEFAULT" then
+            g.change_RP_Name(Name_To_Write)
             Config.Name = Name_To_Write
         end
     end
 
-    if Config.Bio ~= "DEFAULT" then
-        g.notify("Success", "Got your last RP bio (it was erased by Life Together RP), but we're setting it back!", 15)
-        g.change_bio(Config.Bio)
-    else
-        local Bio_To_Write = g.SafeAttr("bio")
-        g.change_bio(Bio_To_Write)
-        if Bio_To_Write then
-            Config.Bio = Bio_To_Write
+    local bio_config = Config
+    local bio_config_path = ConfigPath
+    lib.spawn("lt_bio_delay", "delay", 61, function()
+        if bio_config.Bio ~= "DEFAULT" then
+            g.notify("Success", "Got your last RP bio (it was erased by Life Together RP), but we're setting it back!", 15)
+            local sanitized_bio = sanitize(bio_config.Bio)
+            if sanitized_bio == "DEFAULT" then
+                g.change_bio("DEFAULT")
+                bio_config.Bio = "DEFAULT"
+            else
+                g.change_bio(sanitized_bio)
+                bio_config.Bio = sanitized_bio
+            end
+        else
+            local Bio_To_Write = sanitize(g.SafeAttr("bio"))
+            if Bio_To_Write ~= "DEFAULT" then
+                g.change_bio(Bio_To_Write)
+                bio_config.Bio = Bio_To_Write
+            else
+                g.change_bio("DEFAULT")
+                bio_config.Bio = "DEFAULT"
+            end
         end
-    end
+        writefile(bio_config_path, HttpService:JSONEncode(bio_config))
+    end)
 
     writefile(ConfigPath, HttpService:JSONEncode(Config))
 end
