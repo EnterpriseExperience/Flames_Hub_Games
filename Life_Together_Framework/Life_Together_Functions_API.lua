@@ -49,7 +49,7 @@ getgenv().Flames_Hub_Emojis = {
 }
 g.Announcement_Banner_Notification_Emoji = g.Announcement_Banner_Notification_Emoji or "😎"
 g.Chat_UI_Table_Stuff = {
-   ["Owner_Chat_Tag"] = "✅ OWNER ✅",
+   ["Owner_Chat_Tag"] = "🔥 Flames Hub | CEO 🚬",
    ["Staff_Chat_Tag"] = "⚔️ | STAFF | ⚔️",
    ["Wifey_Chat_Tag"] = "💖 Girlfriend 💖"
 }
