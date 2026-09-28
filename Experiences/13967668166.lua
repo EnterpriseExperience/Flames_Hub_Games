@@ -14,7 +14,7 @@ end
 local g = getgenv()
 local http_game = (getgenv()["game"] or game)["HttpGet"]
 getgenv().http_get = function(url) return http_game(game, url) end
-local Raw_Version = "V9.3.1"
+local Raw_Version = "V9.3.2"
 getgenv().Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
 local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
@@ -1573,7 +1573,7 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
 end
 
 local holiday = g.getholiday() or ""
-local Announcement_Message = "Fixed Configuration API / Framework not loading (causing the script to break) + made maximum outfits slots: 99, enjoy."
+local Announcement_Message = "Made an attempt to fix the 'nil' name issue, and also fixed FallenPartsDestroyHeight still resetting with Anti Void on."
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
 g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.

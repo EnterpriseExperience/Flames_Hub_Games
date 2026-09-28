@@ -20,7 +20,7 @@ local FlamesLibrary = g.FlamesLibrary or getgenv().FlamesLibrary
 local lib = FlamesLibrary
 local InstanceNew = Instance.new
 g.Reset_Fallen_Parts_Height = g.Reset_Fallen_Parts_Height or false
-if workspace.FallenPartsDestroyHeight ~= -500 then
+if not g.anti_void and workspace.FallenPartsDestroyHeight ~= -500 then
    if g.notify and typeof(g.notify) == "function" then g.notify("Warning", "Resetting: FallenPartsDestroyHeight, it's not it's usual number.", 5) end
    local ok = pcall(function() workspace.FallenPartsDestroyHeight = -500 end)
    wait(0.25)
