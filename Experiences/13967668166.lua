@@ -3490,10 +3490,16 @@ local commands = {
     ["!fix"] = {
         display = "!fix [player]",
         run = function(args)
+            local target = args[2]
+            if not g.is_me(target) then return end
             if g.Fix_Camera_Head_Cooldown_Plr_Active then return end
             g.Fix_Camera_Head_Cooldown_Plr_Active = true
-            local head = g.Head or g.Character and g.Character:FindFirstChild("Head") or g.get_head(LocalPlayer, Players.RespawnTime + 1) or g.Char:get_head()
-            if not head then return end
+            local head = g.Head or g.Character and g.Character:FindFirstChild("Head") or g.get_head(LocalPlayer) or g.Char:get_head()
+            if not head or not head.Parent then return end
+            local hum = g.Humanoid or g.Character and g.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(LocalPlayer)
+            if not hum or not hum.Parent or not hum:IsDescendantOf(game) then return end -- can still break if not checked with IsDescendantOf(game or workspace) (either one works)
+            local root = g.HumanoidRootPart or g.Character and g.Character:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer)
+            if not root or not root.Parent then return end
             workspace.CurrentCamera:remove()
             wait(.1)
             repeat wait() until LocalPlayer.Character ~= nil
@@ -3503,6 +3509,8 @@ local commands = {
             LocalPlayer.CameraMaxZoomDistance = 99999
             LocalPlayer.CameraMode = "Classic"
             head.Anchored = false
+            if hum and hum.Parent and hum:IsDescendantOf(game) then pcall(function() hum.WalkSpeed = 16 end) end
+            if root and root.Parent then pcall(function() root.Anchored = false end) end
             task.delay(5, function() g.Fix_Camera_Head_Cooldown_Plr_Active = false end)
         end
     }
