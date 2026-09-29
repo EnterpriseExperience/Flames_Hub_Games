@@ -8377,38 +8377,43 @@ g.start_bansystem = g.start_bansystem or function()
     if g.bansystem.enabled then return end
     if g.bansystem.starting then return end
     g.bansystem.starting = true
-
-    task.spawn(function()
+    FlamesLibrary.spawn("bansystem_init", "spawn", function()
+        local confirmed_owner = false
         for i = 1, 5 do
             if g.is_localplayer_server_owner() then
-                g.bansystem.enabled = true
-                g.bansystem.starting = false
-                for _, p in ipairs(Players:GetPlayers()) do
-                    task.spawn(function()
-                        fw(0.2)
-                        checkban(p)
-                    end)
-                end
-
-                if g.bansystem.connection then
-                    pcall(function() g.bansystem.connection:Disconnect() end)
-                    g.bansystem.connection = nil
-                end
-                wait(0.25)
-                g.bansystem.connection = Players.PlayerAdded:Connect(checkban)
-                g.notify("Success", "Ban system enabled.", 5)
-                return
+                confirmed_owner = true
+                break
             end
-            wait(1)
+            FlamesLibrary.wait(1)
         end
+
+        if not confirmed_owner then
+            g.bansystem.starting = false
+            local is_priv = g.is_in_private_server()
+            if is_priv == false then
+                g.notify("Info", "You're in a public server.", 3)
+            else
+                g.notify_priv_server_owner()
+            end
+            return
+        end
+
+        g.bansystem.enabled = true
         g.bansystem.starting = false
-        g.notify("Info", "Ban system inactive.", 5)
+        for _, p in ipairs(Players:GetPlayers()) do
+            FlamesLibrary.spawn("bansystem_check_" .. p.UserId, "spawn", function()
+                FlamesLibrary.wait(0.2)
+                checkban(p)
+            end)
+        end
+        FlamesLibrary.connect("bansystem_player_added", Players.PlayerAdded:Connect(checkban))
+        g.notify("Success", "Ban system enabled.", 5)
     end)
 end
 fw(0.1)
 if not g.Ban_System_In_Flames_Hub_Has_Been_Started_Already then
     g.Ban_System_In_Flames_Hub_Has_Been_Started_Already = true  -- actually set it!
-    task.spawn(function() g.start_bansystem() end)
+    pcall(function() g.start_bansystem() end)
 end
 
 g.get_server_admin_title_player = g.get_server_admin_title_player or function()
