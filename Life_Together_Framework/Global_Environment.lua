@@ -765,7 +765,6 @@ getgenv().FlamesLibrary.is_alive = function(name)
     local lib = getgenv().FlamesLibrary
     local list = lib._connections[name]
     if not list then return false end
-
     for _, item in ipairs(list) do
         if typeof(item) == "RBXScriptConnection" then
             if item.Connected then
@@ -799,48 +798,128 @@ end
 
 getgenv().FlamesLibrary.cleanup_all = function() for name in pairs(getgenv().FlamesLibrary._connections) do getgenv().FlamesLibrary.disconnect(name) end end
 getgenv().FlamesLibrary.modules.chat_filter_override = {
-	enabled = false,
-	start = function(self)
-		if self.enabled then return end
-		self.enabled = true
-		local function will_tag(text)
-			local filtered = nil
-			local success = pcall(function() filtered = Chat:FilterStringForBroadcast(text, Players.LocalPlayer) end)
-			if not success or filtered == nil then return true end
-			if #filtered ~= #text then return true end
-			for i = 1, #text do
-				local o = text:sub(i, i)
-				local f = filtered:sub(i, i)
-				if o ~= f and f ~= "#" then return true end
-			end
-			return false
-		end
+    enabled = false,
+    _bad_patterns = {
+        "shit", "fuck", "ass", "bitch", "damn", "crap", "hell",
+        "bastard", "dick", "piss", "cunt", "cock", "fag", "slut",
+        "whore", "nigga", "nigger", "retard", "rape", "kill yourself",
+        "kys", "faggot", "twat"
+    },
+    _cache = {},
+    _cache_limit = 100,
+    _will_tag_sync = function(self, text)
+        local lower = text:lower():gsub("%s+", " "):gsub("^%s*(.-)%s*$", "%1")
+        if self._cache[lower] ~= nil then return self._cache[lower] end
+        local result = false
+        for _, pattern in ipairs(self._bad_patterns) do
+            if lower:find(pattern, 1, true) then
+                result = true
+                break
+            end
+        end
 
-		TextChatService.OnIncomingMessage = function(v)
-			local prop = Instance.new("TextChatMessageProperties")
-			if v.TextSource and v.TextSource.UserId == Players.LocalPlayer.UserId and will_tag(v.Text) then
-				prop.Text = "."
-				prop.PrefixText = "."
-				getgenv().FlamesLibrary.wait(0.25)
-				prop.Text = nil
-				if getgenv().notify then getgenv().notify("Warning", "That message seems to have been filtered! We have stopped you from getting banned from it.", 3) end
-				return prop
-			end
-			return prop
-		end
-	end,
+        if not result then
+            local spaced = lower:gsub("%s+", "")
+            for _, pattern in ipairs(self._bad_patterns) do
+                local stripped_pattern = pattern:gsub("%s+", "")
+                if spaced:find(stripped_pattern, 1, true) then
+                    result = true
+                    break
+                end
+            end
+        end
 
-	stop = function(self)
-		if not self.enabled then return end
-		self.enabled = false
-		local text_chat_service = cloneref and cloneref(game:GetService("TextChatService")) or game:GetService("TextChatService")
-		text_chat_service.OnIncomingMessage = nil
-	end,
+        if not result then
+            local leet_map = {
+                ["@"] = "a", ["4"] = "a",
+                ["3"] = "e",
+                ["1"] = "i", ["!"] = "i",
+                ["0"] = "o",
+                ["5"] = "s", ["$"] = "s",
+                ["7"] = "t",
+                ["+"] = "t",
+            }
+            local decoded = lower:gsub(".", function(c) return leet_map[c] or c end)
+            for _, pattern in ipairs(self._bad_patterns) do
+                if decoded:find(pattern, 1, true) then
+                    result = true
+                    break
+                end
+            end
+        end
 
-	toggle = function(self, state)
-		if state == nil then state = not self.enabled end
-		if state then self:start() else self:stop() end
-	end
+        if #self._cache >= self._cache_limit then
+            local keys = {}
+            for k in pairs(self._cache) do table.insert(keys, k) end
+            for i = 1, math.floor(self._cache_limit / 2) do self._cache[keys[i]] = nil end
+        end
+        self._cache[lower] = result
+        return result
+    end,
+
+    _async_verify = function(self, text, on_result)
+        g.FlamesLibrary.spawn("chat_filter_async_verify", "spawn", function()
+            local filtered = nil
+            local ok = pcall(function() filtered = Chat:FilterStringForBroadcast(text, Players.LocalPlayer) end)
+            local flagged = false
+            if ok and filtered ~= nil then
+                if #filtered ~= #text then
+                    flagged = true
+                else
+                    for i = 1, #text do
+                        if filtered:sub(i, i) == "#" and text:sub(i, i) ~= "#" then
+                            flagged = true
+                            break
+                        end
+                    end
+                end
+            end
+            if on_result then on_result(flagged) end
+        end)
+    end,
+
+    start = function(self)
+        if self.enabled then return end
+        self.enabled = true
+        TextChatService.OnIncomingMessage = function(msg)
+            local prop = Instance.new("TextChatMessageProperties")
+            if not msg.TextSource then return prop end
+            if msg.TextSource.UserId ~= LocalPlayer.UserId then return prop end
+            local raw_text = msg.Text or ""
+            local sync_flagged = self:_will_tag_sync(raw_text)
+            if sync_flagged then
+                prop.Text = ""
+                prop.PrefixText = ""
+                if g.notify and typeof(g.notify) == "function" then
+                    g.notify("Anti-Hashtag", "Blocked a message that would've been filtered.", 3)
+                end
+                return prop
+            end
+
+            self:_async_verify(raw_text, function(async_flagged)
+                if async_flagged then
+                    self._cache[raw_text:lower():gsub("%s+", " "):gsub("^%s*(.-)%s*$", "%1")] = true
+                    if g.notify and typeof(g.notify) == "function" then
+                        g.notify("Anti-Hashtag", "Async filter caught a message — pattern cache updated.", 3)
+                    end
+                end
+            end)
+
+            return prop
+        end
+    end,
+
+    stop = function(self)
+        if not self.enabled then return end
+        self.enabled = false
+        pcall(function() TextChatService.OnIncomingMessage = nil end)
+        g.FlamesLibrary.disconnect("chat_filter_async_verify")
+    end,
+
+    toggle = function(self, state)
+        if state == nil then state = not self.enabled end
+        if state then self:start() else self:stop() end
+    end
 }
 
 getgenv().FlamesLibrary.modules.disable_all = function()
