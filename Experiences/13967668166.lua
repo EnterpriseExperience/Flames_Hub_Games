@@ -24,7 +24,7 @@ wait(0.25)
 local cloneref = typeof(cloneref) == "function" and cloneref or function(instance) return instance end
 local http_game = (g["game"] or game)["HttpGet"]
 g.http_get = function(url) return http_game(game, url) end
-local Raw_Version = "V9.3.9"
+local Raw_Version = "V9.4.1"
 g.Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
 local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
@@ -841,13 +841,14 @@ if isfile and typeof(isfile) == "function" and not isfile("LifeTogether_RP_Admin
         writefile("LifeTogether_RP_Admin_Custom_Name.txt", speaker.DisplayName)
     end)
 end
+
 wait(0.1)
 if isfile and typeof(isfile) == "function" and not isfile("LifeTogether_RP_Admin_Custom_Bio.txt") then
     pcall(function()
         writefile("LifeTogether_RP_Admin_Custom_Bio.txt", "🔥 Flames Hub 🔥")
     end)
 end
-wait(0.2)
+
 if not g.dragify then
     do
         local active_frame     = nil
@@ -1582,7 +1583,7 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
 end
 
 local holiday = g.getholiday() or ""
-local Announcement_Message = "Fixed Anti-Sit for Wheelchairs, Skateboards, etc + seriously improved main internal Framework + improved Character checking Framework + fixed an internal command + fixed Anti-Void not bouncing you up properly, and much more."
+local Announcement_Message = "Fixed, revamped, improved & added a ton of stuff, check the Discord for more details regarding changelogs."
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
 g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.
@@ -8492,6 +8493,130 @@ g.flash_server_admin_title_client_sided = g.flash_server_admin_title_client_side
     end
 end
 
+local PANTS_ID = 72466003952524
+local SHIRT_ID = 119513877062851
+local CLOTHING_IDS = {Pants = PANTS_ID, Shirt = SHIRT_ID}
+local MODESTY_ITEMS = {
+    __modesty_pants = {class = "Pants", property = "PantsTemplate", template_id = "4667236106"},
+    __modesty_shirt = {class = "Shirt", property = "ShirtTemplate", template_id = "121149625778724"},
+}
+local CONNECTION_NAMES = {"clothing_child_added", "clothing_child_removed", "clothing_char_added"}
+g.anti_clothing_ban_enabled = g.anti_clothing_ban_enabled or false
+g.is_applying = g.is_applying or false
+g.pending_clothing = g.pending_clothing or {}
+g.apply_clothing = function(classes)
+    if not g.Get or typeof(g.Get) ~= "function" then g.notify("Error", "g.Get is not available or does not exist (patched?).", 3); return end
+    for _, class_name in ipairs(classes) do g.Get("wear", CLOTHING_IDS[class_name], class_name) end
+end
+
+g.safe_apply_clothing = function(classes)
+    if g.is_applying then return end
+    g.is_applying = true
+    g.notify("Success", "Flames Hub | Applying Safe Clothing (Anti-Clothing-Ban).", 1.5)
+    local success, reason = pcall(g.apply_clothing, classes)
+    if not success then g.notify("Error", tostring(reason), 5) end
+    task.delay(0.5, function() g.is_applying = false end)
+end
+
+g.is_valid_character = function(c) return c and c:FindFirstChild("HumanoidRootPart") and c:IsDescendantOf(workspace) end
+g.get_clothing_class = function(child)
+    if child:IsA("Shirt") then return "Shirt" end
+    if child:IsA("Pants") then return "Pants" end
+    return nil
+end
+
+g.get_modesty_class = function(child)
+    local entry = MODESTY_ITEMS[child.Name]
+    if entry and child:IsA(entry.class) then return entry.class end
+    for _, item in pairs(MODESTY_ITEMS) do
+        if child:IsA(item.class) then
+            local ok, template = pcall(function() return child[item.property] end)
+            if ok and type(template) == "string" and string.find(template, item.template_id, 1, true) then return item.class end
+        end
+    end
+    return nil
+end
+
+g.needs_restore = function(character, class_name)
+    for _, child in ipairs(character:GetChildren()) do if child:IsA(class_name) and not g.get_modesty_class(child) then return false end end
+    return true
+end
+
+g.flush_clothing = function(character)
+    if not g.anti_clothing_ban_enabled then
+        table.clear(g.pending_clothing)
+        return
+    end
+    if g.is_applying then
+        task.delay(0.3, g.flush_clothing, character)
+        return
+    end
+    local classes = {}
+    for class_name in pairs(g.pending_clothing) do
+        g.pending_clothing[class_name] = nil
+        if g.is_valid_character(character) and g.needs_restore(character, class_name) then table.insert(classes, class_name) end
+    end
+    if #classes == 0 then return end
+    g.safe_apply_clothing(classes)
+end
+
+g.queue_clothing = function(character, class_name)
+    if not g.anti_clothing_ban_enabled then return end
+    g.pending_clothing[class_name] = true
+    task.delay(0.25, g.flush_clothing, character)
+end
+
+g.watch_clothing = function(character)
+    if not g.anti_clothing_ban_enabled then return end
+    if not g.is_valid_character(character) then return end
+    table.clear(g.pending_clothing)
+    FlamesLibrary.connect("clothing_child_added", character.ChildAdded:Connect(function(child)
+        if not g.anti_clothing_ban_enabled then return end
+        local class_name = g.get_modesty_class(child)
+        if not class_name then return end
+        if not g.is_valid_character(g.get_char(speaker)) then return end
+        g.queue_clothing(character, class_name)
+    end))
+
+    FlamesLibrary.connect("clothing_child_removed", character.ChildRemoved:Connect(function(child)
+        if not g.anti_clothing_ban_enabled then return end
+        local class_name = g.get_clothing_class(child)
+        if not class_name then return end
+        if not g.is_valid_character(g.get_char(speaker)) then return end
+        g.queue_clothing(character, class_name)
+    end))
+
+    for _, child in ipairs(character:GetChildren()) do
+        local class_name = g.get_modesty_class(child)
+        if class_name then g.queue_clothing(character, class_name) end
+    end
+end
+
+g.toggle_anti_clothing_ban_system = function(state)
+    if state == true then
+        if g.anti_clothing_ban_enabled then return end
+        g.anti_clothing_ban_enabled = true
+        local char = g.Character or speaker.Character or g.get_char(speaker)
+        if g.is_valid_character(char) then g.watch_clothing(char) end
+        FlamesLibrary.connect("clothing_char_added", speaker.CharacterAdded:Connect(function(new_char)
+            if not g.anti_clothing_ban_enabled then return end
+            if not g.is_valid_character(new_char) then return end
+            g.watch_clothing(new_char)
+        end))
+        g.notify("Success", "Flames Hub | Anti-Clothing-Ban enabled.", 3)
+    elseif state == false then
+        if not g.anti_clothing_ban_enabled then return end
+        g.anti_clothing_ban_enabled = false
+        for _, connection_name in ipairs(CONNECTION_NAMES) do FlamesLibrary.disconnect(connection_name) end
+        table.clear(g.pending_clothing)
+        g.is_applying = false
+        g.notify("Success", "Flames Hub | Anti-Clothing-Ban disabled.", 3)
+    else
+        return
+    end
+end
+
+-- [[ Was automatically implemented but was taken out because people did not want it apparently. ]] --
 --if not g.Server_Admin_Text_Title_Changer then g.flash_server_admin_title_client_sided(true) end
 g.is_tool_colorable = g.is_tool_colorable or function(tool)
     if tool:IsA("Tool") and (tool:GetAttribute("color1") or tool:GetAttribute("Color1")) then
@@ -8507,7 +8632,6 @@ g.find_backpack_tool = g.find_backpack_tool or function()
             return v
         end
     end
-
     return nil
 end
 
@@ -8517,7 +8641,6 @@ g.find_character_tool = g.find_character_tool or function()
             return v
         end
     end
-
     return nil
 end
 
@@ -8529,30 +8652,25 @@ g.find_placed_models_tool = g.find_placed_models_tool or function()
             end
         end
     end
-
     return nil
 end
 
 g.find_owned_model = g.find_owned_model or function()
     local folder = Workspace:FindFirstChild("PlacedModels")
-    if not folder then return nil end
-
-    local uid = g.LocalPlayer.UserId
-
+    if not folder or not folder:IsA("Folder") then return nil end
+    local uid = speaker.UserId
     for _, model in ipairs(folder:GetChildren()) do
         if model:IsA("Model") and model:GetAttribute("owner_id") == uid then
             return model
         end
     end
-
     return nil
 end
 
 g.rainbow_tool = g.rainbow_tool or function(toggled)
     if toggled then
-        g.notify("Success", "RGB Tool is now enabled.", 5)
+        g.notify("Success", "Flames Hub | RGB Tools is now enabled.", 5)
         local tool = g.find_character_tool() or g.find_backpack_tool() or g.find_placed_models_tool()
-
         if not tool then
             g.Send("get_tool", "Gift")
             g.notify("Warning", "Wait! We're giving you a colorable Tool...", 5)
@@ -8594,9 +8712,9 @@ g.rainbow_tool = g.rainbow_tool or function(toggled)
             end
         end
     else
-        if not g.Rainbow_Tools_FE then g.notify("Warning", "RGB Tools is not enabled!", 5); return end
+        if not g.Rainbow_Tools_FE then g.notify("Warning", "Flames Hub | RGB Tools is not enabled!", 5); return end
         g.Rainbow_Tools_FE = false
-        g.notify("Success", "RGB tools has been disabled.", 5)
+        g.notify("Success", "Flames Hub | RGB Tools is now disabled.", 5)
     end
 end
 
@@ -8606,7 +8724,6 @@ g.toggle_name_func = g.toggle_name_func or function(boolean)
     elseif boolean == false then
         g.Send("hide_name", false)
     else
-        g.notify("Error", "Invalid arguments provided.", 3)
         return 
     end
 end
@@ -8619,9 +8736,9 @@ g.flashy_name = g.flashy_name or function(Toggle)
         FL.spawn("flashy_name_loop", "spawn", function()
             while g.Flashing_Name_Title == true do
                 g.toggle_name_func(true)
-                fw(.1)
+                fw(0)
                 g.toggle_name_func(false)
-                fw(.1)
+                fw(0)
             end
         end)
     elseif Toggle == false then
@@ -11126,6 +11243,14 @@ Flag = "Job_Spammer_Toggled_UI",
 Callback = function(state)
     g.job_spammer(state)
 end}, "Job_Spammer_Toggled_UI")
+
+g.create_ui_element("Toggle", LocalPlayer_Section, {
+Name = "Anti Clothing Ban (FE)",
+Default = false,
+Flag = "Anti_Clothes_Ban_Roblox_Bypass_Toggle_UI",
+Callback = function(state)
+    g.toggle_anti_clothing_ban_system(state)
+end}, "Anti_Clothes_Ban_Roblox_Bypass_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Glitch Outfit (FE)",

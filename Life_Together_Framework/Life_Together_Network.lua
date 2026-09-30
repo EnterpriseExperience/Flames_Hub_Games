@@ -1,11 +1,19 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
 -- [[ Better Network system, it'll grab ALL the ModuleScripts. ]] --
-local g = getgenv()
+local In_Studio = false
+local g
+if game:GetService("RunService"):IsStudio() then
+    g = _G
+    In_Studio = true
+else
+    g = getgenv()
+end
+local cloneref = typeof(cloneref) == "function" and cloneref or function(instance) return instance end
 local excluded = { Lighting = true }
 g.Game = cloneref and cloneref(game) or game
 g.service_cache = g.service_cache or {}
 g.Chat_UI_Table_Stuff = { ["Owner_Chat_Tag"] = "😉🤫😈 | OWNER | ⚔️👑⭐", ["Staff_Chat_Tag"] = "⚔️ | STAFF | ⚔️", ["Wife_Chat_Tag"] = "💘 | WIFEY | 💘", }
-g.safewrap = function(name)
+g.safewrap = g.safewrap or function(name)
     local cache = g.service_cache
     if cache[name] then return cache[name] end
     local ok, svc = pcall(function()
@@ -26,7 +34,7 @@ local function getorset(global, value)
     return v
 end
 
-network = nil
+Network = nil
 HttpService    = getorset("HttpService",    g.safewrap("HttpService"))
 Players        = getorset("Players",        g.safewrap("Players"))
 RunService     = getorset("RunService",     g.safewrap("RunService"))
@@ -36,10 +44,8 @@ Workspace      = getorset("Workspace",      g.safewrap("Workspace"))
 Modules        = getorset("Modules",        ReplicatedStorage:FindFirstChild("Modules", true))
 Core           = getorset("Core", ReplicatedStorage:FindFirstChild("Core", true) or Modules:FindFirstChild("Core", true))
 Game_Folder    = getorset("Game_Folder", ReplicatedStorage:FindFirstChild("Game", true) or Modules:FindFirstChild("Game", true))
-
 if not g.LifeTogether_Network_Modules_Already_Loaded_Initialized then
     g.LifeTogether_Network_Modules_Already_Loaded_Initialized = true
-
     local function load_modules(folder)
         for _, child in ipairs(folder:GetChildren()) do
             if excluded[child.Name] then
@@ -74,6 +80,8 @@ if not g.LifeTogether_Network_Modules_Already_Loaded_Initialized then
 end
 wait(0.4)
 local function shownotification(title, text, method, image)
+    if In_Studio then warn(tostring(method)..": "..tostring(title), tostring(text)); return end
+    if not Phone or typeof(Phone) ~= "table" then warn(tostring(method)..": "..tostring(title), tostring(text)); return end
     if method == "Normal" and not image then
         Phone.show_notification(tostring(title), tostring(text))
     elseif method == "Warning" then
@@ -87,7 +95,7 @@ getorset("show_notification", shownotification)
 getorset("Modules",   Modules)
 getorset("Core",      Core)
 getorset("Game_Folder", Game_Folder)
-getorset("Net",       network)
+getorset("Net",       Network)
 local function sendfunction(...) Network.get(...) end
 local function sendremote(...) Network.send(...) end
 getorset("send_remote", sendremote)

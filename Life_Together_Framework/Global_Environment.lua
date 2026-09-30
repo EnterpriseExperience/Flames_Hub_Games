@@ -673,8 +673,9 @@ end
 
 getgenv().FlamesLibrary = getgenv().FlamesLibrary or {}
 getgenv().FlamesLibrary._connections = getgenv().FlamesLibrary._connections or {}
-getgenv().FlamesLibrary.modules = getgenv().FlamesLibrary.modules or {} -- new
-getgenv().FlamesLibrary.module_utils = getgenv().FlamesLibrary.module_utils or {} -- new
+getgenv().FlamesLibrary.modules = getgenv().FlamesLibrary.modules or {}
+getgenv().FlamesLibrary.module_utils = getgenv().FlamesLibrary.module_utils or {}
+getgenv().FlamesLibrary.table_lib = getgenv().FlamesLibrary.table_lib or {} -- new 'table' methods and usage, making us only more efficient.
 getgenv().FlamesLibrary.connect = function(name, connection)
     local existing = getgenv().FlamesLibrary._connections[name]
     if existing then
@@ -799,60 +800,70 @@ end
 getgenv().FlamesLibrary.cleanup_all = function() for name in pairs(getgenv().FlamesLibrary._connections) do getgenv().FlamesLibrary.disconnect(name) end end
 getgenv().FlamesLibrary.modules.chat_filter_override = {
     enabled = false,
-    _bad_patterns = {
-        "shit", "fuck", "ass", "bitch", "damn", "crap", "hell",
-        "bastard", "dick", "piss", "cunt", "cock", "fag", "slut",
-        "whore", "nigga", "nigger", "retard", "rape", "kill yourself",
-        "kys", "faggot", "twat"
+    -- [[ All encoded to bypass any filters (even in games). ]] --
+    _encoded_patterns = {
+        "c2hpdA==", "ZnVjaw==", "YXNz", "YmlhdGNo", "ZGFtbg==",
+        "Y3JhcA==", "aGVsbA==", "YmFzdGFyZA==", "ZGljaw==", "cGlzcw==",
+        "Y3VudA==", "Y29jaw==", "ZmFn", "c2x1dA==", "d2hvcmU=",
+        "bmln", "cmV0YXJk", "cmFwZQ==", "a2lsbCB5b3Vyc2VsZg==",
+        "a3lz", "ZmFnZ290", "dHdhdA=="
     },
+
+    _bad_patterns = nil,
+    _decode_patterns = function(self)
+        if self._bad_patterns then return end
+        self._bad_patterns = {}
+        local b = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+        for _, enc in ipairs(self._encoded_patterns) do
+            local decoded = enc:gsub("[^"..b.."=]", "")
+            local result = ""
+            local padding = decoded:sub(-2) == "==" and 2 or decoded:sub(-1) == "=" and 1 or 0
+            decoded = decoded:gsub("=", "A")
+            for i = 1, #decoded, 4 do
+                local c1, c2, c3, c4 = decoded:sub(i,i), decoded:sub(i+1,i+1), decoded:sub(i+2,i+2), decoded:sub(i+3,i+3)
+                local n1 = b:find(c1) - 1
+                local n2 = b:find(c2) - 1
+                local n3 = b:find(c3) - 1
+                local n4 = b:find(c4) - 1
+                local combined = n1 * 262144 + n2 * 4096 + n3 * 64 + n4
+                result = result .. string.char(
+                    math.floor(combined / 65536) % 256,
+                    math.floor(combined / 256) % 256,
+                    combined % 256
+                )
+            end
+            table.insert(self._bad_patterns, result:sub(1, #result - padding))
+        end
+    end,
+
     _cache = {},
     _cache_limit = 100,
     _will_tag_sync = function(self, text)
+        self:_decode_patterns()
         local lower = text:lower():gsub("%s+", " "):gsub("^%s*(.-)%s*$", "%1")
         if self._cache[lower] ~= nil then return self._cache[lower] end
         local result = false
-        for _, pattern in ipairs(self._bad_patterns) do
-            if lower:find(pattern, 1, true) then
-                result = true
-                break
-            end
-        end
-
+        for _, pattern in ipairs(self._bad_patterns) do if lower:find(pattern, 1, true) then result = true; break end end
         if not result then
             local spaced = lower:gsub("%s+", "")
-            for _, pattern in ipairs(self._bad_patterns) do
-                local stripped_pattern = pattern:gsub("%s+", "")
-                if spaced:find(stripped_pattern, 1, true) then
-                    result = true
-                    break
-                end
-            end
+            for _, pattern in ipairs(self._bad_patterns) do if spaced:find(pattern:gsub("%s+", ""), 1, true) then result = true; break end end
         end
 
         if not result then
             local leet_map = {
-                ["@"] = "a", ["4"] = "a",
-                ["3"] = "e",
-                ["1"] = "i", ["!"] = "i",
-                ["0"] = "o",
-                ["5"] = "s", ["$"] = "s",
-                ["7"] = "t",
-                ["+"] = "t",
+                ["@"]="a",["4"]="a",["3"]="e",["1"]="i",
+                ["!"]="i",["0"]="o",["5"]="s",["$"]="s",
+                ["7"]="t",["+"]="t",
             }
-            local decoded = lower:gsub(".", function(c) return leet_map[c] or c end)
-            for _, pattern in ipairs(self._bad_patterns) do
-                if decoded:find(pattern, 1, true) then
-                    result = true
-                    break
-                end
-            end
+            local decoded_text = lower:gsub(".", function(c) return leet_map[c] or c end)
+            for _, pattern in ipairs(self._bad_patterns) do if decoded_text:find(pattern, 1, true) then result = true; break end end
         end
-
         if #self._cache >= self._cache_limit then
             local keys = {}
             for k in pairs(self._cache) do table.insert(keys, k) end
             for i = 1, math.floor(self._cache_limit / 2) do self._cache[keys[i]] = nil end
         end
+
         self._cache[lower] = result
         return result
     end,
@@ -866,12 +877,7 @@ getgenv().FlamesLibrary.modules.chat_filter_override = {
                 if #filtered ~= #text then
                     flagged = true
                 else
-                    for i = 1, #text do
-                        if filtered:sub(i, i) == "#" and text:sub(i, i) ~= "#" then
-                            flagged = true
-                            break
-                        end
-                    end
+                    for i = 1, #text do if filtered:sub(i, i) == "#" and text:sub(i, i) ~= "#" then flagged = true; break end end
                 end
             end
             if on_result then on_result(flagged) end
@@ -886,25 +892,18 @@ getgenv().FlamesLibrary.modules.chat_filter_override = {
             if not msg.TextSource then return prop end
             if msg.TextSource.UserId ~= LocalPlayer.UserId then return prop end
             local raw_text = msg.Text or ""
-            local sync_flagged = self:_will_tag_sync(raw_text)
-            if sync_flagged then
+            if self:_will_tag_sync(raw_text) then
                 prop.Text = ""
                 prop.PrefixText = ""
-                if g.notify and typeof(g.notify) == "function" then
-                    g.notify("Anti-Hashtag", "Blocked a message that would've been filtered.", 3)
-                end
+                if g.notify and typeof(g.notify) == "function" then g.notify("Warning", "Blocked a message that would've been filtered.", 3) end
                 return prop
             end
-
             self:_async_verify(raw_text, function(async_flagged)
                 if async_flagged then
                     self._cache[raw_text:lower():gsub("%s+", " "):gsub("^%s*(.-)%s*$", "%1")] = true
-                    if g.notify and typeof(g.notify) == "function" then
-                        g.notify("Anti-Hashtag", "Async filter caught a message — pattern cache updated.", 3)
-                    end
+                    if g.notify and typeof(g.notify) == "function" then g.notify("Success", "Async filter caught it — cache updated.", 3) end
                 end
             end)
-
             return prop
         end
     end,
@@ -1055,6 +1054,122 @@ getgenv().FlamesLibrary.set_starter_player_property = function(property, value)
     local success, err = pcall(function() starter_player[resolved] = value end)
     if not success then return false, "failed to set " .. resolved .. ": " .. tostring(err) end
     return true, resolved
+end
+
+-- [[ New 'table' methods. ]] --
+getgenv().FlamesLibrary.table_lib._is_table = function(value) return type(value) == "table" end
+getgenv().FlamesLibrary.table_lib._is_index = function(value) return type(value) == "number" and value == math.floor(value) end
+getgenv().FlamesLibrary.table_lib._is_frozen = function(tbl)
+    if not table.isfrozen then return false end
+    local ok, frozen = pcall(table.isfrozen, tbl)
+    return ok and frozen
+end
+
+getgenv().FlamesLibrary.table_lib._deep_clone = function(source, seen)
+    local lib = getgenv().FlamesLibrary.table_lib
+    if seen[source] then return seen[source] end
+    local copy = {}
+    seen[source] = copy
+    for key, value in next, source do
+        local new_key = lib._is_table(key) and lib._deep_clone(key, seen) or key
+        copy[new_key] = lib._is_table(value) and lib._deep_clone(value, seen) or value
+    end
+    local meta = getmetatable(source)
+    if lib._is_table(meta) then pcall(setmetatable, copy, meta) end
+    return copy
+end
+
+getgenv().FlamesLibrary.table_lib._shallow_clone = function(source)
+    local lib = getgenv().FlamesLibrary.table_lib
+    if table.clone then
+        local ok, copy = pcall(table.clone, source)
+        if ok then return copy end
+    end
+    local copy = {}
+    for key, value in next, source do copy[key] = value end
+    local meta = getmetatable(source)
+    if lib._is_table(meta) then pcall(setmetatable, copy, meta) end
+    return copy
+end
+
+getgenv().FlamesLibrary.table_lib._deep_freeze = function(tbl, seen)
+    local lib = getgenv().FlamesLibrary.table_lib
+    if seen[tbl] then return end
+    seen[tbl] = true
+    for key, value in next, tbl do
+        if lib._is_table(key) then lib._deep_freeze(key, seen) end
+        if lib._is_table(value) then lib._deep_freeze(value, seen) end
+    end
+    if not lib._is_frozen(tbl) then table.freeze(tbl) end
+end
+
+getgenv().FlamesLibrary.table_lib.insert = function(tbl, ...)
+    local lib = getgenv().FlamesLibrary.table_lib
+    if not lib._is_table(tbl) then return false, "invalid table" end
+    if lib._is_frozen(tbl) then return false, "table is frozen" end
+    local count = select("#", ...)
+    if count == 1 then
+        local value = ...
+        if value == nil then return false, "value is nil" end
+        local ok, err = pcall(table.insert, tbl, value)
+        if not ok then return false, "insert failed: " .. tostring(err) end
+        return true, #tbl
+    elseif count == 2 then
+        local position, value = ...
+        if not lib._is_index(position) then return false, "position must be an integer" end
+        if value == nil then return false, "value is nil" end
+        if position < 1 or position > #tbl + 1 then
+            return false, "position " .. tostring(position) .. " out of bounds (1 to " .. tostring(#tbl + 1) .. ")"
+        end
+        local ok, err = pcall(function() table.insert(tbl, value) end)
+        if not ok then return false, "insert failed: " .. tostring(err) end
+        return true, position
+    end
+    return false, "expected (value) or (position, value)"
+end
+
+getgenv().FlamesLibrary.table_lib.remove = function(tbl, position)
+    local lib = getgenv().FlamesLibrary.table_lib
+    if not lib._is_table(tbl) then return false, "invalid table" end
+    if lib._is_frozen(tbl) then return false, "table is frozen" end
+    local length = #tbl
+    if length == 0 then return false, "table is empty" end
+    if position ~= nil then
+        if not lib._is_index(position) then return false, "position must be an integer" end
+        if position < 1 or position > length then
+            return false, "position " .. tostring(position) .. " out of bounds (1 to " .. tostring(length) .. ")"
+        end
+    end
+    local ok, removed = pcall(table.remove, tbl, position)
+    if not ok then return false, "remove failed: " .. tostring(removed) end
+    return true, removed
+end
+
+getgenv().FlamesLibrary.table_lib.clone = function(tbl, deep)
+    local lib = getgenv().FlamesLibrary.table_lib
+    if not lib._is_table(tbl) then return false, "invalid table" end
+    local ok, result = pcall(function()
+        if deep == true then return lib._deep_clone(tbl, {}) end
+        return lib._shallow_clone(tbl)
+    end)
+    if not ok then return false, "clone failed: " .. tostring(result) end
+    return true, result
+end
+
+getgenv().FlamesLibrary.table_lib.freeze = function(tbl, deep)
+    local lib = getgenv().FlamesLibrary.table_lib
+    if not lib._is_table(tbl) then return false, "invalid table" end
+    if not table.freeze then return false, "table.freeze is not supported here" end
+    if deep ~= true and lib._is_frozen(tbl) then return true, tbl end
+    local ok, err = pcall(function()
+        if deep == true then
+            lib._deep_freeze(tbl, {})
+        else
+            table.freeze(tbl)
+        end
+    end)
+    if not ok then return false, "freeze failed: " .. tostring(err) end
+    return true, tbl
 end
 wait(0.1)
 local FL = getgenv().FlamesLibrary
