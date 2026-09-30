@@ -1583,7 +1583,7 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
 end
 
 local holiday = g.getholiday() or ""
-local Announcement_Message = "Added a hot-fix for Outfits Manager not properly loading all your saved outfits correctly upon closing it and re-opening it."
+local Announcement_Message = "Added a hot-fix for Outfits Manager not properly loading all your saved outfits correctly upon closing it and re-opening it + fixed RateLimiter bypass notifying on every load."
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
 g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.
@@ -5974,18 +5974,21 @@ if Drawing and not g.tracer_core_initialized then
     end
 end
 wait(0.25)
-if g.RateLimiter_Bypass_Applied then
-    if g.RateLimiter_Bypass_Applied_Method_1 then
-        g.notify("Success", "RateLimiter bypass applied with method 1.", 10)
-    elseif g.RateLimiter_Bypass_Applied_Method_2 then
-        g.notify("Success", "RateLimiter bypass applied with method 2.", 10)
-    elseif g.RateLimiter_Bypass_Applied_Method_3 then
-        g.notify("Success", "RateLimiter bypass applied with method 3.", 10)
+if not g.RateLimiter_Notified then
+    g.RateLimiter_Notified = true
+    if g.RateLimiter_Bypass_Applied then
+        if g.RateLimiter_Bypass_Applied_Method_1 then
+            g.notify("Success", "RateLimiter bypass applied with method 1.", 10)
+        elseif g.RateLimiter_Bypass_Applied_Method_2 then
+            g.notify("Success", "RateLimiter bypass applied with method 2.", 10)
+        elseif g.RateLimiter_Bypass_Applied_Method_3 then
+            g.notify("Success", "RateLimiter bypass applied with method 3.", 10)
+        else
+            g.notify("Warning", "We we're unable to apply any RateLimiter bypass.", 10)
+        end
     else
-        g.notify("Warning", "We we're unable to apply any RateLimiter bypass.", 10)
+        g.notify("Warning", "Not sure if RateLimiter bypass was applied or not.", 10)
     end
-else
-    g.notify("Warning", "Not sure if RateLimiter bypass was applied or not.")
 end
 
 g.WalkFlingWhitelist = g.WalkFlingWhitelist or {}
