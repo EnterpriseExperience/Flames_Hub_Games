@@ -24,7 +24,7 @@ wait(0.25)
 local cloneref = typeof(cloneref) == "function" and cloneref or function(instance) return instance end
 local http_game = (g["game"] or game)["HttpGet"]
 g.http_get = function(url) return http_game(game, url) end
-local Raw_Version = "V9.3.7"
+local Raw_Version = "V9.3.9"
 g.Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
 local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
