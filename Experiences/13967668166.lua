@@ -1582,7 +1582,7 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
 end
 
 local holiday = g.getholiday() or ""
-local Announcement_Message = "Disabled Wildwood Integration and it's parts (TouchTransmitter's, Seats) + added Studio advancements to detect Roblox Studio runtime."
+local Announcement_Message = "Fixed Anti-Sit for Wheelchairs, Skateboards, etc + seriously improved main internal Framework + improved Character checking Framework + fixed an internal command + fixed Anti-Void not bouncing you up properly, and much more."
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
 g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.
