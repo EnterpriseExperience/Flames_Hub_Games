@@ -2494,7 +2494,11 @@ if Workspace:FindFirstChild("WildwoodIntegration") then
         if v:IsA("TouchTransmitter") then
             pcall(function() v:Destroy() end)
         elseif v:IsA("Seat") then
-            pcall(function() v.Disabled = true end)
+            pcall(function()
+                v.Disabled = true
+                wait(0.15)
+                v:Destroy()
+            end)
         end
     end
 end
