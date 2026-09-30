@@ -11,13 +11,17 @@ if not game:IsLoaded() then
     hint_instance:Destroy()
 end
 
+-- [[     INITIALIZATION (Roblox Environment)     ]] --
+local In_Studio = false
 local g
 if game:GetService("RunService"):IsStudio() then
     g = _G
+    In_Studio = true
 else
     g = getgenv()
 end
 wait(0.25)
+local cloneref = typeof(cloneref) == "function" and cloneref or function(instance) return instance end
 local http_game = (g["game"] or game)["HttpGet"]
 g.http_get = function(url) return http_game(game, url) end
 local Raw_Version = "V9.3.7"
@@ -46,21 +50,22 @@ g.colors = g.colors or {
     Color3.fromRGB(128,0,128),
 }
 g.LocalPlayer = g.LocalPlayer or localPlayer
-if not game:GetService("RunService"):IsStudio() then
+if not In_Studio then
     if not g.GlobalEnvironmentFramework_Initialized then
-        loadstring(getgenv().http_get("https://pastebin.com/raw/T25mDhBZ"))()
+        loadstring(g.http_get("https://pastebin.com/raw/T25mDhBZ"))()
         wait(0.1)
         g.GlobalEnvironmentFramework_Initialized = true
     end
 end
 wait(0.25)
 if not g.LifeTogether_Actual_Flames_Hub_Running_Functioning_Currently_On_Client then if g.notify and typeof(g.notify) == "function" then g.notify("Success", "Got LocalPlayer: "..tostring(g.LocalPlayer), 5) end end
--- [[     SERVICES     ]] --
+-- [[     SERVICES / DEFINITIONS     ]] --
+local has_gethui = (typeof(gethui) == "function") or (typeof(g.gethui) == "function")
+local has_gethidden = (typeof(get_hidden_gui) == "function") or (typeof(g.get_hidden_gui) == "function")
 local RunService = cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
 local CoreGui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
-local has_gethui = (typeof(gethui) == "function") or (typeof(g.gethui) == "function")
-local has_gethidden = (typeof(get_hidden_gui) == "function") or (typeof(g.get_hidden_gui) == "function")
+local RobloxReplicatedStorage = g.RobloxReplicatedStorage or cloneref and cloneref(game:GetService("RobloxReplicatedStorage")) or game:GetService("RobloxReplicatedStorage")
 local ReplicatedStorage = g.ReplicatedStorage or cloneref and cloneref(game:GetService("ReplicatedStorage")) or game:GetService("ReplicatedStorage")
 local HttpService = g.HttpService or cloneref and cloneref(game:GetService("HttpService")) or game:GetService("HttpService")
 local LocalPlayer = g.LocalPlayer or Players.LocalPlayer
@@ -83,7 +88,7 @@ local rs  = RunService
 local IsMobile = UserInputService.TouchEnabled
 local http = HttpService
 if not has_gethui and not has_gethidden and not g.roblox_hidden_gui_location then
-    if RunService:IsStudio() then
+    if In_Studio then
         g.roblox_hidden_gui_location = player_gui
     else
         for _, v in ipairs(CoreGui:GetChildren()) do
@@ -94,6 +99,7 @@ if not has_gethui and not has_gethidden and not g.roblox_hidden_gui_location the
         end
     end
     local function resolve_gui()
+        if In_Studio then return player_gui end
         if g.roblox_hidden_gui_location and g.roblox_hidden_gui_location.Parent and g.roblox_hidden_gui_location:IsA("ScreenGui") then return g.roblox_hidden_gui_location end
         return CoreGui
     end
@@ -307,8 +313,27 @@ local function isVerified()
     return type(content) == "string" and content:lower():find("true") ~= nil
 end
 
-local function setVerified() if writefile and typeof(writefile) == "function" then writefile(verify_file, "true") end end
-local function waitForGuiGone() while CoreGui:FindFirstChild("MemoryMinigameGUI") do task.wait() end end
+local function setVerified()
+    if In_Studio then return true end
+    if typeof(writefile) ~= "function" or type(verify_file) ~= "string" then return false end
+    local ok = pcall(writefile, verify_file, "true")
+    return ok
+end
+
+local function waitForGuiGone()
+    local container = CoreGui
+    if In_Studio then
+        container = player_gui or speaker:FindFirstChildOfClass("PlayerGui")
+        if not container or not container:IsA("PlayerGui") then return end
+    end
+    wait(0.1)
+    while true do
+        local ok, found = pcall(function() return container:FindFirstChild("MemoryMinigameGUI") end)
+        if not ok or not found then break end
+        task.wait()
+    end
+end
+
 g.disabled_global_value_correctly = g.disabled_global_value_correctly or function(input)
     local ok, result = pcall(function() return input end)
     if not ok then return true end
@@ -328,7 +353,7 @@ while (not lib or type(lib) ~= "table") and lib_attempts < lib_max_attempts do
 end
 
 if not lib or type(lib) ~= "table" then
-    if g.notify then g.notify("Error", "FlamesLibrary failed to load, the system cannot continue without it.", 15) end
+    if g.notify and typeof(g.notify) == "function" then g.notify("Error", "FlamesLibrary failed to load, the system cannot continue without it.", 15) else warn("FlamesLibrary failed to load, the system cannot continue without it.") end
     return
 end
 
@@ -349,13 +374,18 @@ end
 function create_flames_hub_unique_id(target_user_id)
     local file_name = "flames_hub_unique_ID.txt"
     if userid ~= target_user_id then return nil end
-    if isfile and isfile(file_name) then
-        local id = readfile and readfile(file_name)
-        if id and id ~= "" then return id end
+    if In_Studio then
+        g.flames_hub_unique_id = g.flames_hub_unique_id or HttpService:GenerateGUID(false)
+        return g.flames_hub_unique_id
     end
 
-    local new_id = http:GenerateGUID(false)
-    pcall(function() writefile(file_name, new_id) end)
+    if isfile and readfile and typeof(isfile) == "function" and typeof(readfile) == "function" and isfile(file_name) then
+        local ok, id = pcall(readfile, file_name)
+        if ok and id and id ~= "" then return id end
+    end
+
+    local new_id = HttpService:GenerateGUID(false)
+    if writefile and typeof(writefile) == "function" then pcall(writefile, file_name, new_id) end
     return new_id
 end
 
@@ -630,62 +660,36 @@ local function fetch_value(name)
     if not name then return nil end
     local lowered = tostring(name):lower()
     if virtuals[lowered] then
-        local ok, players = pcall(function()
-            return g.service_cache["Players"].LocalPlayer
+        local ok, speaker = pcall(function()
+            local Players = g.service_cache["Players"] or (Players)
+            return Players.LocalPlayer
         end)
-
-        if not ok or not players then
-            return nil
-        end
-
-        local lp = players.LocalPlayer
-        if lp then
-            return lowered, lp
-        end
-
-        return nil
+        if not ok or not speaker then return nil end
+        return lowered, speaker
     end
 
     local resolved = resolve_service(name)
     if not resolved then return nil end
     local ok, svc = pcall(function()
-        return game:GetService(resolved)
+        local service = game:GetService(resolved)
+        if cloneref and typeof(cloneref) == "function" then return cloneref(service) end
+        return service
     end)
-
     if not ok or not svc then return nil end
-
-    if cloneref then
-        local success, cloned = pcall(function()
-            return cloneref(svc)
-        end)
-        if success and cloned then
-            svc = cloned
-        end
-    end
-
     return resolved, svc
 end
 
-if setmetatable and getmetatable and rawget and rawset then
+-- [[ Ultra proper checking my friends. ]] --
+if setmetatable and getmetatable and rawget and rawset and typeof(setmetatable) == "function" and typeof(getmetatable) == "function" and typeof(rawget) == "function" and typeof(rawset) == "function" then
     if not getmetatable(g.service_cache) then
         setmetatable(g.service_cache, {
             __index = function(self, key)
                 local existing = rawget(self, key)
-                if existing then
-                    return existing
-                end
-
+                if existing then return existing end
                 local resolved_key, value = fetch_value(key)
-                if not value then
-                    return nil
-                end
-
+                if not value then return nil end
                 rawset(self, key, value)
-
-                if resolved_key and resolved_key ~= key then
-                    rawset(self, resolved_key, value)
-                end
-
+                if resolved_key and resolved_key ~= key then rawset(self, resolved_key, value) end
                 return value
             end
         })
@@ -701,13 +705,8 @@ else
         if g.service_cache[name] then return g.service_cache[name] end
         local resolved_key, value = fetch_value(name)
         if not value then return nil end
-
         g.service_cache[name] = value
-
-        if resolved_key and resolved_key ~= name then
-            g.service_cache[resolved_key] = value
-        end
-
+        if resolved_key and resolved_key ~= name then g.service_cache[resolved_key] = value end
         return value
     end
 end
@@ -2187,7 +2186,7 @@ g.find_placed_models_folder = function()
 end
 
 if not g.cached_placed_models_folder then pcall(function() g.find_placed_models_folder() end) end
-local Placed_Models = g.cached_placed_models_folder or g.Workspace:FindFirstChild("PlacedModels") or g.Workspace:WaitForChild("PlacedModels", 1) or g.find_placed_models_folder()
+local Placed_Models = g.cached_placed_models_folder or Workspace:FindFirstChild("PlacedModels") or Workspace:WaitForChild("PlacedModels", 1) or g.find_placed_models_folder()
 g.workspace_editor_script_GUI = function()
     if g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub") and g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub"):IsA("ScreenGui") then
         g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub").Enabled = true
@@ -2198,7 +2197,6 @@ g.workspace_editor_script_GUI = function()
 end
 
 g.is_in_private_server = function()
-    local RobloxReplicatedStorage = g.RobloxReplicatedStorage or cloneref and cloneref(game:GetService("RobloxReplicatedStorage")) or game:GetService("RobloxReplicatedStorage")
     local Remote = RobloxReplicatedStorage:FindFirstChild("GetServerType")
     if not Remote then return g.notify("Error", "RemoteFunction: GetServerType does not exist under: RobloxReplicatedStorage, probably patched.", 3) end
     local Result = Remote:InvokeServer()
@@ -5290,7 +5288,7 @@ g.save_copied_plrs_emote = g.save_copied_plrs_emote or function()
         if g.FreeEmotes_Enabled then g.notify("Warning", "You already have Flames Emoting GUI loaded!", 5); return end
         if CoreGui:FindFirstChild("FlamesEmoteGUI") then g.notify("Warning", "You already have Flames Emoting GUI loaded!", 5); return end
         g.FreeEmotes_Enabled = true
-        loadstring(getgenv().http_get("https://pastebin.com/raw/RCj6RJtc"))()
+        loadstring(g.http_get("https://pastebin.com/raw/RCj6RJtc"))()
         wait(1)
         g.notify("Info", "Try the command again, you did not have our Free Emotes GUI loaded.", 15)
         wait(1)
@@ -5531,7 +5529,7 @@ g.name_changer_premium = g.name_changer_premium or function(state)
     }
 
     if state == true then
-        if g.Name_Spammer_Currently_Enabled then getgenv().notify("Warning", "Flames Hub | Name Spammer is already enabled.", 5); return end
+        if g.Name_Spammer_Currently_Enabled then g.notify("Warning", "Flames Hub | Name Spammer is already enabled.", 5); return end
         g.Name_Spammer_Currently_Enabled = true
         Old_Name_From_Name_Spammer = g.LocalPlayer:GetAttribute("roleplay_name") or "SERVER"
         local index = 1
@@ -5547,8 +5545,8 @@ g.name_changer_premium = g.name_changer_premium or function(state)
 
         g.notify("Success", "Name Spammer is now enabled.", 3)
     elseif state == false then
-        if not g.Name_Spammer_Currently_Enabled then getgenv().notify("Warning", "Flames Hub | Name Spammer is not enabled.", 5); return end
-        getgenv().Name_Spammer_Currently_Enabled = false
+        if not g.Name_Spammer_Currently_Enabled then g.notify("Warning", "Flames Hub | Name Spammer is not enabled.", 5); return end
+        g.Name_Spammer_Currently_Enabled = false
         lib.disconnect(name)
         fw(0.1)
         g.Send("roleplay_name", tostring(Old_Name_From_Name_Spammer))
@@ -5602,7 +5600,7 @@ g.anti_outfit_copier = function(toggle)
         if g.anti_outfit_stealer then g.notify("Error", "Anti Outfit Stealer is already enabled!", 5); return end
         if g.FlamesLibrary.is_alive("AntiFitStealerConn") then g.notify("Error", "Anti Outfit Stealer is already enabled! [connection].", 5); return end
         g.notify("Success", "Flames Hub | Anti Outfit Stealer is now active.", 7)
-        local lib = getgenv().FlamesLibrary
+        local lib = g.FlamesLibrary
         g.ToggleAntiFit_Stealer = g.ToggleAntiFit_Stealer or function(state)
             if not state then
                 g.anti_outfit_stealer = false
@@ -5829,7 +5827,7 @@ g.ToggleAutoLock = g.AutoLockConnection or function(state)
         return 
     else
         local car = g.get_vehicle()
-        if not car then getgenv().notify("Error", "Vehicle not found, spawn one!", 5); return end
+        if not car then g.notify("Error", "Vehicle not found, spawn one!", 5); return end
         g.AutoLockOn = true
     end
 
@@ -6036,7 +6034,6 @@ g.start_walkfling = g.start_walkfling or function()
     g.TouchingWhitelisted = {}
     if not g.Noclip_Enabled then g.Toggleable_Noclip(true) end
     g.notify("Success", "Flames Hub | WalkFling-V3.5 is now enabled.", 5)
-    local lp = g.LocalPlayer or Players.LocalPlayer
     local function connect_touch_fling(character)
         for _, conn in pairs(g.WalkFlingConnections) do conn:Disconnect() end
         g.WalkFlingConnections = {}
@@ -6048,7 +6045,7 @@ g.start_walkfling = g.start_walkfling or function()
                     local hit_char = hit.Parent
                     while hit_char and not Players:GetPlayerFromCharacter(hit_char) and hit_char.Parent ~= workspace do hit_char = hit_char.Parent end
                     local hit_player = Players:GetPlayerFromCharacter(hit_char)
-                    if not hit_player or hit_player == lp then return end
+                    if not hit_player or hit_player == speaker then return end
                     if g.is_whitelisted(hit_player) then
                         g.TouchingWhitelisted[hit_player.UserId] = true
                         return
@@ -6079,18 +6076,18 @@ g.start_walkfling = g.start_walkfling or function()
         end
     end
 
-    local char = g.Character or g.LocalPlayer.Character or g.get_char(lp, 3)
+    local char = g.Character or g.LocalPlayer.Character or g.get_char(speaker, 3)
     if char then connect_touch_fling(char) end
     if g.WalkFlingRespawnConn then
         g.WalkFlingRespawnConn:Disconnect()
         g.WalkFlingRespawnConn = nil
     end
     wait(0.25)
-    g.WalkFlingRespawnConn = lp.CharacterAdded:Connect(function(new_char) if g.walkflinging then connect_touch_fling(new_char) end end)
+    g.WalkFlingRespawnConn = speaker.CharacterAdded:Connect(function(new_char) if g.walkflinging then connect_touch_fling(new_char) end end)
     g.FlamesLibrary.disconnect("walkflinger")
     g.FlamesLibrary.connect("walkflinger", RunService.Heartbeat:Connect(function()
         if not g.walkflinging then return end
-        local m = g.Character or g.get_char(lp, 3)
+        local m = g.Character or g.get_char(speaker, 3)
         local r = m and (g.HumanoidRootPart or m:FindFirstChild("HumanoidRootPart"))
         if not r then return end
         local v = r.Velocity
@@ -6904,7 +6901,7 @@ g.Flames_Debugger_Function_Tester_GUI = g.Flames_Debugger_Function_Tester_GUI or
     if CoreGui:FindFirstChild("FlamesDebugger") then
         CoreGui.FlamesDebugger.Enabled = true
         genv.__flames_debugger_running = false
-        getgenv().dont_receive_any_notifications_flames_hub = false
+        g.dont_receive_any_notifications_flames_hub = false
         return
     end
 
@@ -6952,7 +6949,7 @@ g.Flames_Debugger_Function_Tester_GUI = g.Flames_Debugger_Function_Tester_GUI or
     rescan.MouseButton1Click:Connect(function()
         if not genv.__flames_debugger_running then
             genv.__flames_debugger_running = true
-            getgenv().dont_receive_any_notifications_flames_hub = true
+            g.dont_receive_any_notifications_flames_hub = true
             start_scan()
         end
     end)
@@ -7068,10 +7065,10 @@ g.Flames_Debugger_Function_Tester_GUI = g.Flames_Debugger_Function_Tester_GUI or
 
                 if tested == 0 then
                     add_row("No functions found to test", false)
-                    getgenv().dont_receive_any_notifications_flames_hub = false
+                    g.dont_receive_any_notifications_flames_hub = false
                 else
                     add_row("Completed testing "..tested.." functions", true)
-                    getgenv().dont_receive_any_notifications_flames_hub = false
+                    g.dont_receive_any_notifications_flames_hub = false
                 end
             end
 
@@ -7079,7 +7076,7 @@ g.Flames_Debugger_Function_Tester_GUI = g.Flames_Debugger_Function_Tester_GUI or
             task.wait(0.15)
             g.button_text_changing_for_debug_scanner = false
             genv.__flames_debugger_running = false
-            getgenv().dont_receive_any_notifications_flames_hub = false
+            g.dont_receive_any_notifications_flames_hub = false
             if rescan and rescan:IsA("TextButton") then rescan.Text = "Start Scan" end
         end)
     end
@@ -7426,8 +7423,8 @@ g.always_show_title_of_player_regardless_of_chats = g.always_show_title_of_playe
     end
 end
 
-g.change_RP_Name = g.change_RP_Name or function(New_Name) getgenv().Send("roleplay_name", tostring(New_Name)) end
-g.change_bio = g.change_bio or function(New_Bio) getgenv().Send("bio", tostring(New_Bio)) end
+g.change_RP_Name = g.change_RP_Name or function(New_Name) g.Send("roleplay_name", tostring(New_Name)) end
+g.change_bio = g.change_bio or function(New_Bio) g.Send("bio", tostring(New_Bio)) end
 wait(0.25)
 -- [[ ultra safe checking that always works + falls back to your current roleplay name if not already saved so you don't have to do it yourself. ]] --
 g.WaitForAttribute = g.WaitForAttribute or function(Instance, Attribute, Timeout)
@@ -8615,12 +8612,12 @@ g.toggle_name_func = g.toggle_name_func or function(boolean)
 end
 
 g.flashy_name = g.flashy_name or function(Toggle)
-    local FL = getgenv().FlamesLibrary
+    local FL = g.FlamesLibrary
     if Toggle == true then
-        if getgenv().Flashing_Name_Title then g.notify("Warning", "Name-Flasher is already enabled.", 5); return end
-        getgenv().Flashing_Name_Title = true
+        if g.Flashing_Name_Title then g.notify("Warning", "Name-Flasher is already enabled.", 5); return end
+        g.Flashing_Name_Title = true
         FL.spawn("flashy_name_loop", "spawn", function()
-            while getgenv().Flashing_Name_Title == true do
+            while g.Flashing_Name_Title == true do
                 g.toggle_name_func(true)
                 fw(.1)
                 g.toggle_name_func(false)
@@ -8628,8 +8625,8 @@ g.flashy_name = g.flashy_name or function(Toggle)
             end
         end)
     elseif Toggle == false then
-        if not getgenv().Flashing_Name_Title then g.notify("Warning", "Name-Flasher is not enabled.", 5); return end
-        getgenv().Flashing_Name_Title = false
+        if not g.Flashing_Name_Title then g.notify("Warning", "Name-Flasher is not enabled.", 5); return end
+        g.Flashing_Name_Title = false
         FL.disconnect("flashy_name_loop")
         fw(1.5)
         g.toggle_name_func(false)
@@ -8878,7 +8875,7 @@ g.send_msg_menu = g.send_msg_menu or function()
             table.insert(msgs,raw)
         end
 
-        g.Send_Message_Main_Phone_Messages_Module_Task = getgenv().FlamesLibrary.spawn("send_message_phone_task", "spawn", function()
+        g.Send_Message_Main_Phone_Messages_Module_Task = g.FlamesLibrary.spawn("send_message_phone_task", "spawn", function()
             for i = 1, num do
                 local text = msgs[((i - 1) % #msgs) + 1]
                 pcall(function() g.send_msg_phone(target, text) end)
@@ -9036,12 +9033,12 @@ g.setup_cmd_handler_plr = function(player)
     local channel = TextChatService:FindFirstChild("RBXGeneral", true)
     if not player:IsFriendsWith(g.LocalPlayer.UserId) then return end
     local function trim(str) return str:match("^%s*(.-)%s*$") end
-    if getgenv().Message_Received_Connection_Other_Players then
-        pcall(function() getgenv().Message_Received_Connection_Other_Players:Disconnect() end)
-        getgenv().Message_Received_Connection_Other_Players = nil
+    if g.Message_Received_Connection_Other_Players then
+        pcall(function() g.Message_Received_Connection_Other_Players:Disconnect() end)
+        g.Message_Received_Connection_Other_Players = nil
     end
     wait(0.5)
-    getgenv().Message_Received_Connection_Other_Players = TextChatService.MessageReceived:Connect(function(chatMessage)
+    g.Message_Received_Connection_Other_Players = TextChatService.MessageReceived:Connect(function(chatMessage)
         local speaker = chatMessage.TextSource
         if not (speaker and speaker.Name ~= localPlayerName and g.player_admins[speaker.Name]) then return end
         local normalizedMessage = trim(chatMessage.Text:lower())
@@ -9142,9 +9139,9 @@ g.setup_cmd_handler_plr = function(player)
             task.delay(15, function() g.Check_Cooldown = false end)
             local args = command:split(" ")
             local checkTargetName = args[2]
-            if not checkTargetName or #checkTargetName <= 0 then getgenv().notify("Warning", "Target player invalid: "..tostring(checkTargetName), 1); return end
+            if not checkTargetName or #checkTargetName <= 0 then g.notify("Warning", "Target player invalid: "..tostring(checkTargetName), 1); return end
             local target = g.findplr(checkTargetName)
-            if not target then getgenv().notify("Warning", "Could not find: "..tostring(target), 1); return end
+            if not target then g.notify("Warning", "Could not find: "..tostring(target), 1); return end
             local isVerified = target:GetAttribute("is_verified")
             local general_channel = TextChatService:FindFirstChild("RBXGeneral", true) or TextChatService:FindFirstChild("TextChannels"):FindFirstChild("RBXGeneral")
             if general_channel then
@@ -9822,36 +9819,278 @@ g.toggle_anti_sit = function(state)
 	end
 end
 
+local attr_name = "InHumanoidVehicle"
+local keys = {loop = "anti_sit_loop", char = "anti_sit_char", spam = "anti_sit_spam", hook = "anti_sit_hook", seat = "anti_sit_seat", hv = "anti_sit_hv"}
+local cfg = g.anti_sit_config or {phase_two = 0.75, phase_three = 2, timeout = 5, retry_delay = 0.5}
+local spam = g.anti_sit_spam or {active = false, started = 0, last_send = 0, last_hard = 0, cooldown_until = 0, exits = 0, total = 0, fastest = math.huge}
+local registry = g.anti_sit_registry or {}
+g.seat_cache = {}
+local uid = 0
+g.anti_sit_config = cfg
+g.anti_sit_spam = spam
+g.anti_sit_registry = registry
+-- [[ Replaced up here but kept down there as well because some scripts reference it after this point. ]] --
+g.in_humanoid_vehicle = g.in_humanoid_vehicle or function(player_or_name)
+    local humanoid_vehicles = g.Workspace:FindFirstChild("HumanoidVehicles", true)
+    if not humanoid_vehicles then return end
+    local player = player_or_name
+    if typeof(player_or_name) == "string" then
+        player = g.Players:FindFirstChild(player_or_name)
+        if not player then return end
+    end
+    local character = player == g.LocalPlayer and g.Character or player.Character
+    if not character then return end
+    local humanoid = character and character:FindFirstChildWhichIsA("Humanoid") or g.get_human(player, 3)
+    if not humanoid then return end
+    local vehicle_attr = humanoid:GetAttribute("InHumanoidVehicle")
+    if vehicle_attr == nil then return end
+    if type(g.Humanoid_Vehicles) ~= "table" then return end
+    if not table.find(g.Humanoid_Vehicles, vehicle_attr) then return end
+    return vehicle_attr
+end
+
+g.hum_vehicle_name = g.hum_vehicle_name or function(plr)
+    local hv = g.in_humanoid_vehicle(plr)
+    if not hv then return nil end
+    local folder = g.Workspace:FindFirstChild("HumanoidVehicles", true)
+    if not folder or not folder:IsA("Folder") then return nil end
+    local inst = folder:FindFirstChild(hv)
+    if not inst then return nil end
+    return inst.Name
+end
+
+g.anti_sit_uid = function() uid += 1; return uid end
+g.anti_sit_connect = function(name, conn) registry[name] = true; g.FlamesLibrary.connect(name, conn) end
+g.anti_sit_cleanup = function() for name in pairs(registry) do g.FlamesLibrary.disconnect(name) end; table.clear(registry); table.clear(g.seat_cache) end
+g.anti_sit_get_char = function() return g.Character or speaker.Character or (g.get_char and g.get_char(speaker)) end
+g.anti_sit_get_hum = function(char) return (char and char:FindFirstChildWhichIsA("Humanoid")) or g.Humanoid or (g.get_human and g.get_human(speaker)) or (g.Char and g.Char.get_hum and g.Char.get_hum()) end
+g.anti_sit_char_valid = function(char) return char ~= nil and char:FindFirstChild("HumanoidRootPart") ~= nil and char:IsDescendantOf(workspace) end
+g.anti_sit_hum_valid = function(hum) return hum ~= nil and hum.Parent ~= nil and hum:IsDescendantOf(game) end
+g.anti_sit_attr = function(hum)
+    if not hum then return nil end
+    local ok, res = pcall(function() return hum:GetAttribute(attr_name) end)
+    if ok and res ~= nil then return res end
+    return nil
+end
+
+g.anti_sit_in_hv = function(hum)
+    if g.in_humanoid_vehicle and typeof(g.in_humanoid_vehicle) == "function" then
+        local ok, res = pcall(g.in_humanoid_vehicle, speaker)
+        if ok and res ~= nil then return res end
+    end
+    return g.anti_sit_attr(hum)
+end
+
+g.anti_sit_hard_eject = function(char, hum)
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local folder = workspace:FindFirstChild("HumanoidVehicles")
+    if folder and hrp then
+        for _, group in folder:GetChildren() do
+            for _, model in group:GetChildren() do
+                if model:IsA("Model") and model:HasTag("HumanoidVehicle") then
+                    local occupant_val = model:FindFirstChild("occupant")
+                    local owner_val = model:FindFirstChild("owner")
+                    local ours = (occupant_val and occupant_val.Value == hum) or (owner_val and owner_val.Value == speaker)
+                    if ours then
+                        local touch_part = model:FindFirstChild("TouchPart", true)
+                        if touch_part then
+                            for _, weld in touch_part:GetChildren() do
+                                if weld:IsA("WeldConstraint") and (weld.Part0 == hrp or weld.Part1 == hrp) then pcall(function() weld:Destroy() end) end
+                            end
+                        end
+                        if occupant_val then pcall(function() occupant_val.Value = nil end) end
+                    end
+                end
+            end
+        end
+    end
+    if hrp and hrp.Parent then
+        for _, joint in hrp:GetChildren() do
+            if joint:IsA("JointInstance") or joint:IsA("WeldConstraint") then
+                local other = joint.Part0 == hrp and joint.Part1 or joint.Part0
+                if other and not other:IsDescendantOf(char) then pcall(function() joint:Destroy() end) end
+            end
+        end
+        pcall(function() hrp.CFrame = hrp.CFrame * CFrame.new(0, 4, -3) end)
+    end
+    pcall(function() hum:SetAttribute(attr_name, nil) end)
+    pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
+    if g.Send and typeof(g.Send) == "function" then pcall(g.Send, "stop_sitting") end
+end
+
+g.anti_sit_spam_stop = function(success)
+    FlamesLibrary.disconnect(keys.spam)
+    if success then
+        local took = os.clock() - spam.started
+        spam.exits += 1
+        spam.total += took
+        spam.fastest = math.min(spam.fastest, took)
+    end
+    spam.active = false
+    spam.cooldown_until = os.clock() + (success and 0 or cfg.retry_delay)
+end
+
+g.anti_sit_spam_start = function()
+    if spam.active or os.clock() < spam.cooldown_until then return end
+    spam.active = true
+    spam.started = os.clock()
+    spam.last_send = 0
+    spam.last_hard = 0
+    FlamesLibrary.connect(keys.spam, RunService.Heartbeat:Connect(function()
+        if not g.Not_Ever_Sitting then g.anti_sit_spam_stop(false); return end
+        local char = g.anti_sit_get_char()
+        local hum = char and g.anti_sit_get_hum(char)
+        if not g.anti_sit_char_valid(char) or not g.anti_sit_hum_valid(hum) then g.anti_sit_spam_stop(false); return end
+        if g.anti_sit_in_hv(hum) == nil then g.anti_sit_spam_stop(true); return end
+        local now = os.clock()
+        local elapsed = now - spam.started
+        if elapsed > cfg.timeout then g.anti_sit_spam_stop(false); return end
+        pcall(function()
+            hum.Jump = true
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end)
+        if elapsed > cfg.phase_two then
+            pcall(function() hum.Sit = false end)
+            if now - spam.last_send > 0.15 then
+                spam.last_send = now
+                if g.Send and typeof(g.Send) == "function" then pcall(g.Send, "stop_sitting") end
+            end
+        end
+        if elapsed > cfg.phase_three and now - spam.last_hard > 0.4 then
+            spam.last_hard = now
+            g.anti_sit_hard_eject(char, hum)
+        end
+    end))
+end
+
+g.anti_sit_eject_seat = function(hum, seat)
+    local target = seat or hum.SeatPart
+    if target and target.Parent then
+        pcall(function() target:SetAttribute("Disabled", true) end)
+        task.delay(0.3, function() pcall(function() if target.Parent then target:SetAttribute("Disabled", false) end end) end)
+    end
+    pcall(function() hum.Sit = false end)
+    pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
+    if g.Send then pcall(g.Send, "stop_sitting") end
+    local char = hum.Parent
+    local hrp = char and char:IsDescendantOf(workspace) and char:FindFirstChild("HumanoidRootPart")
+    if hrp and hrp.Parent then pcall(function() hrp.CFrame = hrp.CFrame * CFrame.new(0, 3, -2) end) end
+end
+
+g.anti_sit_eject_any = function(char, hum)
+    if not g.anti_sit_char_valid(char) or not g.anti_sit_hum_valid(hum) then return end
+    if g.anti_sit_in_hv(hum) ~= nil then g.anti_sit_spam_start(); return end
+    local seat_part = hum.SeatPart
+    local is_sit = hum.Sit or (g.Char and g.Char.is_sitting and g.Char.is_sitting.get())
+    if is_sit or seat_part then g.anti_sit_eject_seat(hum, seat_part) end
+end
+
+g.anti_sit_disable_nearby = function(char)
+    local hrp = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(speaker)
+    if not hrp or not hrp.Parent then return end
+    for seat in pairs(g.seat_cache) do
+        if seat.Parent and seat:GetAttribute("Disabled") ~= true and (seat.Position - hrp.Position).Magnitude < 8 then
+            pcall(function() seat:SetAttribute("Disabled", true) end)
+            task.delay(0.35, function() pcall(function() if seat.Parent then seat:SetAttribute("Disabled", false) end end) end)
+        end
+    end
+end
+
+g.anti_sit_hook_hum = function(hum, char)
+    g.anti_sit_connect(keys.hook .. "_attr", hum:GetAttributeChangedSignal(attr_name):Connect(function()
+        if g.Not_Ever_Sitting and g.anti_sit_attr(hum) ~= nil then g.anti_sit_eject_any(char, hum) end
+    end))
+    g.anti_sit_connect(keys.hook .. "_sit", hum:GetPropertyChangedSignal("Sit"):Connect(function()
+        if g.Not_Ever_Sitting and hum.Sit then g.anti_sit_eject_any(char, hum) end
+    end))
+    g.anti_sit_connect(keys.hook .. "_seatpart", hum:GetPropertyChangedSignal("SeatPart"):Connect(function()
+        if not g.Not_Ever_Sitting or not hum.SeatPart then return end
+        task.defer(function() if g.Not_Ever_Sitting then g.anti_sit_eject_any(char, hum) end end)
+    end))
+end
+
+g.anti_sit_watch_seats = function()
+    table.clear(g.seat_cache)
+    for _, obj in workspace:GetDescendants() do if obj:IsA("Seat") or obj:IsA("VehicleSeat") then g.seat_cache[obj] = true end end
+    g.anti_sit_connect(keys.seat .. "_added", workspace.DescendantAdded:Connect(function(obj) if obj:IsA("Seat") or obj:IsA("VehicleSeat") then g.seat_cache[obj] = true end end))
+    g.anti_sit_connect(keys.seat .. "_removed", workspace.DescendantRemoving:Connect(function(obj) g.seat_cache[obj] = nil end))
+end
+
+g.anti_sit_bind_hv_model = function(model)
+    if not (model:IsA("Model") and model:HasTag("HumanoidVehicle")) then return end
+    task.spawn(function()
+        local occupant_val = model:WaitForChild("occupant", 5)
+        if not occupant_val or not occupant_val:IsA("ObjectValue") or not g.Not_Ever_Sitting then return end
+        g.anti_sit_connect(keys.hv .. "_occ_" .. g.anti_sit_uid(), occupant_val:GetPropertyChangedSignal("Value"):Connect(function()
+            if not g.Not_Ever_Sitting or occupant_val.Value == nil then return end
+            local char = g.anti_sit_get_char()
+            local hum = char and g.anti_sit_get_hum(char)
+            if occupant_val.Value == hum then g.anti_sit_spam_start() end
+        end))
+    end)
+end
+
+g.anti_sit_bind_hv_folder = function(folder)
+    if not folder:IsA("Folder") then return end
+    for _, model in folder:GetChildren() do g.anti_sit_bind_hv_model(model) end
+    g.anti_sit_connect(keys.hv .. "_child_" .. g.anti_sit_uid(), folder.ChildAdded:Connect(function(model)
+        if g.Not_Ever_Sitting then g.anti_sit_bind_hv_model(model) end
+    end))
+end
+
+g.anti_sit_watch_hv = function()
+    local root = workspace:FindFirstChild("HumanoidVehicles")
+    if not root then return end
+    for _, folder in root:GetChildren() do g.anti_sit_bind_hv_folder(folder) end
+    g.anti_sit_connect(keys.hv .. "_folders", root.ChildAdded:Connect(function(folder) if g.Not_Ever_Sitting then g.anti_sit_bind_hv_folder(folder) end end))
+end
+
 g.anti_sit_func = function(toggle)
     local lib = g.FlamesLibrary
-    local key = "anti_sit_loop"
     local fw = lib.wait
-    g.Seat = require(g.Game_Folder:FindFirstChild("Seat"))
-
+    if not g.Seat then
+        local ok, res = pcall(function() return require(g.Game_Folder:FindFirstChild("Seat")) end)
+        if not ok or not res then g.notify("Error", "Seat ModuleScript not found or failed to load!", 3); return end
+        g.Seat = res
+    end
     if toggle == true then
         if g.Not_Ever_Sitting then g.notify("Warning", "AntiSit is already enabled!", 3); return end
         g.Not_Ever_Sitting = true
-        --g.toggle_anti_sit(true)
         g.notify("Success", "Anti-Sit is now enabled!", 3)
         g.show_notification("Success:", "Anti-Sit is now enabled.", "Normal")
-        lib.spawn(key, "spawn", function()
+        local char = g.anti_sit_get_char()
+        local hum = char and g.anti_sit_get_hum(char)
+        if g.anti_sit_char_valid(char) and g.anti_sit_hum_valid(hum) then g.anti_sit_hook_hum(hum, char) end
+        g.anti_sit_watch_seats()
+        g.anti_sit_watch_hv()
+        g.anti_sit_connect(keys.char, speaker.CharacterAdded:Connect(function(new_char)
+            fw(0)
+            local new_hum = new_char:WaitForChild("Humanoid", 5)
+            if g.anti_sit_char_valid(new_char) and g.anti_sit_hum_valid(new_hum) then g.anti_sit_hook_hum(new_hum, new_char) end
+        end))
+        lib.spawn(keys.loop, "spawn", function()
             while g.Not_Ever_Sitting == true do
                 g.Seat.enabled.set(false)
+                local cur_char = g.anti_sit_get_char()
+                local cur_hum = cur_char and g.anti_sit_get_hum(cur_char)
+                if g.anti_sit_char_valid(cur_char) and g.anti_sit_hum_valid(cur_hum) then
+                    g.anti_sit_eject_any(cur_char, cur_hum)
+                    if cur_hum.Sit or cur_hum.SeatPart then g.anti_sit_disable_nearby(cur_char) end
+                end
                 fw(0)
             end
-            lib.disconnect(key)
+            lib.disconnect(keys.loop)
         end)
     elseif toggle == false then
         if not g.Not_Ever_Sitting then g.notify("Warning", "AntiSit is not enabled!", 3); return end
         g.Not_Ever_Sitting = false
-        lib.disconnect(key)
-        --g.toggle_anti_sit(false)
+        g.anti_sit_spam_stop(false)
+        g.anti_sit_cleanup()
+        lib.disconnect(keys.loop)
         fw(0.2)
         g.Seat.enabled.set(true)
         g.notify("Success", "Anti-Sit is now disabled.", 3)
         pcall(function() g.Phone.show_notification("Success:", "Anti-Sit is now disabled.", "Normal") end)
-    else
-        return
     end
 end
 wait(0.1)
@@ -9860,6 +10099,7 @@ g.Anti_Tent_Spawning = function(state)
     if not state then g.FlamesLibrary.disconnect("anti_tent_spawning"); return end
     local PlacedModels = g.cached_placed_models_folder or g.find_placed_models_folder()
     if not PlacedModels or not PlacedModels:IsA("Folder") then g.notify("Error", "Folder: PlacedModels does not exist or was not found.", 3); return end
+    if not g.Not_Ever_Sitting then if g.anti_sit_func and typeof(g.anti_sit_func) == "function" then g.anti_sit_func(true) end end
     local function neuter_tent(tent)
         if not tent:IsA("Model") or tent.Name ~= "Tent" then return end
         pcall(function()
@@ -9875,11 +10115,8 @@ g.Anti_Tent_Spawning = function(state)
         end)
     end
 
-    for _, v in ipairs(PlacedModels:GetChildren()) do
-        neuter_tent(v)
-    end
-
-    g.FlamesLibrary.connect("anti_tent_spawning", PlacedModels.ChildAdded:Connect(function(child)
+    for _, v in ipairs(PlacedModels:GetChildren()) do neuter_tent(v) end
+    FlamesLibrary.connect("anti_tent_spawning", PlacedModels.ChildAdded:Connect(function(child)
         if not g.Anti_Tent_Spawning_Currently_Active then return end
         neuter_tent(child)
     end))
@@ -10240,13 +10477,13 @@ local applied = g.Humanoid:GetAppliedDescription()
 local Old_Shirt = applied.Shirt
 local Old_Pants = applied.Pants
 g.glitch_outfit = g.glitch_outfit or function(toggle)
-    local FL = getgenv().FlamesLibrary
+    local FL = g.FlamesLibrary
 
     if toggle == true then
-        if getgenv().Glitching_Outfit then g.notify("Warning", "Glitch Outfit is already enabled.", 3); return end
-        getgenv().Glitching_Outfit = true
+        if g.Glitching_Outfit then g.notify("Warning", "Glitch Outfit is already enabled.", 3); return end
+        g.Glitching_Outfit = true
         FL.spawn("glitch_outfit_loop", "spawn", function()
-            while getgenv().Glitching_Outfit == true do
+            while g.Glitching_Outfit == true do
                 fw(0)
                 for _, shirtId in ipairs(g.GlitchIDs.Shirts) do
                     g.forceEquip("Shirt", shirtId)
@@ -10262,8 +10499,8 @@ g.glitch_outfit = g.glitch_outfit or function(toggle)
             end
         end)
     else
-        if not getgenv().Glitching_Outfit then g.notify("Warning", "Glitch Outfit is not enabled.", 3); return end
-        getgenv().Glitching_Outfit = false
+        if not g.Glitching_Outfit then g.notify("Warning", "Glitch Outfit is not enabled.", 3); return end
+        g.Glitching_Outfit = false
         FL.disconnect("glitch_outfit_loop")
         FL.spawn("glitch_outfit_restore", "delay", 0.5, function()
             g.Send("code", Old_Shirt, "Shirt")
@@ -10365,13 +10602,13 @@ g.check_friend = g.check_friend or function(Player)
 end
 
 g.spam_create_groups = g.spam_create_groups or function(toggle)
-    local FL = getgenv().FlamesLibrary
+    local FL = g.FlamesLibrary
     if toggle == true then
-        if getgenv().Creating_Groups then g.notify("Warning", "Group spammer is already enabled.", 3); return end
+        if g.Creating_Groups then g.notify("Warning", "Group spammer is already enabled.", 3); return end
         g.group_chatting_users = g.group_chatting_users or {}
-        getgenv().Creating_Groups = true
+        g.Creating_Groups = true
         FL.spawn("spam_create_groups_loop", "spawn", function()
-            while getgenv().Creating_Groups == true do
+            while g.Creating_Groups == true do
                 fw(0)
                 for _, name in ipairs(g.group_chatting_users) do
                     local success, userId = pcall(function()
@@ -10385,8 +10622,8 @@ g.spam_create_groups = g.spam_create_groups or function(toggle)
             end
         end)
     elseif toggle == false then
-        if not getgenv().Creating_Groups then g.notify("Warning", "Group spammer is not enabled.", 3); return end
-        getgenv().Creating_Groups = false
+        if not g.Creating_Groups then g.notify("Warning", "Group spammer is not enabled.", 3); return end
+        g.Creating_Groups = false
         FL.disconnect("spam_create_groups_loop")
     else
         return
@@ -10501,7 +10738,6 @@ g.in_humanoid_vehicle = g.in_humanoid_vehicle or function(PlayerOrName)
     if vehicleAttr == nil then return end
     if type(g.Humanoid_Vehicles) ~= "table" then return end
     if not table.find(g.Humanoid_Vehicles, vehicleAttr) then return end
-
     return vehicleAttr
 end
 
@@ -10512,7 +10748,6 @@ g.hum_vehicle_name = g.hum_vehicle_name or function(plr)
     if not folder or not folder:IsA("Folder") then return nil end
     local inst = folder:FindFirstChild(hv)
     if not inst then return nil end
-
     return inst.Name
 end
 
@@ -10702,10 +10937,10 @@ end
 for _, v in ipairs(Players:GetPlayers()) do
     if v.Name == "CIippedByAura" or v.Name == "L0CKED_1N1" or v.Name == "AuraWithClipFarmin" then
         local owner_content = "Flames Hub | Owner is currently in this server, come to me: ("..tostring(v.Name)..") for assistance (if you need help)."
-        getgenv().notify("Success", owner_content, 30)
+        g.notify("Success", owner_content, 30)
     elseif allowed[v.Name] and v.Name ~= "CIippedByAura" and v.Name ~= "L0CKED_1N1" and v.Name ~= "AuraWithClipFarmin" then
         local staff_content = "A Flames Hub | Staff member is currently in this server, this is more rare and they can get in contact with me faster."
-        getgenv().notify("Success", staff_content, 15)
+        g.notify("Success", staff_content, 15)
     end
 end
 
@@ -10783,11 +11018,11 @@ g.create_ui_element = g.create_ui_element or function(element_type, parent, conf
     end)
 
     while not done do task.wait() end
-    if global_name then getgenv()[global_name] = element end
+    if global_name then g[global_name] = element end
     return element
 end
 wait(0.25)
-getgenv().notify("Success", "Now loading UI elements...", 10)
+g.notify("Success", "Now loading UI elements...", 10)
 local Home_Page = UI:CreatePage("Main")
 local Home_Section = Home_Page:CreateSection("Main")
 local LocalPlayer_Section = Home_Page:CreateSection("LocalPlayer")
@@ -10886,7 +11121,7 @@ end}, "Anti_Hashtags_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Job Spammer (FE)",
-Default = getgenv().Every_Job or false,
+Default = g.Every_Job or false,
 Flag = "Job_Spammer_Toggled_UI",
 Callback = function(state)
     g.job_spammer(state)
@@ -10894,7 +11129,7 @@ end}, "Job_Spammer_Toggled_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Glitch Outfit (FE)",
-Default = getgenv().Glitching_Outfit or false,
+Default = g.Glitching_Outfit or false,
 Flag = "Glitch_Outfit_Toggle_UI",
 Callback = function(state)
     g.glitch_outfit(state)
@@ -10904,7 +11139,7 @@ g.create_ui_element("Slider", LocalPlayer_Section, {
 Name = "Side To Side Speed",
 Min = 1,
 Max = 100,
-Default = getgenv().SideGlitch_Speed or 25,
+Default = g.SideGlitch_Speed or 25,
 Flag = "Side_To_Side_Speed_Slider_UI",
 Callback = function(val)
     g.SideGlitch_Speed = val
@@ -10914,7 +11149,7 @@ g.create_ui_element("Slider", LocalPlayer_Section, {
 Name = "Side To Side Distance",
 Min = 1,
 Max = 25,
-Default = getgenv().SideGlitch_Distance or 5,
+Default = g.SideGlitch_Distance or 5,
 Flag = "Side_To_Side_Distance_Slider_UI",
 Callback = function(val)
     g.SideGlitch_Distance = val
@@ -10924,7 +11159,7 @@ g.create_ui_element("Slider", LocalPlayer_Section, {
 Name = "Side To Side Smoothness",
 Min = 0.1,
 Max = 1,
-Default = getgenv().SideGlitch_Smooth or 5,
+Default = g.SideGlitch_Smooth or 5,
 Flag = "Side_To_Side_Smoothness_UI_Slider",
 Callback = function(val)
     g.SideGlitch_Smooth = val
@@ -10932,7 +11167,7 @@ end}, "Side_To_Side_Smoothness_UI_Slider")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Side To Side Glitch (FE)",
-Default = getgenv().SideGlitch_Enabled or false,
+Default = g.SideGlitch_Enabled or false,
 Flag = "Side_To_Side_Glitch_Not_Smooth_Toggle_UI",
 Callback = function(state)
     if state then
@@ -10944,7 +11179,7 @@ end}, "Side_To_Side_Glitch_Not_Smooth_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Smooth Side To Side Glitch (FE)",
-Default = getgenv().SideGlitch_Enabled or false,
+Default = g.SideGlitch_Enabled or false,
 Flag = "Side_To_Side_Glitch_Smooth_Toggle_UI",
 Callback = function(state)
     if state then
@@ -10967,7 +11202,7 @@ end,})
 
 g.create_ui_element("Toggle", Vehicle_Section, {
 Name = "Rainbow Vehicle (FE)",
-Default = getgenv().Rainbow_Vehicle or false,
+Default = g.Rainbow_Vehicle or false,
 Flag = "Rainbow_Vehicle_Toggle_UI",
 Callback = function(state)
     g.RGB_Vehicle(state)
@@ -10975,7 +11210,7 @@ end}, "Rainbow_Vehicle_Toggle_UI")
 
 g.create_ui_element("Toggle", Vehicle_Section, {
 Name = "Two Tone Vehicle (FE)",
-Default = getgenv().two_tone_vehicle_colors_changing or false,
+Default = g.two_tone_vehicle_colors_changing or false,
 Flag = "Two_Tone_Car_Toggle_UI",
 Callback = function(state)
     g.two_color_switcher_FE_func(state)
@@ -10983,7 +11218,7 @@ end}, "Two_Tone_Car_Toggle_UI")
 
 g.create_ui_element("Toggle", Phone_Section, {
 Name = "Rainbow Phone (FE)",
-Default = getgenv().RGB_Rainbow_Phone or false,
+Default = g.RGB_Rainbow_Phone or false,
 Flag = "Rainbow_Phone_Toggle_UI",
 Callback = function(state)
     g.RGB_Phone(state)
@@ -10991,7 +11226,7 @@ end}, "Rainbow_Phone_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Free Premium (FE)",
-Default = getgenv().Has_Free_LifePremium or false,
+Default = g.Has_Free_LifePremium or false,
 Flag = "Free_Premium_Toggle_UI",
 Callback = function(state)
     g.FreePayFuncToggle(state)
@@ -11076,7 +11311,7 @@ end})
 
 g.main_vehicle_fly_UI_toggle = g.create_ui_element("Toggle", Vehicle_Section, {
 Name = "Vehicle Fly (FE)",
-Default = getgenv().vehicle_fly or false,
+Default = g.vehicle_fly or false,
 Flag = "Vehicle_Fly_Toggle_UI",
 Callback = function(state)
     g.toggle_vehicle_fly(state)
@@ -11086,7 +11321,7 @@ g.create_ui_element("Slider", Vehicle_Section, {
 Name = "Vehicle Fly Speed",
 Min = 1,
 Max = 100,
-Default = getgenv().vehicle_fly_speed or 5,
+Default = g.vehicle_fly_speed or 5,
 Flag = "Vehicle_Fly_Speed",
 Callback = function(val)
     if g.vehicle_fly then g.vehicle_fly_speed = val end
@@ -11094,7 +11329,7 @@ end}, "Vehicle_Fly_Speed")
 
 g.create_ui_element("Toggle", Vehicle_Section, {
 Name = "Anti Car Fling (FE)",
-Default = getgenv().VehicleDestroyer_Enabled or false,
+Default = g.VehicleDestroyer_Enabled or false,
 Flag = "Anti_Car_Fling_Toggle_UI",
 Callback = function(state)
     g.anti_car_fling(state)
@@ -11102,7 +11337,7 @@ end}, "Anti_Car_Fling_Toggle_UI")
 
 g.create_ui_element("Toggle", Vehicle_Section, {
 Name = "Auto Lock Car (FE)",
-Default = getgenv().AutoLockOn or false,
+Default = g.AutoLockOn or false,
 Flag = "Auto_Lock_Car_Toggle_UI",
 Callback = function(state)
     if g.ToggleAutoLock then g.ToggleAutoLock(state) end
@@ -11130,7 +11365,7 @@ end,})
 
 g.create_ui_element("Toggle", Vehicle_Section, {
 Name = "Trailer (FE)",
-Default = getgenv().trailer_enabled or false,
+Default = g.trailer_enabled or false,
 Flag = "Trailer_Toggle_UI",
 Callback = function(state)
     local Vehicle = g.get_vehicle()
@@ -11145,7 +11380,7 @@ end}, "Trailer_Toggle_UI")
 
 g.create_ui_element("Toggle", Vehicle_Section, {
 Name = "View Car (FE)",
-Default = getgenv().viewing_car or false,
+Default = g.viewing_car or false,
 Flag = "View_Car_Toggle_UI",
 Callback = function(state)
     if state then
@@ -11166,7 +11401,7 @@ Callback = function(state)
         local target = find_vehicle_part(Vehicle)
         if not target then g.notify("Error", "Could not find a valid vehicle part.", 5); return end
         Camera.CameraSubject = target
-        getgenv().viewing_car = true
+        g.viewing_car = true
         g.notify("Info", "Now viewing Vehicle.", 5)
         g.CamWatcherConn = target.AncestryChanged:Connect(function()
             if not target:IsDescendantOf(workspace) then
@@ -11175,7 +11410,7 @@ Callback = function(state)
                     g.CamWatcherConn:Disconnect()
                     g.CamWatcherConn = nil
                 end
-                getgenv().viewing_car = false
+                g.viewing_car = false
                 g.notify("Info", "Vehicle lost, camera reset.", 5)
             end
         end)
@@ -11193,7 +11428,7 @@ Callback = function(state)
             Camera.CameraSubject = fb
             g.notify("Info", "Camera now set back to your character.", 5)
         end
-        getgenv().viewing_car = false
+        g.viewing_car = false
     end
 end}, "View_Car_Toggle_UI")
 
@@ -11307,7 +11542,7 @@ end}, "Steal_Car_Input_UI")
 
 g.create_ui_element("Toggle", Vehicle_Section, {
 Name = "Vehicle ESP",
-Default = getgenv().vehicle_esp_enabled or false,
+Default = g.vehicle_esp_enabled or false,
 Flag = "Vehicle_ESP_Toggle_UI",
 Callback = function(state)
     g.vehicle_esp_toggle(state)
@@ -11321,8 +11556,8 @@ Callback = function(split)
     local Target = g.findplr(split)
     if not Target then g.notify("Error", "Target doesn't exist or has left the game.", 5); return end
     if g.Is_Orbiting then g.notify("Warning", "You're already orbiting somebody.", 5); return end
-    local speed = getgenv().Orbit_Speed_Value or 1
-    local distance = getgenv().Orbit_Distance_Value or 5
+    local speed = g.Orbit_Speed_Value or 1
+    local distance = g.Orbit_Distance_Value or 5
     g.start_orbit_plr(Target, speed, distance)
 end}, "Orbit_Player_Input_UI")
 
@@ -11330,10 +11565,10 @@ g.create_ui_element("Slider", Players_Section, {
 Name = "Orbit Speed",
 Min = 1,
 Max = 75,
-Default = getgenv().Orbit_Speed_Value or 1,
+Default = g.Orbit_Speed_Value or 1,
 Flag = "Orbit_Speed_Slider_UI",
 Callback = function(val)
-    getgenv().Orbit_Speed_Value = val
+    g.Orbit_Speed_Value = val
     if g.Is_Orbiting then
         g.set_orbit_speed(val)
     end
@@ -11343,10 +11578,10 @@ g.create_ui_element("Slider", Players_Section, {
 Name = "Orbit Distance",
 Min = 1,
 Max = 75,
-Default = getgenv().Orbit_Distance_Value or 5,
+Default = g.Orbit_Distance_Value or 5,
 Flag = "Orbit_Distance_Slider_UI",
 Callback = function(val)
-    getgenv().Orbit_Distance_Value = val
+    g.Orbit_Distance_Value = val
 end}, "Orbit_Distance_Slider_UI")
 
 g.create_ui_element("Input", Players_Section, {
@@ -11682,7 +11917,7 @@ end}, "Gravity_Input_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Noclip (FE)",
-Default = getgenv().Noclip_Enabled or false,
+Default = g.Noclip_Enabled or false,
 Flag = "Noclip_Toggle_UI",
 Callback = function(state)
     if state then
@@ -11696,7 +11931,7 @@ end}, "Noclip_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Invisible (FE)",
-Default = getgenv().is_invisible_script_toggled or false,
+Default = g.is_invisible_script_toggled or false,
 Flag = "Invisible_Toggle_UI",
 Callback = function(state)
     if state then
@@ -11710,7 +11945,7 @@ end}, "Invisible_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Float (FE)",
-Default = getgenv().Float_Running_In_Flames_Hub or false,
+Default = g.Float_Running_In_Flames_Hub or false,
 Flag = "Float_Toggle_UI",
 Callback = function(state)
     if state then
@@ -11722,11 +11957,11 @@ end}, "Float_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Spin (FE)",
-Default = getgenv().already_spinning_localplr or false,
+Default = g.already_spinning_localplr or false,
 Flag = "Spin_Toggle_UI",
 Callback = function(state)
     if state then
-        local speed = getgenv().Spin_Speed_Value or 5
+        local speed = g.Spin_Speed_Value or 5
         g.spin_plr(true, speed)
     else
         g.spin_plr(false)
@@ -11737,10 +11972,10 @@ g.create_ui_element("Slider", LocalPlayer_Section, {
 Name = "Spin Speed",
 Min = 1,
 Max = 100,
-Default = getgenv().Spin_Speed_Value or 5,
+Default = g.Spin_Speed_Value or 5,
 Flag = "Spin_Speed_Slider_UI",
 Callback = function(val)
-    getgenv().Spin_Speed_Value = val
+    g.Spin_Speed_Value = val
     if g.already_spinning_localplr then g.change_spin_speed(val) end
 end}, "Spin_Speed_Slider_UI")
 
@@ -11776,7 +12011,7 @@ end}, "Normal_Size_Button_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Flash Name (FE)",
-Default = getgenv().Flashing_Name_Title or false,
+Default = g.Flashing_Name_Title or false,
 Flag = "Flash_Name_Toggle_UI",
 Callback = function(state)
     if state then
@@ -11792,7 +12027,7 @@ end}, "Flash_Name_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Flash Invisible (FE)",
-Default = getgenv().Invisible_Flash or false,
+Default = g.Invisible_Flash or false,
 Flag = "Flash_Invis_Toggle_UI",
 Callback = function(state)
     if state then
@@ -11819,7 +12054,7 @@ end}, "Flash_Invis_Toggle_UI")
 
 g.create_ui_element("Toggle", Extras_Section, {
 Name = "Night Vision",
-Default = getgenv().NightVisionEnabled or false,
+Default = g.NightVisionEnabled or false,
 Flag = "Night_Vision_Toggle_UI",
 Callback = function(state)
     g.night_vision(state)
@@ -11827,7 +12062,7 @@ end}, "Night_Vision_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Anti Fling",
-Default = getgenv().afEnabled or false,
+Default = g.afEnabled or false,
 Flag = "Anti_Fling_Toggle_UI",
 Callback = function(state)
     if state then
@@ -11859,12 +12094,12 @@ end,})
 
 g.create_ui_element("Toggle", Houses_Section, {
 Name = "Anti House Ban (FE)",
-Default = getgenv().never_banned_houses or false,
+Default = g.never_banned_houses or false,
 Flag = "Anti_House_Ban_Toggle_UI",
 Callback = function(state)
     if state then
         if g.never_banned_houses or g.AntiTeleport then g.notify("Error", "AntiHouseBan / AntiTeleport is already enabled.", 6); return end
-        local lib = getgenv().FlamesLibrary
+        local lib = g.FlamesLibrary
         g.never_banned_houses = true
         g.AntiTeleport = true
         local LocalPlayer = g.LocalPlayer or Players.LocalPlayer
@@ -11922,7 +12157,7 @@ Callback = function(state)
         g.notify("Success", "Flames Hub | Anti-House-Ban V2 is now enabled.", 7)
     else
         if not g.never_banned_houses and not g.AntiTeleport then g.notify("Warning", "AntiHouseBan is not enabled.", 5); return end
-        local lib = getgenv().FlamesLibrary
+        local lib = g.FlamesLibrary
         lib.disconnect("AntiHouseBan_CharAdded")
         lib.disconnect("AntiHouseBan_Heartbeat")
         lib.disconnect("AntiHouseBan_PlotLoop")
@@ -11978,7 +12213,7 @@ end})
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Anti Sit",
-Default = getgenv().Not_Ever_Sitting or false,
+Default = g.Not_Ever_Sitting or false,
 Flag = "Anti_Sit_Toggle_UI",
 Callback = function(state)
     g.anti_sit_func(state)
@@ -11986,7 +12221,7 @@ end}, "Anti_Sit_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Walk Fling (FE)",
-Default = getgenv().walkflinging or false,
+Default = g.walkflinging or false,
 Flag = "Walk_Fling_Toggle_UI",
 Callback = function(state)
     if state then
@@ -12000,7 +12235,7 @@ end}, "Walk_Fling_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Name Spam (FE, Slow!)",
-Default = getgenv().Name_Spammer_Currently_Enabled or false,
+Default = g.Name_Spammer_Currently_Enabled or false,
 Flag = "Name_Spam_Toggle_UI",
 Callback = function(state)
     g.name_changer_premium(state)
@@ -12008,7 +12243,7 @@ end}, "Name_Spam_Toggle_UI")
 
 g.create_ui_element("Toggle", Phone_Section, {
 Name = "Block Calls (FE)",
-Default = getgenv().Auto_Calls_Blocker_V3_Is_Enabled_Boolean_Flag or false,
+Default = g.Auto_Calls_Blocker_V3_Is_Enabled_Boolean_Flag or false,
 Flag = "Block_Calls_Toggle_UI",
 Callback = function(state)
     if state then
@@ -12063,21 +12298,21 @@ g.create_ui_element("Slider", LocalPlayer_Section, {
 Name = "Fly Speed",
 Min = 1,
 Max = 200,
-Default = getgenv().Fly_Speed_Value or 5,
+Default = g.Fly_Speed_Value or 5,
 Flag = "Fly_Speed_Slider_UI",
 Callback = function(val)
-    getgenv().Fly_Speed_Value = val
+    g.Fly_Speed_Value = val
 end}, "Fly_Speed_Slider_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Fly (FE)",
-Default = getgenv().FlyEnabled or false,
+Default = g.FlyEnabled or false,
 Flag = "Fly_Toggle_UI",
 Callback = function(state)
     if state then
         if g.FlyEnabled then g.notify("Error", "Fly is already enabled!", 5); return end
         if g.Enabled_Flying then g.notify("Error", "Another fly is already enabled!", 5); return end
-        local speed = getgenv().Fly_Speed_Value or nil
+        local speed = g.Fly_Speed_Value or nil
         g.EnableFly(true, speed)
         g.notify("Warning", "E = up, Q = down, WASD to move.", 3)
     else
@@ -12087,13 +12322,13 @@ end}, "Fly_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Fly 2 - Magic Carpet (FE)",
-Default = getgenv().Enabled_Flying or false,
+Default = g.Enabled_Flying or false,
 Flag = "Fly2_Toggle_UI",
 Callback = function(state)
     if state then
         if g.Enabled_Flying then g.notify("Error", "Fly-2 is already enabled!", 5); return end
         if g.FlyEnabled then g.notify("Error", "Fly-1 is already enabled, disable it first.", 6); return end
-        local speed = getgenv().Fly_Speed_Value or nil
+        local speed = g.Fly_Speed_Value or nil
         g.EnableFly2(speed)
         g.notify("Info", "Space = up, Shift = down, WASD to move.", 3)
     else
@@ -12109,7 +12344,7 @@ Callback = function(state)
     if state then
         if g.Enabled_Flying then g.notify("Error", "Fly-2 is already enabled, disable it first.", 5); return end
         if g.FlyEnabled then g.notify("Error", "Fly-1 is already enabled, disable it first.", 6); return end
-        local speed = getgenv().Fly_Speed_Value or nil
+        local speed = g.Fly_Speed_Value or nil
         if speed then g.SetAdonisFlySpeed(speed) end
         g.notify("Info", "E = up, Q = down, WASD to move.", 5)
         g.StartAdonisAdminFlyScript()
@@ -12285,7 +12520,7 @@ end}, "Unlock_Home_Button_UI")
 
 g.create_ui_element("Toggle", Houses_Section, {
 Name = "Auto Lock Home (FE)",
-Default = getgenv().LockHomeLoop or false,
+Default = g.LockHomeLoop or false,
 Flag = "Auto_Lock_Home_Toggle_UI",
 Callback = function(state)
     g.keep_home_locked(state)
@@ -12354,7 +12589,7 @@ end}, "Unfriend_Player_Input_UI")
 if executor_contains("delta") then
     g.create_ui_element("Toggle", Home_Section, {
     Name = "Toggle Delta Icon",
-    Default = getgenv().Is_Deltas_Icon_Currently_Toggled or false,
+    Default = g.Is_Deltas_Icon_Currently_Toggled or false,
     Flag = "Hide_Delta_Toggle_UI",
     Callback = function(state)
         g.toggle_delta_image_button_flames_hub(not state)
@@ -12363,7 +12598,7 @@ end
 
 g.create_ui_element("Toggle", Phone_Section, {
 Name = "Anti RGB Phone",
-Default = getgenv().HidePhoneModels or false,
+Default = g.HidePhoneModels or false,
 Flag = "Anti_RGB_Phone_Toggle_UI",
 Callback = function(state)
     if state then
@@ -12379,7 +12614,7 @@ end}, "Anti_RGB_Phone_Toggle_UI")
 
 g.create_ui_element("Toggle", Extras_Section, {
 Name = "FPS Boost",
-Default = getgenv().ultimate_lag_reducer or false,
+Default = g.ultimate_lag_reducer or false,
 Flag = "FPS_Boost_Toggle_UI",
 Callback = function(state)
     g.FlamesLagReducerFunc(state)
@@ -12395,7 +12630,7 @@ end}, "Always_Show_Titles_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "RGB Skin (FE)",
-Default = getgenv().rainbow_skintone_currently_enabled or false,
+Default = g.rainbow_skintone_currently_enabled or false,
 Flag = "RGB_Skin_Toggle_UI",
 Callback = function(state)
     g.rainbow_skin(state)
@@ -12403,7 +12638,7 @@ end}, "RGB_Skin_Toggle_UI")
 
 g.create_ui_element("Toggle", Extras_Section, {
 Name = "RGB Tool (FE)",
-Default = getgenv().Rainbow_Tools_FE or false,
+Default = g.Rainbow_Tools_FE or false,
 Flag = "RGB_Tool_Toggle_UI",
 Callback = function(state)
     if state then
@@ -12417,7 +12652,7 @@ end}, "RGB_Tool_Toggle_UI")
 
 g.create_ui_element("Toggle", Extras_Section, {
 Name = "Anti Fire",
-Default = getgenv().firehidden or false,
+Default = g.firehidden or false,
 Flag = "Anti_Fire_Toggle_UI",
 Callback = function(state)
     if state then
@@ -12435,7 +12670,7 @@ end}, "Anti_Fire_Toggle_UI")
 if priv_server_is_in == true then
     g.create_ui_element("Toggle", PrivServer_Section, {
     Name = "Stop Time (FE)",
-    Default = getgenv().is_time_currently_stopped_priv_server or false,
+    Default = g.is_time_currently_stopped_priv_server or false,
     Flag = "Stop_Time_Toggle_UI",
     Callback = function(state)
         g.stop_time_toggle(state)
@@ -12443,7 +12678,7 @@ if priv_server_is_in == true then
 
     g.create_ui_element("Toggle", PrivServer_Section, {
     Name = "Flash Time (FE)",
-    Default = getgenv().flashing_time_fe_toggle or false,
+    Default = g.flashing_time_fe_toggle or false,
     Flag = "Flash_Time_Toggle_UI",
     Callback = function(state)
         g.flash_time_toggle(state)
@@ -12451,7 +12686,7 @@ if priv_server_is_in == true then
 
     g.create_ui_element("Toggle", PrivServer_Section, {
     Name = "Flash Weather (FE)",
-    Default = getgenv().changing_weather_on_repeat or false,
+    Default = g.changing_weather_on_repeat or false,
     Flag = "Flash_Weather_Toggle_UI",
     Callback = function(state)
         g.weather_flasher_loop(state)
@@ -12459,7 +12694,7 @@ if priv_server_is_in == true then
 
     g.create_ui_element("Toggle", PrivServer_Section, {
     Name = "Server Lock (FE)",
-    Default = getgenv().server_lock_enabled or false,
+    Default = g.server_lock_enabled or false,
     Flag = "Server_Lock_Toggle_UI",
     Callback = function(state)
         g.server_lock_toggle(state)
@@ -12527,7 +12762,7 @@ end
 
 g.create_ui_element("Toggle", Extras_Section, {
 Name = "RGB Street Lights",
-Default = getgenv().RGB_Street_Lights_NightTime_Loop or false,
+Default = g.RGB_Street_Lights_NightTime_Loop or false,
 Flag = "RGB_Street_Lights_Toggle_UI",
 Callback = function(state)
     g.toggle_rgb_streetlights(state)
@@ -12748,7 +12983,7 @@ end,})
 
 g.Toggle_Fire_Spam = g.create_ui_element("Toggle", Extras_Section, {
 Name = "Flames (FE)",
-Default = getgenv().spamming_all_that_fire or false,
+Default = g.spamming_all_that_fire or false,
 Flag = "Flames_Toggle_UI",
 Callback = function(state)
     if state then
@@ -12788,7 +13023,7 @@ end}, "Spawn_Fire_Input_UI")
 
 g.create_ui_element("Toggle", Extras_Section, {
 Name = "Sign Spam (FE)",
-Default = getgenv().ToolChanger_FE or false,
+Default = g.ToolChanger_FE or false,
 Flag = "Sign_Spam_Toggle_UI",
 Callback = function(state)
     if state then
@@ -12811,7 +13046,7 @@ end,})
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Anti Outfit Copier (FE)",
-Default = getgenv().anti_outfit_stealer or false,
+Default = g.anti_outfit_stealer or false,
 Flag = "Anti_Outfit_Copier_Toggle_UI",
 Callback = function(state)
     g.anti_outfit_copier(state)
@@ -12819,7 +13054,7 @@ end}, "Anti_Outfit_Copier_Toggle_UI")
 
 g.create_ui_element("Toggle", Extras_Section, {
 Name = "Mute Tools",
-Default = getgenv().autosilence or false,
+Default = g.autosilence or false,
 Flag = "Mute_Tools_Toggle_UI",
 Callback = function(state)
     g.mute_all_tools(state)
@@ -12929,7 +13164,7 @@ end}, "Stats_GUI_Button_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Two Tone Skin (FE)",
-Default = getgenv().Two_Tone_Skin_Tone_Loop_Toggled or false,
+Default = g.Two_Tone_Skin_Tone_Loop_Toggled or false,
 Flag = "Two_Tone_Skin_Toggle_UI",
 Callback = function(state)
     g.two_tone_skin(state)
@@ -12947,7 +13182,7 @@ end}, "Car_Color_Picker_UI")
 
 g.create_ui_element("Toggle", Players_Section, {
 Name = "Player ESP",
-Default = getgenv().Flames_Hub_Player_ESP_Core_Has_Been_Enabled or false,
+Default = g.Flames_Hub_Player_ESP_Core_Has_Been_Enabled or false,
 Flag = "Player_ESP_Toggle_UI",
 Callback = function(state)
     if state then
@@ -12959,7 +13194,7 @@ end}, "Player_ESP_Toggle_UI")
 
 g.create_ui_element("Toggle", Players_Section, {
 Name = "Tracer ESP",
-Default = getgenv().tracer_esp_currently_running_flag_Flames_Hub or false,
+Default = g.tracer_esp_currently_running_flag_Flames_Hub or false,
 Flag = "Tracer_ESP_Toggle_UI",
 Callback = function(state)
     if state then
@@ -13059,7 +13294,7 @@ if not g.lta_updater_running then
     task.spawn(function()
         while g.lta_updater_running and thread_id == g.lta_updater_thread_id do
             task.wait(20)
-            local local_version = clean(tostring(getgenv().Script_Version))
+            local local_version = clean(tostring(g.Script_Version))
             if local_version == "" then continue end
             local remote_version = ws_get_version()
             if not remote_version or remote_version == "" then continue end
@@ -13068,7 +13303,7 @@ if not g.lta_updater_running then
                 Notify("[UPDATE DETECTED]:\nLocal: " .. local_version .. "\nServer: " .. remote_version .. "\nReloading...", 6)
                 task.wait(0.6)
                 g.LifeTogether_Actual_Flames_Hub_Running_Functioning_Currently_On_Client = false
-                getgenv().Script_Version = nil
+                g.Script_Version = nil
                 g.LifeTogetherRP_Admin = false
                 pcall(function()
                     loadstring(game:HttpGet(script_url .. "?cache=" .. tostring(os.clock())))()

@@ -1,5 +1,11 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
-local g = getgenv()
+local g
+if game:GetService("RunService"):IsStudio() then
+    g = _G
+else
+    g = getgenv()
+end
+wait(0.1)
 g.Game = game
 if g.FlamesConfigManager then return end
 g.FlamesConfigManager = true
@@ -18,12 +24,12 @@ if not g.GlobalEnvironmentFramework_Initialized then
 end
 wait(0.25)
 local debug_ext = (debug :: any)
-local lib = getgenv().FlamesLibrary
+local lib = g.FlamesLibrary
 local fw = lib.wait
 local function get_or_set(global, value)
-    local v = rawget and rawget(getgenv(), global) or getgenv()[global]
+    local v = rawget and rawget(g, global) or g[global]
     if v == nil then
-        getgenv()[global] = value
+        g[global] = value
         return value
     end
     return v
@@ -35,6 +41,8 @@ LocalPlayer = get_or_set("LocalPlayer", Players.LocalPlayer)
 CoreGui = get_or_set("CoreGui", safe_wrap("CoreGui"))
 RunService = get_or_set("RunService", safe_wrap("RunService"))
 UserInputService = get_or_set("UserInputService", safe_wrap("UserInputService"))
+local FlamesLibrary = lib
+local speaker = g.LocalPlayer or Players.LocalPlayer
 local is_mob_device = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local parent_gui = CoreGui
 local config_path = "Flames_Admin_Config.json"
@@ -99,7 +107,7 @@ function set_enrolled_state(state)
     writefile(config_path, HttpService:JSONEncode(config))
 end
 wait(0.1)
-getgenv().set_enrolled_state = set_enrolled_state
+g.set_enrolled_state = set_enrolled_state
 wait(0.1)
 function get_enrolled_state()
     if not isfile(config_path) then
@@ -110,15 +118,15 @@ function get_enrolled_state()
     return config.Enrolled
 end
 wait(0.1)
-getgenv().get_enrolled_state = get_enrolled_state
-if not getgenv().FreePay_Originals then getgenv().FreePay_Originals = {} end
-local originals = getgenv().FreePay_Originals
+g.get_enrolled_state = get_enrolled_state
+if not g.FreePay_Originals then g.FreePay_Originals = {} end
+local originals = g.FreePay_Originals
 local function freepay_func(state)
     if not Data or not Data.initiate then g.notify("Error", "Data module missing.", 3); return end
     if not debug_ext.getupvalue then g.notify("Error", "Executor does not support getupvalue.", 3); return end
-    if state == nil then state = not getgenv().Has_Free_LifePremium end
+    if state == nil then state = not g.Has_Free_LifePremium end
     if state then
-        if getgenv().Has_Free_LifePremium then g.notify("Error", "FreePay is already enabled.", 3); return end
+        if g.Has_Free_LifePremium then g.notify("Error", "FreePay is already enabled.", 3); return end
         local update_datum = debug_ext.getupvalue(Data.initiate, 2)
         if type(update_datum) ~= "function" then g.notify("Error", "Could not resolve update_datum.", 3); return end
         local u3 = debug_ext.getupvalue(update_datum, 2)
@@ -166,10 +174,10 @@ local function freepay_func(state)
             end
         end
 
-        getgenv().Has_Free_LifePremium = true
+        g.Has_Free_LifePremium = true
         g.notify("Success", "FreePay is now enabled.", 5)
     else
-        if not getgenv().Has_Free_LifePremium then g.notify("Error", "FreePay is not enabled.", 3); return end
+        if not g.Has_Free_LifePremium then g.notify("Error", "FreePay is not enabled.", 3); return end
         local update_datum = debug_ext.getupvalue(Data.initiate, 2)
         for key, original_val in next, originals do
             if typeof(key) == "string" then
@@ -188,26 +196,26 @@ local function freepay_func(state)
         end
 
         table.clear(originals)
-        getgenv().Has_Free_LifePremium = false
+        g.Has_Free_LifePremium = false
         g.notify("Success", "FreePay is now disabled.", 5)
     end
 end
 
-getgenv().set_enrolled_state("enabled")
-if not getgenv().FreePayFuncToggle then getgenv().FreePayFuncToggle = freepay_func end
-function change_vehicle_color(Color, Vehicle) getgenv().Send("vehicle_color", Color, Vehicle) end
-function change_phone_color(New_Color) getgenv().Send("phone_color", New_Color) end
+g.set_enrolled_state("enabled")
+if not g.FreePayFuncToggle then g.FreePayFuncToggle = freepay_func end
+function change_vehicle_color(Color, Vehicle) g.Send("vehicle_color", Color, Vehicle) end
+function change_phone_color(New_Color) g.Send("phone_color", New_Color) end
 task.wait(0.2)
-getgenv().RGB_Phone = getgenv().RGB_Phone or function(Boolean)
+g.RGB_Phone = g.RGB_Phone or function(Boolean)
     local key = "rgb_phone_loop"
     if Boolean == true then
-        if getgenv().RGB_Rainbow_Phone then g.notify("Warning", "Rainbow Phone is already enabled.", 3); return end
-        getgenv().RGB_Rainbow_Phone = true
-        getgenv().notify("Success", "Started RGB/Rainbow Phone.", 5)
+        if g.RGB_Rainbow_Phone then g.notify("Warning", "Rainbow Phone is already enabled.", 3); return end
+        g.RGB_Rainbow_Phone = true
+        g.notify("Success", "Started RGB/Rainbow Phone.", 5)
         lib.spawn(key, "spawn", function()
-            while getgenv().RGB_Rainbow_Phone == true do
+            while g.RGB_Rainbow_Phone == true do
                 for _, color in ipairs(colors) do
-                    if getgenv().RGB_Rainbow_Phone ~= true then
+                    if g.RGB_Rainbow_Phone ~= true then
                         lib.disconnect(key)
                         return
                     end
@@ -218,8 +226,8 @@ getgenv().RGB_Phone = getgenv().RGB_Phone or function(Boolean)
             lib.disconnect(key)
         end)
     elseif Boolean == false then
-        if not getgenv().RGB_Rainbow_Phone then g.notify("Warning", "Rainbow Phone is not enabled.", 5); return end
-        getgenv().RGB_Rainbow_Phone = false
+        if not g.RGB_Rainbow_Phone then g.notify("Warning", "Rainbow Phone is not enabled.", 5); return end
+        g.RGB_Rainbow_Phone = false
         lib.disconnect(key)
         g.notify("Success", "Stopped RGB/Rainbow Phone.", 5)
         fw(0.1)
@@ -228,14 +236,14 @@ getgenv().RGB_Phone = getgenv().RGB_Phone or function(Boolean)
 end
 
 local NOCLIP_KEY = "noclip_loop"
-getgenv().Noclip_Enabled = getgenv().Noclip_Enabled or false
+g.Noclip_Enabled = g.Noclip_Enabled or false
 local function ToggleNoclip(toggle)
     if toggle == true then
-        if getgenv().Noclip_Enabled then g.notify("Error", "Noclip already enabled!", 3); return end
-        getgenv().Noclip_Enabled = true
+        if g.Noclip_Enabled then g.notify("Error", "Noclip already enabled!", 3); return end
+        g.Noclip_Enabled = true
         g.notify("Success", "Noclip has been enabled.", 5)
         lib.connect(NOCLIP_KEY, RunService.Stepped:Connect(function()
-            if not getgenv().Noclip_Enabled then return end
+            if not g.Noclip_Enabled then return end
             local char = g.Character or g.LocalPlayer.Character or g.get_char(LocalPlayer, 5) or g.Char:get()
             if not char then return end
             for _, part in ipairs(char:GetDescendants()) do
@@ -245,10 +253,10 @@ local function ToggleNoclip(toggle)
             end
         end))
     elseif toggle == false then
-        if not getgenv().Noclip_Enabled then g.notify("Error", "Noclip not enabled!", 3); return end
-        getgenv().Noclip_Enabled = false
+        if not g.Noclip_Enabled then g.notify("Error", "Noclip not enabled!", 3); return end
+        g.Noclip_Enabled = false
         lib.disconnect(NOCLIP_KEY)
-        local char = getgenv().Character
+        local char = g.Character
         if char then
             for _, part in ipairs(char:GetDescendants()) do
                 if part and part:IsA("BasePart") then
@@ -263,17 +271,17 @@ local function ToggleNoclip(toggle)
         return
     end
 end
-if not getgenv().Toggleable_Noclip then getgenv().Toggleable_Noclip = ToggleNoclip end
+if not g.Toggleable_Noclip then g.Toggleable_Noclip = ToggleNoclip end
 function RGB_Vehicle(Boolean)
     local key = "rgb_vehicle_loop"
     if Boolean == true then
-        if getgenv().Rainbow_Vehicle then g.notify("Warning", "Flames Hub | Rainbow Vehicle is already enabled.", 5); return end
-        getgenv().Rainbow_Vehicle = true
-        getgenv().notify("Success", "Flames Hub | Rainbow Vehicle is now enabled.", 5)
+        if g.Rainbow_Vehicle then g.notify("Warning", "Flames Hub | Rainbow Vehicle is already enabled.", 5); return end
+        g.Rainbow_Vehicle = true
+        g.notify("Success", "Flames Hub | Rainbow Vehicle is now enabled.", 5)
         lib.spawn(key, "spawn", function()
-            while getgenv().Rainbow_Vehicle == true do
+            while g.Rainbow_Vehicle == true do
                 for _, color in ipairs(colors) do
-                    if getgenv().Rainbow_Vehicle ~= true then
+                    if g.Rainbow_Vehicle ~= true then
                         lib.disconnect(key)
                         return
                     end
@@ -284,94 +292,336 @@ function RGB_Vehicle(Boolean)
             lib.disconnect(key)
         end)
     elseif Boolean == false then
-        if not getgenv().Rainbow_Vehicle then g.notify("Warning", "Flames Hub | Rainbow Vehicle is not enabled.", 5); return end
-        getgenv().Rainbow_Vehicle = false
+        if not g.Rainbow_Vehicle then g.notify("Warning", "Flames Hub | Rainbow Vehicle is not enabled.", 5); return end
+        g.Rainbow_Vehicle = false
         lib.disconnect(key)
         g.notify("Success", "Flames Hub | Rainbow Vehicle is now disabled.", 5)
     end
 end
 
-getgenv().anti_outfit_copier = function(toggle)
+g.anti_outfit_copier = function(toggle)
     if toggle == true then
-        if getgenv().anti_outfit_stealer then g.notify("Error", "Anti Outfit Stealer is already enabled!", 5); return end
-        if getgenv().FlamesLibrary.is_alive("AntiFitStealerConn") then g.notify("Error", "Anti Outfit Stealer is already enabled! [connection]", 5); return end
+        if g.anti_outfit_stealer then g.notify("Error", "Anti Outfit Stealer is already enabled!", 5); return end
+        if g.FlamesLibrary.is_alive("AntiFitStealerConn") then g.notify("Error", "Anti Outfit Stealer is already enabled! [connection]", 5); return end
         g.notify("Success", "Flames Hub | Anti Outfit Stealer is now active.", 7)
-        getgenv().ToggleAntiFit_Stealer = function(state)
+        g.ToggleAntiFit_Stealer = function(state)
             if not state then
-                getgenv().anti_outfit_stealer = false
+                g.anti_outfit_stealer = false
                 lib.disconnect("AntiFitStealerConn")
-                local hide_outfit_toggle = getgenv().LocalPlayer:GetAttribute("hide_view_outfit")
+                local hide_outfit_toggle = g.LocalPlayer:GetAttribute("hide_view_outfit")
                 if hide_outfit_toggle and hide_outfit_toggle == false then
-                    getgenv().Send("hide_view_outfit", true)
+                    g.Send("hide_view_outfit", true)
                     g.notify("Success", "hide_view_outfit setting changed, reverted change (keep it on).", 3)
                 end
             else
-                getgenv().anti_outfit_stealer = true
-                if getgenv().Send then getgenv().Send("bio", "`~ Flames Hub Anti Stealer Is Enabled ~`") end
+                g.anti_outfit_stealer = true
+                if g.Send then g.Send("bio", "`~ Flames Hub Anti Stealer Is Enabled ~`") end
             end
 
             local last_check = 0
             local target_bio = "`~ Flames Hub Anti Stealer Is Enabled ~`"
-            lib.connect("AntiFitStealerConn", getgenv().RunService.Heartbeat:Connect(function()
+            lib.connect("AntiFitStealerConn", g.RunService.Heartbeat:Connect(function()
                 local now = tick()
                 if now - last_check < 0.4 then return end
                 last_check = now
-                local hide_outfit_toggle = getgenv().LocalPlayer:GetAttribute("hide_view_outfit")
+                local hide_outfit_toggle = g.LocalPlayer:GetAttribute("hide_view_outfit")
                 if hide_outfit_toggle and hide_outfit_toggle == false then
-                    getgenv().Send("hide_view_outfit", true)
+                    g.Send("hide_view_outfit", true)
                     g.notify("Success", "hide_view_outfit setting changed, reverted change (keep it on).", 3)
                 end
 
-                if getgenv().anti_outfit_stealer then
-                    local current_bio = getgenv().LocalPlayer:GetAttribute("bio")
+                if g.anti_outfit_stealer then
+                    local current_bio = g.LocalPlayer:GetAttribute("bio")
                     if current_bio ~= target_bio then
-                        getgenv().Send("bio", target_bio)
+                        g.Send("bio", target_bio)
                         g.notify("Success", "Bio was changed, reverted back.", 3)
                     end
                 end
             end))
         end
         fw(0.1)
-        getgenv().ToggleAntiFit_Stealer(true)
+        g.ToggleAntiFit_Stealer(true)
     elseif toggle == false then
-        if not getgenv().anti_outfit_stealer then g.notify("Error", "Anti Outfit Copier is not enabled!", 3); return end
-        getgenv().anti_outfit_stealer = false
-        getgenv().FlamesLibrary.disconnect("AntiFitStealerConn")
-        getgenv().ToggleAntiFit_Stealer(false)
+        if not g.anti_outfit_stealer then g.notify("Error", "Anti Outfit Copier is not enabled!", 3); return end
+        g.anti_outfit_stealer = false
+        g.FlamesLibrary.disconnect("AntiFitStealerConn")
+        g.ToggleAntiFit_Stealer(false)
         g.notify("Success", "Disabled Anti Outfit Stealer.", 5)
     else
         return
     end
 end
 
+local attr_name = "InHumanoidVehicle"
+local keys = {loop = "anti_sit_loop", char = "anti_sit_char", spam = "anti_sit_spam", hook = "anti_sit_hook", seat = "anti_sit_seat", hv = "anti_sit_hv"}
+local cfg = g.anti_sit_config or {phase_two = 0.75, phase_three = 2, timeout = 5, retry_delay = 0.5}
+local spam = g.anti_sit_spam or {active = false, started = 0, last_send = 0, last_hard = 0, cooldown_until = 0, exits = 0, total = 0, fastest = math.huge}
+local registry = g.anti_sit_registry or {}
+g.seat_cache = {}
+local uid = 0
+g.anti_sit_config = cfg
+g.anti_sit_spam = spam
+g.anti_sit_registry = registry
+-- [[ Replaced up here but kept down there as well because some scripts reference it after this point. ]] --
+g.in_humanoid_vehicle = g.in_humanoid_vehicle or function(player_or_name)
+    local humanoid_vehicles = g.Workspace:FindFirstChild("HumanoidVehicles", true)
+    if not humanoid_vehicles then return end
+    local player = player_or_name
+    if typeof(player_or_name) == "string" then
+        player = g.Players:FindFirstChild(player_or_name)
+        if not player then return end
+    end
+    local character = player == g.LocalPlayer and g.Character or player.Character
+    if not character then return end
+    local humanoid = character and character:FindFirstChildWhichIsA("Humanoid") or g.get_human(player, 3)
+    if not humanoid then return end
+    local vehicle_attr = humanoid:GetAttribute("InHumanoidVehicle")
+    if vehicle_attr == nil then return end
+    if type(g.Humanoid_Vehicles) ~= "table" then return end
+    if not table.find(g.Humanoid_Vehicles, vehicle_attr) then return end
+    return vehicle_attr
+end
+
+g.hum_vehicle_name = g.hum_vehicle_name or function(plr)
+    local hv = g.in_humanoid_vehicle(plr)
+    if not hv then return nil end
+    local folder = g.Workspace:FindFirstChild("HumanoidVehicles", true)
+    if not folder or not folder:IsA("Folder") then return nil end
+    local inst = folder:FindFirstChild(hv)
+    if not inst then return nil end
+    return inst.Name
+end
+
+g.anti_sit_uid = function() uid += 1; return uid end
+g.anti_sit_connect = function(name, conn) registry[name] = true; g.FlamesLibrary.connect(name, conn) end
+g.anti_sit_cleanup = function() for name in pairs(registry) do g.FlamesLibrary.disconnect(name) end; table.clear(registry); table.clear(g.seat_cache) end
+g.anti_sit_get_char = function() return g.Character or speaker.Character or (g.get_char and g.get_char(speaker)) end
+g.anti_sit_get_hum = function(char) return (char and char:FindFirstChildWhichIsA("Humanoid")) or g.Humanoid or (g.get_human and g.get_human(speaker)) or (g.Char and g.Char.get_hum and g.Char.get_hum()) end
+g.anti_sit_char_valid = function(char) return char ~= nil and char:FindFirstChild("HumanoidRootPart") ~= nil and char:IsDescendantOf(workspace) end
+g.anti_sit_hum_valid = function(hum) return hum ~= nil and hum.Parent ~= nil and hum:IsDescendantOf(game) end
+g.anti_sit_attr = function(hum)
+    if not hum then return nil end
+    local ok, res = pcall(function() return hum:GetAttribute(attr_name) end)
+    if ok and res ~= nil then return res end
+    return nil
+end
+
+g.anti_sit_in_hv = function(hum)
+    if g.in_humanoid_vehicle and typeof(g.in_humanoid_vehicle) == "function" then
+        local ok, res = pcall(g.in_humanoid_vehicle, speaker)
+        if ok and res ~= nil then return res end
+    end
+    return g.anti_sit_attr(hum)
+end
+
+g.anti_sit_hard_eject = function(char, hum)
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local folder = workspace:FindFirstChild("HumanoidVehicles")
+    if folder and hrp then
+        for _, group in folder:GetChildren() do
+            for _, model in group:GetChildren() do
+                if model:IsA("Model") and model:HasTag("HumanoidVehicle") then
+                    local occupant_val = model:FindFirstChild("occupant")
+                    local owner_val = model:FindFirstChild("owner")
+                    local ours = (occupant_val and occupant_val.Value == hum) or (owner_val and owner_val.Value == speaker)
+                    if ours then
+                        local touch_part = model:FindFirstChild("TouchPart", true)
+                        if touch_part then
+                            for _, weld in touch_part:GetChildren() do
+                                if weld:IsA("WeldConstraint") and (weld.Part0 == hrp or weld.Part1 == hrp) then pcall(function() weld:Destroy() end) end
+                            end
+                        end
+                        if occupant_val then pcall(function() occupant_val.Value = nil end) end
+                    end
+                end
+            end
+        end
+    end
+    if hrp and hrp.Parent then
+        for _, joint in hrp:GetChildren() do
+            if joint:IsA("JointInstance") or joint:IsA("WeldConstraint") then
+                local other = joint.Part0 == hrp and joint.Part1 or joint.Part0
+                if other and not other:IsDescendantOf(char) then pcall(function() joint:Destroy() end) end
+            end
+        end
+        pcall(function() hrp.CFrame = hrp.CFrame * CFrame.new(0, 4, -3) end)
+    end
+    pcall(function() hum:SetAttribute(attr_name, nil) end)
+    pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
+    if g.Send and typeof(g.Send) == "function" then pcall(g.Send, "stop_sitting") end
+end
+
+g.anti_sit_spam_stop = function(success)
+    FlamesLibrary.disconnect(keys.spam)
+    if success then
+        local took = os.clock() - spam.started
+        spam.exits += 1
+        spam.total += took
+        spam.fastest = math.min(spam.fastest, took)
+    end
+    spam.active = false
+    spam.cooldown_until = os.clock() + (success and 0 or cfg.retry_delay)
+end
+
+g.anti_sit_spam_start = function()
+    if spam.active or os.clock() < spam.cooldown_until then return end
+    spam.active = true
+    spam.started = os.clock()
+    spam.last_send = 0
+    spam.last_hard = 0
+    FlamesLibrary.connect(keys.spam, RunService.Heartbeat:Connect(function()
+        if not g.Not_Ever_Sitting then g.anti_sit_spam_stop(false); return end
+        local char = g.anti_sit_get_char()
+        local hum = char and g.anti_sit_get_hum(char)
+        if not g.anti_sit_char_valid(char) or not g.anti_sit_hum_valid(hum) then g.anti_sit_spam_stop(false); return end
+        if g.anti_sit_in_hv(hum) == nil then g.anti_sit_spam_stop(true); return end
+        local now = os.clock()
+        local elapsed = now - spam.started
+        if elapsed > cfg.timeout then g.anti_sit_spam_stop(false); return end
+        pcall(function()
+            hum.Jump = true
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end)
+        if elapsed > cfg.phase_two then
+            pcall(function() hum.Sit = false end)
+            if now - spam.last_send > 0.15 then
+                spam.last_send = now
+                if g.Send and typeof(g.Send) == "function" then pcall(g.Send, "stop_sitting") end
+            end
+        end
+        if elapsed > cfg.phase_three and now - spam.last_hard > 0.4 then
+            spam.last_hard = now
+            g.anti_sit_hard_eject(char, hum)
+        end
+    end))
+end
+
+g.anti_sit_eject_seat = function(hum, seat)
+    local target = seat or hum.SeatPart
+    if target and target.Parent then
+        pcall(function() target:SetAttribute("Disabled", true) end)
+        task.delay(0.3, function() pcall(function() if target.Parent then target:SetAttribute("Disabled", false) end end) end)
+    end
+    pcall(function() hum.Sit = false end)
+    pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
+    if g.Send then pcall(g.Send, "stop_sitting") end
+    local char = hum.Parent
+    local hrp = char and char:IsDescendantOf(workspace) and char:FindFirstChild("HumanoidRootPart")
+    if hrp and hrp.Parent then pcall(function() hrp.CFrame = hrp.CFrame * CFrame.new(0, 3, -2) end) end
+end
+
+g.anti_sit_eject_any = function(char, hum)
+    if not g.anti_sit_char_valid(char) or not g.anti_sit_hum_valid(hum) then return end
+    if g.anti_sit_in_hv(hum) ~= nil then g.anti_sit_spam_start(); return end
+    local seat_part = hum.SeatPart
+    local is_sit = hum.Sit or (g.Char and g.Char.is_sitting and g.Char.is_sitting.get())
+    if is_sit or seat_part then g.anti_sit_eject_seat(hum, seat_part) end
+end
+
+g.anti_sit_disable_nearby = function(char)
+    local hrp = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(speaker)
+    if not hrp or not hrp.Parent then return end
+    for seat in pairs(g.seat_cache) do
+        if seat.Parent and seat:GetAttribute("Disabled") ~= true and (seat.Position - hrp.Position).Magnitude < 8 then
+            pcall(function() seat:SetAttribute("Disabled", true) end)
+            task.delay(0.35, function() pcall(function() if seat.Parent then seat:SetAttribute("Disabled", false) end end) end)
+        end
+    end
+end
+
+g.anti_sit_hook_hum = function(hum, char)
+    g.anti_sit_connect(keys.hook .. "_attr", hum:GetAttributeChangedSignal(attr_name):Connect(function()
+        if g.Not_Ever_Sitting and g.anti_sit_attr(hum) ~= nil then g.anti_sit_eject_any(char, hum) end
+    end))
+    g.anti_sit_connect(keys.hook .. "_sit", hum:GetPropertyChangedSignal("Sit"):Connect(function()
+        if g.Not_Ever_Sitting and hum.Sit then g.anti_sit_eject_any(char, hum) end
+    end))
+    g.anti_sit_connect(keys.hook .. "_seatpart", hum:GetPropertyChangedSignal("SeatPart"):Connect(function()
+        if not g.Not_Ever_Sitting or not hum.SeatPart then return end
+        task.defer(function() if g.Not_Ever_Sitting then g.anti_sit_eject_any(char, hum) end end)
+    end))
+end
+
+g.anti_sit_watch_seats = function()
+    table.clear(g.seat_cache)
+    for _, obj in workspace:GetDescendants() do if obj:IsA("Seat") or obj:IsA("VehicleSeat") then g.seat_cache[obj] = true end end
+    g.anti_sit_connect(keys.seat .. "_added", workspace.DescendantAdded:Connect(function(obj) if obj:IsA("Seat") or obj:IsA("VehicleSeat") then g.seat_cache[obj] = true end end))
+    g.anti_sit_connect(keys.seat .. "_removed", workspace.DescendantRemoving:Connect(function(obj) g.seat_cache[obj] = nil end))
+end
+
+g.anti_sit_bind_hv_model = function(model)
+    if not (model:IsA("Model") and model:HasTag("HumanoidVehicle")) then return end
+    task.spawn(function()
+        local occupant_val = model:WaitForChild("occupant", 5)
+        if not occupant_val or not occupant_val:IsA("ObjectValue") or not g.Not_Ever_Sitting then return end
+        g.anti_sit_connect(keys.hv .. "_occ_" .. g.anti_sit_uid(), occupant_val:GetPropertyChangedSignal("Value"):Connect(function()
+            if not g.Not_Ever_Sitting or occupant_val.Value == nil then return end
+            local char = g.anti_sit_get_char()
+            local hum = char and g.anti_sit_get_hum(char)
+            if occupant_val.Value == hum then g.anti_sit_spam_start() end
+        end))
+    end)
+end
+
+g.anti_sit_bind_hv_folder = function(folder)
+    if not folder:IsA("Folder") then return end
+    for _, model in folder:GetChildren() do g.anti_sit_bind_hv_model(model) end
+    g.anti_sit_connect(keys.hv .. "_child_" .. g.anti_sit_uid(), folder.ChildAdded:Connect(function(model)
+        if g.Not_Ever_Sitting then g.anti_sit_bind_hv_model(model) end
+    end))
+end
+
+g.anti_sit_watch_hv = function()
+    local root = Workspace:FindFirstChild("HumanoidVehicles")
+    if not root then return end
+    for _, folder in root:GetChildren() do g.anti_sit_bind_hv_folder(folder) end
+    g.anti_sit_connect(keys.hv .. "_folders", root.ChildAdded:Connect(function(folder) if g.Not_Ever_Sitting then g.anti_sit_bind_hv_folder(folder) end end))
+end
+
 function anti_sit_func(toggle)
-    local lib = g.FlamesLibrary
-    local key = "anti_sit_loop"
-    local fw = lib.wait
-	if not g.Game_Folder then return end
-    g.Seat = require(g.Game_Folder:FindFirstChild("Seat"))
+    if not g.Seat then
+        local ok, res = pcall(function() return require(g.Game_Folder:FindFirstChild("Seat")) end)
+        if not ok or not res then g.notify("Error", "Seat ModuleScript not found or failed to load!", 3); return end
+        g.Seat = res
+    end
     if toggle == true then
         if g.Not_Ever_Sitting then g.notify("Warning", "AntiSit is already enabled!", 3); return end
         g.Not_Ever_Sitting = true
-        g.notify("Success", "Anti-Sit is now enabled!", 5)
-        g.show_notification("Success:", "Anti-Sit is now enabled!", "Normal")
-        lib.spawn(key, "spawn", function()
+        g.notify("Success", "Anti-Sit is now enabled!", 3)
+        g.show_notification("Success:", "Anti-Sit is now enabled.", "Normal")
+        local char = g.anti_sit_get_char()
+        local hum = char and g.anti_sit_get_hum(char)
+        if g.anti_sit_char_valid(char) and g.anti_sit_hum_valid(hum) then g.anti_sit_hook_hum(hum, char) end
+        g.anti_sit_watch_seats()
+        g.anti_sit_watch_hv()
+        g.anti_sit_connect(keys.char, speaker.CharacterAdded:Connect(function(new_char)
+            fw(0)
+            local new_hum = new_char:WaitForChild("Humanoid", 5)
+            if g.anti_sit_char_valid(new_char) and g.anti_sit_hum_valid(new_hum) then g.anti_sit_hook_hum(new_hum, new_char) end
+        end))
+        lib.spawn(keys.loop, "spawn", function()
             while g.Not_Ever_Sitting == true do
                 g.Seat.enabled.set(false)
+                local cur_char = g.anti_sit_get_char()
+                local cur_hum = cur_char and g.anti_sit_get_hum(cur_char)
+                if g.anti_sit_char_valid(cur_char) and g.anti_sit_hum_valid(cur_hum) then
+                    g.anti_sit_eject_any(cur_char, cur_hum)
+                    if cur_hum.Sit or cur_hum.SeatPart then g.anti_sit_disable_nearby(cur_char) end
+                end
                 fw(0)
             end
-            lib.disconnect(key)
+            lib.disconnect(keys.loop)
         end)
     elseif toggle == false then
-        if not g.Not_Ever_Sitting then g.notify("Warning", "AntiSit is not enabled!", 5); return end
+        if not g.Not_Ever_Sitting then g.notify("Warning", "AntiSit is not enabled!", 3); return end
         g.Not_Ever_Sitting = false
-        lib.disconnect(key)
+        g.anti_sit_spam_stop(false)
+        g.anti_sit_cleanup()
+        lib.disconnect(keys.loop)
         fw(0.2)
         g.Seat.enabled.set(true)
-        g.notify("Success", "Sitting is now enabled!", 5)
-        Phone.show_notification("Success:", "Sitting is now enabled!", "Normal")
-    else
-        return
+        g.notify("Success", "Anti-Sit is now disabled.", 3)
+        pcall(function() g.Phone.show_notification("Success:", "Anti-Sit is now disabled.", "Normal") end)
     end
 end
 
@@ -387,59 +637,59 @@ end
 
 function anti_void(toggle)
     if toggle == true then
-        if getgenv().Anti_Void_Enabled_Bool then g.notify("Warning", "Anti-Void is already enabled!", 3); return end
-        if not getgenv().originalFPDH then getgenv().originalFPDH = getgenv().Workspace.FallenPartsDestroyHeight end
-        getgenv().Workspace.FallenPartsDestroyHeight = -9e9
-        getgenv().Anti_Void_Enabled_Bool = true
+        if g.Anti_Void_Enabled_Bool then g.notify("Warning", "Anti-Void is already enabled!", 3); return end
+        if not g.originalFPDH then g.originalFPDH = g.Workspace.FallenPartsDestroyHeight end
+        g.Workspace.FallenPartsDestroyHeight = -9e9
+        g.Anti_Void_Enabled_Bool = true
         g.notify("Success", "Enabled anti-void.", 5)
     elseif toggle == false then
-        if not getgenv().Anti_Void_Enabled_Bool then g.notify("Warning", "Anti-Void has not been enabled!", 3); return end
-        if not getgenv().originalFPDH then getgenv().originalFPDH = -500; g.notify("Error", "Original FPDH didn't exist at runtime, try this command again!", 5); return end
-        getgenv().Workspace.FallenPartsDestroyHeight = getgenv().originalFPDH
-        getgenv().Anti_Void_Enabled_Bool = false
+        if not g.Anti_Void_Enabled_Bool then g.notify("Warning", "Anti-Void has not been enabled!", 3); return end
+        if not g.originalFPDH then g.originalFPDH = -500; g.notify("Error", "Original FPDH didn't exist at runtime, try this command again!", 5); return end
+        g.Workspace.FallenPartsDestroyHeight = g.originalFPDH
+        g.Anti_Void_Enabled_Bool = false
         g.notify("Success", "Disabled anti-void.", 5)
     end
 end
 
 local VEHICLE_KEY = "vehicle_destroyer"
-getgenv().VehicleDestroyer_Enabled = getgenv().VehicleDestroyer_Enabled or false
-getgenv().DisableVehicleDestroyer = function()
-    if not getgenv().VehicleDestroyer_Enabled then g.notify("Warning", "Anti Vehicle Fling is not enabled!", 3); return end
+g.VehicleDestroyer_Enabled = g.VehicleDestroyer_Enabled or false
+g.DisableVehicleDestroyer = function()
+    if not g.VehicleDestroyer_Enabled then g.notify("Warning", "Anti Vehicle Fling is not enabled!", 3); return end
     fw(0.1)
-    getgenv().VehicleDestroyer_Enabled = false
+    g.VehicleDestroyer_Enabled = false
     lib.disconnect(VEHICLE_KEY)
     g.notify("Success", "Anti Vehicle Fling has been disabled.", 5)
 end
 
-getgenv().job_spammer = getgenv().job_spammer or function(toggle)
-    local lib = getgenv().FlamesLibrary
+g.job_spammer = g.job_spammer or function(toggle)
+    local lib = g.FlamesLibrary
     local key = "job_spammer_loop"
 
     if toggle == true then
-        if getgenv().Every_Job then g.notify("Warning", "Job-Spammer is already enabled! disable it first.", 5); return end
-        getgenv().Every_Job = true
+        if g.Every_Job then g.notify("Warning", "Job-Spammer is already enabled! disable it first.", 5); return end
+        g.Every_Job = true
         g.notify("Success", "Job-Spammer is now enabled.", 3)
         lib.spawn(key, "spawn", function()
-            while getgenv().Every_Job == true do
+            while g.Every_Job == true do
             task.wait(0)
-                getgenv().Send("job", "Police")
+                g.Send("job", "Police")
                 fw(0)
-                getgenv().Send("job", "Firefighter")
+                g.Send("job", "Firefighter")
                 fw(0)
-                getgenv().Send("job", "Baker")
+                g.Send("job", "Baker")
                 fw(0)
-                getgenv().Send("job", "Pizza Worker")
+                g.Send("job", "Pizza Worker")
                 fw(0)
-                getgenv().Send("job", "Barista")
+                g.Send("job", "Barista")
                 fw(0)
-                getgenv().Send("job", "Doctor")
+                g.Send("job", "Doctor")
                 fw(0)
             end
             lib.disconnect(key)
         end)
     elseif toggle == false then
-        if not getgenv().Every_Job then g.notify("Warning", "Job-Spammer is not enabled!", 5); return end
-        getgenv().Every_Job = false
+        if not g.Every_Job then g.notify("Warning", "Job-Spammer is not enabled!", 5); return end
+        g.Every_Job = false
         lib.disconnect(key)
         g.notify("Success", "Job-Spammer is now disabled.", 3)
     end
@@ -619,7 +869,7 @@ List_Padding.PaddingLeft = UDim.new(0, 10)
 List_Padding.PaddingRight = UDim.new(0, 14)
 List_Padding.Parent = Toggle_List
 
-getgenv().Flames_Features = getgenv().Flames_Features or {}
+g.Flames_Features = g.Flames_Features or {}
 local function handle_toggle(name, state)
     if name == "RainbowVehicle" then
         if state == "enabled" then
@@ -641,9 +891,9 @@ local function handle_toggle(name, state)
         end
     elseif name == "AntiFling" then
         if state == "enabled" then
-            if getgenv().Toggle_AntiFling_Boolean_Func then getgenv().Toggle_AntiFling_Boolean_Func(true) end
+            if g.Toggle_AntiFling_Boolean_Func then g.Toggle_AntiFling_Boolean_Func(true) end
         else
-            if getgenv().Toggle_AntiFling_Boolean_Func then getgenv().Toggle_AntiFling_Boolean_Func(false) end
+            if g.Toggle_AntiFling_Boolean_Func then g.Toggle_AntiFling_Boolean_Func(false) end
         end
     elseif name == "AntiVoid" then
         if state == "enabled" then
@@ -653,9 +903,9 @@ local function handle_toggle(name, state)
         end
     elseif name == "NoClip" then
         if state == "enabled" then
-            if getgenv().Toggleable_Noclip then getgenv().Toggleable_Noclip(true) end
+            if g.Toggleable_Noclip then g.Toggleable_Noclip(true) end
         else
-            if getgenv().Toggleable_Noclip then getgenv().Toggleable_Noclip(false) end
+            if g.Toggleable_Noclip then g.Toggleable_Noclip(false) end
         end
     elseif name == "NoSit" then
         if state == "enabled" then

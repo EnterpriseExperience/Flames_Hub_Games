@@ -1,8 +1,14 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
-local g = getgenv()
+local g
+if game:GetService("RunService"):IsStudio() then
+   g = _G
+else
+   g = getgenv()
+end
+wait(0.1)
 g.Game = game
-local http_game = (getgenv()["game"] or game)["HttpGet"]
-getgenv().http_get = function(url) return http_game(game, url) end
+local http_game = (g["game"] or game)["HttpGet"]
+g.http_get = function(url) return http_game(game, url) end
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
 local RunService = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
@@ -16,7 +22,7 @@ local TweenService = g.TweenService or cloneref and cloneref(game:GetService("Tw
 local StarterGui = g.StarterGui or cloneref and cloneref(game:GetService("StarterGui")) or game:GetService("StarterGui")
 local speaker = g.LocalPlayer or Players.LocalPlayer
 local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui
-local FlamesLibrary = g.FlamesLibrary or getgenv().FlamesLibrary
+local FlamesLibrary = g.FlamesLibrary
 local lib = FlamesLibrary
 local InstanceNew = Instance.new
 g.Reset_Fallen_Parts_Height = g.Reset_Fallen_Parts_Height or false
@@ -34,7 +40,7 @@ wait(0.1)
 g.originalFPDH = g.originalFPDH or workspace.FallenPartsDestroyHeight
 g.Script_Creator = "👑 Flames Hub 👑"
 g.Script_Owner = "✅ Flames Hub | ✅"
-getgenv().Flames_Hub_Emojis = {
+g.Flames_Hub_Emojis = {
    ["Checkmark"] = "✅",
    ["Coin"] = "🪙",
    ["Fire"] = "🔥",
@@ -2570,10 +2576,10 @@ g.anti_follow_reset = function()
 	if not char or not char:IsDescendantOf(game) then return end
 	local root = g.HumanoidRootPart or char:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer)
 	if not root or not root.Parent or not root:IsDescendantOf(game) then return end
-	getgenv().Org_Destroy_Height = getgenv().Org_Destroy_Height or workspace.FallenPartsDestroyHeight
-	if not getgenv().Org_Destroy_Height then getgenv().Org_Destroy_Height = 500 end
+	g.Org_Destroy_Height = g.Org_Destroy_Height or workspace.FallenPartsDestroyHeight
+	if not g.Org_Destroy_Height then g.Org_Destroy_Height = 500 end
 	local old_pos = root.CFrame
-	root.CFrame = CFrame.new(Vector3.new(0, getgenv().Org_Destroy_Height - 25, 0))
+	root.CFrame = CFrame.new(Vector3.new(0, g.Org_Destroy_Height - 25, 0))
 	task.wait(1)
 	root.CFrame = old_pos
    if g.anti_void and typeof(g.anti_void) == "function" then g.anti_void(g.fling_recovery_enabled or true) end -- just making sure.
@@ -2732,31 +2738,278 @@ g.Toggle_AntiFling_Boolean_Func = function(flag)
    end
 end
 
+local attr_name = "InHumanoidVehicle"
+local keys = {loop = "anti_sit_loop", char = "anti_sit_char", spam = "anti_sit_spam", hook = "anti_sit_hook", seat = "anti_sit_seat", hv = "anti_sit_hv"}
+local cfg = g.anti_sit_config or {phase_two = 0.75, phase_three = 2, timeout = 5, retry_delay = 0.5}
+local spam = g.anti_sit_spam or {active = false, started = 0, last_send = 0, last_hard = 0, cooldown_until = 0, exits = 0, total = 0, fastest = math.huge}
+local registry = g.anti_sit_registry or {}
+g.seat_cache = {}
+local uid = 0
+g.anti_sit_config = cfg
+g.anti_sit_spam = spam
+g.anti_sit_registry = registry
+-- [[ Replaced up here but kept down there as well because some scripts reference it after this point. ]] --
+g.in_humanoid_vehicle = g.in_humanoid_vehicle or function(player_or_name)
+   local humanoid_vehicles = g.Workspace:FindFirstChild("HumanoidVehicles", true)
+   if not humanoid_vehicles then return end
+   local player = player_or_name
+   if typeof(player_or_name) == "string" then
+      player = g.Players:FindFirstChild(player_or_name)
+      if not player then return end
+   end
+   local character = player == g.LocalPlayer and g.Character or player.Character
+   if not character then return end
+   local humanoid = character and character:FindFirstChildWhichIsA("Humanoid") or g.get_human(player, 3)
+   if not humanoid then return end
+   local vehicle_attr = humanoid:GetAttribute("InHumanoidVehicle")
+   if vehicle_attr == nil then return end
+   if type(g.Humanoid_Vehicles) ~= "table" then return end
+   if not table.find(g.Humanoid_Vehicles, vehicle_attr) then return end
+   return vehicle_attr
+end
+
+g.hum_vehicle_name = g.hum_vehicle_name or function(plr)
+   local hv = g.in_humanoid_vehicle(plr)
+   if not hv then return nil end
+   local folder = g.Workspace:FindFirstChild("HumanoidVehicles", true)
+   if not folder or not folder:IsA("Folder") then return nil end
+   local inst = folder:FindFirstChild(hv)
+   if not inst then return nil end
+   return inst.Name
+end
+
+g.anti_sit_uid = function() uid += 1; return uid end
+g.anti_sit_connect = function(name, conn) registry[name] = true; g.FlamesLibrary.connect(name, conn) end
+g.anti_sit_cleanup = function() for name in pairs(registry) do g.FlamesLibrary.disconnect(name) end; table.clear(registry); table.clear(g.seat_cache) end
+g.anti_sit_get_char = function() return g.Character or speaker.Character or (g.get_char and g.get_char(speaker)) end
+g.anti_sit_get_hum = function(char) return (char and char:FindFirstChildWhichIsA("Humanoid")) or g.Humanoid or (g.get_human and g.get_human(speaker)) or (g.Char and g.Char.get_hum and g.Char.get_hum()) end
+g.anti_sit_char_valid = function(char) return char ~= nil and char:FindFirstChild("HumanoidRootPart") ~= nil and char:IsDescendantOf(workspace) end
+g.anti_sit_hum_valid = function(hum) return hum ~= nil and hum.Parent ~= nil and hum:IsDescendantOf(game) end
+g.anti_sit_attr = function(hum)
+   if not hum then return nil end
+   local ok, res = pcall(function() return hum:GetAttribute(attr_name) end)
+   if ok and res ~= nil then return res end
+   return nil
+end
+
+g.anti_sit_in_hv = function(hum)
+   if g.in_humanoid_vehicle and typeof(g.in_humanoid_vehicle) == "function" then
+      local ok, res = pcall(g.in_humanoid_vehicle, speaker)
+      if ok and res ~= nil then return res end
+   end
+   return g.anti_sit_attr(hum)
+end
+
+g.anti_sit_hard_eject = function(char, hum)
+   local hrp = char and char:FindFirstChild("HumanoidRootPart")
+   local folder = workspace:FindFirstChild("HumanoidVehicles")
+   if folder and hrp then
+      for _, group in folder:GetChildren() do
+         for _, model in group:GetChildren() do
+            if model:IsA("Model") and model:HasTag("HumanoidVehicle") then
+               local occupant_val = model:FindFirstChild("occupant")
+               local owner_val = model:FindFirstChild("owner")
+               local ours = (occupant_val and occupant_val.Value == hum) or (owner_val and owner_val.Value == speaker)
+               if ours then
+                  local touch_part = model:FindFirstChild("TouchPart", true)
+                  if touch_part then
+                        for _, weld in touch_part:GetChildren() do
+                           if weld:IsA("WeldConstraint") and (weld.Part0 == hrp or weld.Part1 == hrp) then pcall(function() weld:Destroy() end) end
+                        end
+                  end
+                  if occupant_val then pcall(function() occupant_val.Value = nil end) end
+               end
+            end
+         end
+      end
+   end
+   if hrp and hrp.Parent then
+      for _, joint in hrp:GetChildren() do
+         if joint:IsA("JointInstance") or joint:IsA("WeldConstraint") then
+            local other = joint.Part0 == hrp and joint.Part1 or joint.Part0
+            if other and not other:IsDescendantOf(char) then pcall(function() joint:Destroy() end) end
+         end
+      end
+      pcall(function() hrp.CFrame = hrp.CFrame * CFrame.new(0, 4, -3) end)
+   end
+   pcall(function() hum:SetAttribute(attr_name, nil) end)
+   pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
+   if g.Send and typeof(g.Send) == "function" then pcall(g.Send, "stop_sitting") end
+end
+
+g.anti_sit_spam_stop = function(success)
+   FlamesLibrary.disconnect(keys.spam)
+   if success then
+      local took = os.clock() - spam.started
+      spam.exits += 1
+      spam.total += took
+      spam.fastest = math.min(spam.fastest, took)
+   end
+   spam.active = false
+   spam.cooldown_until = os.clock() + (success and 0 or cfg.retry_delay)
+end
+
+g.anti_sit_spam_start = function()
+   if spam.active or os.clock() < spam.cooldown_until then return end
+   spam.active = true
+   spam.started = os.clock()
+   spam.last_send = 0
+   spam.last_hard = 0
+   FlamesLibrary.connect(keys.spam, RunService.Heartbeat:Connect(function()
+      if not g.Not_Ever_Sitting then g.anti_sit_spam_stop(false); return end
+      local char = g.anti_sit_get_char()
+      local hum = char and g.anti_sit_get_hum(char)
+      if not g.anti_sit_char_valid(char) or not g.anti_sit_hum_valid(hum) then g.anti_sit_spam_stop(false); return end
+      if g.anti_sit_in_hv(hum) == nil then g.anti_sit_spam_stop(true); return end
+      local now = os.clock()
+      local elapsed = now - spam.started
+      if elapsed > cfg.timeout then g.anti_sit_spam_stop(false); return end
+      pcall(function()
+         hum.Jump = true
+         hum:ChangeState(Enum.HumanoidStateType.Jumping)
+      end)
+      if elapsed > cfg.phase_two then
+         pcall(function() hum.Sit = false end)
+         if now - spam.last_send > 0.15 then
+            spam.last_send = now
+            if g.Send and typeof(g.Send) == "function" then pcall(g.Send, "stop_sitting") end
+         end
+      end
+      if elapsed > cfg.phase_three and now - spam.last_hard > 0.4 then
+         spam.last_hard = now
+         g.anti_sit_hard_eject(char, hum)
+      end
+   end))
+end
+
+g.anti_sit_eject_seat = function(hum, seat)
+   local target = seat or hum.SeatPart
+   if target and target.Parent then
+      pcall(function() target:SetAttribute("Disabled", true) end)
+      task.delay(0.3, function() pcall(function() if target.Parent then target:SetAttribute("Disabled", false) end end) end)
+   end
+   pcall(function() hum.Sit = false end)
+   pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
+   if g.Send then pcall(g.Send, "stop_sitting") end
+   local char = hum.Parent
+   local hrp = char and char:IsDescendantOf(workspace) and char:FindFirstChild("HumanoidRootPart")
+   if hrp and hrp.Parent then pcall(function() hrp.CFrame = hrp.CFrame * CFrame.new(0, 3, -2) end) end
+end
+
+g.anti_sit_eject_any = function(char, hum)
+   if not g.anti_sit_char_valid(char) or not g.anti_sit_hum_valid(hum) then return end
+   if g.anti_sit_in_hv(hum) ~= nil then g.anti_sit_spam_start(); return end
+   local seat_part = hum.SeatPart
+   local is_sit = hum.Sit or (g.Char and g.Char.is_sitting and g.Char.is_sitting.get())
+   if is_sit or seat_part then g.anti_sit_eject_seat(hum, seat_part) end
+end
+
+g.anti_sit_disable_nearby = function(char)
+   local hrp = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(speaker)
+   if not hrp or not hrp.Parent then return end
+   for seat in pairs(g.seat_cache) do
+      if seat.Parent and seat:GetAttribute("Disabled") ~= true and (seat.Position - hrp.Position).Magnitude < 8 then
+         pcall(function() seat:SetAttribute("Disabled", true) end)
+         task.delay(0.35, function() pcall(function() if seat.Parent then seat:SetAttribute("Disabled", false) end end) end)
+      end
+   end
+end
+
+g.anti_sit_hook_hum = function(hum, char)
+   g.anti_sit_connect(keys.hook .. "_attr", hum:GetAttributeChangedSignal(attr_name):Connect(function()
+      if g.Not_Ever_Sitting and g.anti_sit_attr(hum) ~= nil then g.anti_sit_eject_any(char, hum) end
+   end))
+   g.anti_sit_connect(keys.hook .. "_sit", hum:GetPropertyChangedSignal("Sit"):Connect(function()
+      if g.Not_Ever_Sitting and hum.Sit then g.anti_sit_eject_any(char, hum) end
+   end))
+   g.anti_sit_connect(keys.hook .. "_seatpart", hum:GetPropertyChangedSignal("SeatPart"):Connect(function()
+      if not g.Not_Ever_Sitting or not hum.SeatPart then return end
+      task.defer(function() if g.Not_Ever_Sitting then g.anti_sit_eject_any(char, hum) end end)
+   end))
+end
+
+g.anti_sit_watch_seats = function()
+   table.clear(g.seat_cache)
+   for _, obj in workspace:GetDescendants() do if obj:IsA("Seat") or obj:IsA("VehicleSeat") then g.seat_cache[obj] = true end end
+   g.anti_sit_connect(keys.seat .. "_added", workspace.DescendantAdded:Connect(function(obj) if obj:IsA("Seat") or obj:IsA("VehicleSeat") then g.seat_cache[obj] = true end end))
+   g.anti_sit_connect(keys.seat .. "_removed", workspace.DescendantRemoving:Connect(function(obj) g.seat_cache[obj] = nil end))
+end
+
+g.anti_sit_bind_hv_model = function(model)
+   if not (model:IsA("Model") and model:HasTag("HumanoidVehicle")) then return end
+   task.spawn(function()
+      local occupant_val = model:WaitForChild("occupant", 5)
+      if not occupant_val or not occupant_val:IsA("ObjectValue") or not g.Not_Ever_Sitting then return end
+      g.anti_sit_connect(keys.hv .. "_occ_" .. g.anti_sit_uid(), occupant_val:GetPropertyChangedSignal("Value"):Connect(function()
+         if not g.Not_Ever_Sitting or occupant_val.Value == nil then return end
+         local char = g.anti_sit_get_char()
+         local hum = char and g.anti_sit_get_hum(char)
+         if occupant_val.Value == hum then g.anti_sit_spam_start() end
+      end))
+   end)
+end
+
+g.anti_sit_bind_hv_folder = function(folder)
+   if not folder:IsA("Folder") then return end
+   for _, model in folder:GetChildren() do g.anti_sit_bind_hv_model(model) end
+   g.anti_sit_connect(keys.hv .. "_child_" .. g.anti_sit_uid(), folder.ChildAdded:Connect(function(model)
+      if g.Not_Ever_Sitting then g.anti_sit_bind_hv_model(model) end
+   end))
+end
+
+g.anti_sit_watch_hv = function()
+   local root = workspace:FindFirstChild("HumanoidVehicles")
+   if not root then return end
+   for _, folder in root:GetChildren() do g.anti_sit_bind_hv_folder(folder) end
+   g.anti_sit_connect(keys.hv .. "_folders", root.ChildAdded:Connect(function(folder) if g.Not_Ever_Sitting then g.anti_sit_bind_hv_folder(folder) end end))
+end
+
 g.anti_sit_func = function(toggle)
-   local key = "anti_sit_loop"
-   g.Seat = require(g.Game_Folder:FindFirstChild("Seat"))
+   local lib = g.FlamesLibrary
+   local fw = lib.wait
+   if not g.Seat then
+      local ok, res = pcall(function() return require(g.Game_Folder:FindFirstChild("Seat")) end)
+      if not ok or not res then g.notify("Error", "Seat ModuleScript not found or failed to load!", 3); return end
+      g.Seat = res
+   end
    if toggle == true then
-      if g.Not_Ever_Sitting then g.notify("Warning", "Flames Hub | AntiSit is already enabled!", 3); return end
+      if g.Not_Ever_Sitting then g.notify("Warning", "AntiSit is already enabled!", 3); return end
       g.Not_Ever_Sitting = true
-      g.notify("Success", "Anti-Sit is now enabled.", 5)
+      g.notify("Success", "Anti-Sit is now enabled!", 3)
       g.show_notification("Success:", "Anti-Sit is now enabled.", "Normal")
-      lib.spawn(key, "spawn", function()
+      local char = g.anti_sit_get_char()
+      local hum = char and g.anti_sit_get_hum(char)
+      if g.anti_sit_char_valid(char) and g.anti_sit_hum_valid(hum) then g.anti_sit_hook_hum(hum, char) end
+      g.anti_sit_watch_seats()
+      g.anti_sit_watch_hv()
+      g.anti_sit_connect(keys.char, speaker.CharacterAdded:Connect(function(new_char)
+         fw(0)
+         local new_hum = new_char:WaitForChild("Humanoid", 5)
+         if g.anti_sit_char_valid(new_char) and g.anti_sit_hum_valid(new_hum) then g.anti_sit_hook_hum(new_hum, new_char) end
+      end))
+      lib.spawn(keys.loop, "spawn", function()
          while g.Not_Ever_Sitting == true do
             g.Seat.enabled.set(false)
+            local cur_char = g.anti_sit_get_char()
+            local cur_hum = cur_char and g.anti_sit_get_hum(cur_char)
+            if g.anti_sit_char_valid(cur_char) and g.anti_sit_hum_valid(cur_hum) then
+               g.anti_sit_eject_any(cur_char, cur_hum)
+               if cur_hum.Sit or cur_hum.SeatPart then g.anti_sit_disable_nearby(cur_char) end
+            end
             fw(0)
          end
-         lib.disconnect(key)
+         lib.disconnect(keys.loop)
       end)
    elseif toggle == false then
       if not g.Not_Ever_Sitting then g.notify("Warning", "AntiSit is not enabled!", 3); return end
       g.Not_Ever_Sitting = false
-      lib.disconnect(key)
+      g.anti_sit_spam_stop(false)
+      g.anti_sit_cleanup()
+      lib.disconnect(keys.loop)
       fw(0.2)
       g.Seat.enabled.set(true)
-      g.notify("Success", "Anti-Sit is now disabled.", 5)
-      g.Phone.show_notification("Success:", "Anti-Sit is now disabled.", "Normal")
-   else
-      return 
+      g.notify("Success", "Anti-Sit is now disabled.", 3)
+      pcall(function() g.Phone.show_notification("Success:", "Anti-Sit is now disabled.", "Normal") end)
    end
 end
 
@@ -3394,13 +3647,13 @@ end
 local emotes = fetch_emotes("needy", 25)
 g.emote_list = emotes
 g.play_random_emote = function()
-   if #emotes == 0 then getgenv().notify("Warning", "No emotes loaded.", 3); return end
+   if #emotes == 0 then g.notify("Warning", "No emotes loaded.", 3); return end
    local emote = emotes[math.random(1, #emotes)]
    g.playemote(emote.asset_id)
 end
 
 g.play_emote_by_index = function(index)
    local emote = emotes[index]
-   if not emote then getgenv().notify("Error", "No emote at index: "..tostring(index), 5); return end
+   if not emote then g.notify("Error", "No emote at index: "..tostring(index), 5); return end
    g.playemote(emote.asset_id)
 end
