@@ -11745,7 +11745,7 @@ Callback = function(val)
 end}, "Spin_Speed_Slider_UI")
 
 g.create_ui_element("Button", LocalPlayer_Section, {
-Name = "uur Avatar (FE)",
+Name = "Cover Map With Your Avatar (FE)",
 Callback = function()
     g.size_func_setter(85, 85)
 end,})
