@@ -24,7 +24,7 @@ wait(0.25)
 local cloneref = typeof(cloneref) == "function" and cloneref or function(instance) return instance end
 local http_game = (g["game"] or game)["HttpGet"]
 g.http_get = function(url) return http_game(game, url) end
-local Raw_Version = "V9.4.1"
+local Raw_Version = "V9.4.2"
 g.Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
 local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
@@ -1583,7 +1583,7 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
 end
 
 local holiday = g.getholiday() or ""
-local Announcement_Message = "Fixed, revamped, improved & added a ton of stuff, check the Discord for more details regarding changelogs."
+local Announcement_Message = "Added a hot-fix for Outfits Manager not properly loading all your saved outfits correctly upon closing it and re-opening it."
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
 g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.
@@ -4285,9 +4285,12 @@ g.save_outfits_GUI = function()
     Instance.new("UICorner", CloseButton)
 
     CloseButton.MouseButton1Click:Connect(function()
+        g.is_busy_outfit_manager = false
         ScreenGui:Destroy()
         g.LoadedOutfit_Manager_GUI = false
     end)
+
+
 
     local SaveButton = Instance.new("TextButton")
     SaveButton.Size = UDim2.new(0.5, -5, 0, 35)
@@ -4453,6 +4456,7 @@ g.save_outfits_GUI = function()
             g.notify("Error", "Could not load outfits.", 3)
             return
         end
+        refreshOutfitList()
     end)
 end
 
