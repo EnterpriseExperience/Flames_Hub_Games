@@ -14,7 +14,7 @@ end
 local g = getgenv()
 local http_game = (getgenv()["game"] or game)["HttpGet"]
 getgenv().http_get = function(url) return http_game(game, url) end
-local Raw_Version = "V9.3.2"
+local Raw_Version = "V9.3.5"
 getgenv().Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
 local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
@@ -1573,7 +1573,7 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
 end
 
 local holiday = g.getholiday() or ""
-local Announcement_Message = "Made an attempt to fix the 'nil' name issue, and also fixed FallenPartsDestroyHeight still resetting with Anti Void on."
+local Announcement_Message = "Fixed Anti Hashtags not working, fixed Name Spammer (FE), fixed internal code (title system getting updated soon)."
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
 g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.
@@ -5506,7 +5506,7 @@ g.name_changer_premium = g.name_changer_premium or function(state)
                 g.Send("roleplay_name", words[index])
                 index = index + 1
                 if index > count then index = 1 end
-                fw(0)
+                fw(61)
             end
         end)
 
@@ -11964,7 +11964,7 @@ Callback = function(state)
 end}, "Walk_Fling_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
-Name = "Name Spam (FE, Broken)",
+Name = "Name Spam (FE, Slow!)",
 Default = getgenv().Name_Spammer_Currently_Enabled or false,
 Flag = "Name_Spam_Toggle_UI",
 Callback = function(state)
