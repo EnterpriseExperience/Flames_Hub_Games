@@ -11,11 +11,17 @@ if not game:IsLoaded() then
     hint_instance:Destroy()
 end
 
-local g = getgenv()
-local http_game = (getgenv()["game"] or game)["HttpGet"]
-getgenv().http_get = function(url) return http_game(game, url) end
-local Raw_Version = "V9.3.6"
-getgenv().Script_Version = tostring(Raw_Version).."-LifeHub"
+local g
+if game:GetService("RunService"):IsStudio() then
+    g = _G
+else
+    g = getgenv()
+end
+wait(0.25)
+local http_game = (g["game"] or game)["HttpGet"]
+g.http_get = function(url) return http_game(game, url) end
+local Raw_Version = "V9.3.7"
+g.Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
 local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
 local speaker = localPlayer
@@ -40,10 +46,12 @@ g.colors = g.colors or {
     Color3.fromRGB(128,0,128),
 }
 g.LocalPlayer = g.LocalPlayer or localPlayer
-if not g.GlobalEnvironmentFramework_Initialized then
-    loadstring(getgenv().http_get("https://pastebin.com/raw/T25mDhBZ"))()
-    wait(0.1)
-    g.GlobalEnvironmentFramework_Initialized = true
+if not game:GetService("RunService"):IsStudio() then
+    if not g.GlobalEnvironmentFramework_Initialized then
+        loadstring(getgenv().http_get("https://pastebin.com/raw/T25mDhBZ"))()
+        wait(0.1)
+        g.GlobalEnvironmentFramework_Initialized = true
+    end
 end
 wait(0.25)
 if not g.LifeTogether_Actual_Flames_Hub_Running_Functioning_Currently_On_Client then if g.notify and typeof(g.notify) == "function" then g.notify("Success", "Got LocalPlayer: "..tostring(g.LocalPlayer), 5) end end
@@ -76,7 +84,7 @@ local IsMobile = UserInputService.TouchEnabled
 local http = HttpService
 if not has_gethui and not has_gethidden and not g.roblox_hidden_gui_location then
     if RunService:IsStudio() then
-        g.roblox_hidden_gui_location = player_gui or CoreGui
+        g.roblox_hidden_gui_location = player_gui
     else
         for _, v in ipairs(CoreGui:GetChildren()) do
             if v:IsA("ScreenGui") and v.Name == "RobloxGui" then
@@ -310,7 +318,7 @@ end
 g.LifeTogether_Actual_Flames_Hub_Running_Functioning_Currently_On_Client = true
 local userid = localPlayer.UserId
 local lib = g.FlamesLibrary
-getgenv().lib = getgenv().FlamesLibrary -- necessary for some reason.
+g.lib = g.FlamesLibrary -- necessary for some reason.
 local lib_attempts = 0
 local lib_max_attempts = 15
 while (not lib or type(lib) ~= "table") and lib_attempts < lib_max_attempts do
@@ -365,7 +373,7 @@ function get_masked_flames_hub_unique_id()
     return mask_unique_id(raw)
 end
 
-local FlamesLibrary = g.lib or g.FlamesLibrary or getgenv().FlamesLibrary
+local FlamesLibrary = g.lib or g.FlamesLibrary
 --local ws_connect = (syn and syn.websocket and syn.websocket.connect) or (WebSocket and WebSocket.connect) or (websocket and websocket.connect)
 --local http_req = request or http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request)
 g.will_tag = function(text)
@@ -449,7 +457,7 @@ end
 --local set_hid_func = sethiddenproperty or set_hidden_property or set_hidden_prop or sethiddenprop
 g.originalIO = g.originalIO or {}
 g.spectateConns = g.spectateConns or {}
-local fw = getgenv().FlamesLibrary.wait
+local fw = lib.wait
 --local name = "administrator_watcher_conn_Flames_Hub"
 g.originalIO.ensureCam = function(spectate_target)
     if not spectate_target then return end
@@ -713,7 +721,7 @@ end
 g.load_youtube_music_player_func = g.load_youtube_music_player_func or function()
     if g.You_Tube_Music_Player_Loaded then return g.notify("Warning", "YouTube Music Player is already loaded.", 5) end
     g.You_Tube_Music_Player_Loaded = true
-    loadstring(getgenv().http_get("https://raw.githubusercontent.com/Dan41/Roblox-Scripts/refs/heads/main/Youtube%20Music%20Player/YoutubeMusicPlayer.lua"))()
+    loadstring(g.http_get("https://raw.githubusercontent.com/Dan41/Roblox-Scripts/refs/heads/main/Youtube%20Music%20Player/YoutubeMusicPlayer.lua"))()
     local asset_id = "76673896881913"
     local target_image = "rbxassetid://" .. asset_id
     task.spawn(function()
@@ -1168,11 +1176,11 @@ g.get_all_current_outfits_and_their_IDs = function()
 end
 
 g.find_nba_props_map_folder = function()
-    local cache = getgenv().nba_props_kept_folder_inst
+    local cache = g.nba_props_kept_folder_inst
     if cache and cache:IsA("Folder") then return cache end
     for _, v in ipairs(workspace:GetDescendants()) do
         if v:IsA("Folder") and v.Name:lower():find("map") and v.Name:lower():find("props") and v.Parent.Name:lower():find("nba") then
-            getgenv().nba_props_kept_folder_inst = v
+            g.nba_props_kept_folder_inst = v
             return v
         end
     end
@@ -1225,7 +1233,7 @@ g.toggle_delta_image_button_flames_hub = g.toggle_delta_image_button_flames_hub 
     if not executor_contains("delta") then g.notify("Error", "You're not using Delta, this feature will not work for you.", 7); return end
     local btn = g.find_delta_icon_image_button()
     if btn and btn:IsA("ImageButton") then
-        getgenv().Is_Deltas_Icon_Currently_Toggled = state
+        g.Is_Deltas_Icon_Currently_Toggled = state
         btn.Visible = state
     end
 end
@@ -1353,7 +1361,7 @@ if game.PlaceId ~= 13967668166 and game.PlaceId ~= 99644611200703 and game.Place
 end
 
 -- [[ configuration GUI. ]] --
-if not CoreGui:FindFirstChild("FlamesAdminGUI", true) then loadstring(getgenv().http_get("https://pastebin.com/raw/9qkZEvjw"))() end
+if not CoreGui:FindFirstChild("FlamesAdminGUI", true) then loadstring(g.http_get("https://pastebin.com/raw/9qkZEvjw"))() end
 g._rgb_conns = g._rgb_conns or {}
 g._rgb_global_conn = g._rgb_global_conn or nil
 g.rgb_color_map = g.rgb_color_map or {
@@ -1573,7 +1581,7 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
 end
 
 local holiday = g.getholiday() or ""
-local Announcement_Message = "Disabled Wildwood Integration and it's parts (TouchTransmitter's, Seats)."
+local Announcement_Message = "Disabled Wildwood Integration and it's parts (TouchTransmitter's, Seats) + added Studio advancements to detect Roblox Studio runtime."
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
 g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.
@@ -2114,7 +2122,7 @@ end
 g.Net = g.Net or g.find_module_s("Net") or require(g.Core:FindFirstChild("Net"))
 g.owner_joined = function(Name)
    local owner_text_content = "Flames Hub | Owner has joined this server ("..tostring(Name).."), this is my current and only account right now, so come to me if you need help/assistance."
-   getgenv().notify("Success", owner_text_content, 15)
+   if g.notify and typeof(g.notify) == "function" then g.notify("Success", owner_text_content, 15) else print("Success: "..tostring(owner_text_content)) end
 end
 
 if g.Teleport_Checker_For_Script then
@@ -2162,13 +2170,13 @@ if not g.Spawned_Vehicle_Checker then
 end
 fw(0.2)
 g.find_placed_models_folder = function()
-    local cached_folder = getgenv().cached_placed_models_folder
+    local cached_folder = g.cached_placed_models_folder
     if cached_folder and cached_folder.Parent and cached_folder:IsDescendantOf(workspace) then return cached_folder end
 
     for _, v in ipairs(g.Workspace:GetDescendants()) do
         local n = v.Name:lower()
         if v:IsA("Folder") and (n:find("placedmodels", 1, true) or n:find("modelsplaced", 1, true)) then
-            getgenv().cached_placed_models_folder = v
+            g.cached_placed_models_folder = v
             return v
         end
     end
@@ -2176,15 +2184,15 @@ g.find_placed_models_folder = function()
     return nil
 end
 
-if not getgenv().cached_placed_models_folder then pcall(function() g.find_placed_models_folder() end) end
-local Placed_Models = getgenv().cached_placed_models_folder or g.Workspace:FindFirstChild("PlacedModels") or g.Workspace:WaitForChild("PlacedModels", 1) or g.find_placed_models_folder()
+if not g.cached_placed_models_folder then pcall(function() g.find_placed_models_folder() end) end
+local Placed_Models = g.cached_placed_models_folder or g.Workspace:FindFirstChild("PlacedModels") or g.Workspace:WaitForChild("PlacedModels", 1) or g.find_placed_models_folder()
 g.workspace_editor_script_GUI = function()
     if g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub") and g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub"):IsA("ScreenGui") then
         g.CoreGui:FindFirstChild("Workspace_Editor_GUI_Flames_Hub").Enabled = true
         return 
     end
     fw(0.1)
-    loadstring(getgenv().http_get('https://pastebin.com/raw/bdiufqqx'))()
+    loadstring(g.http_get('https://pastebin.com/raw/bdiufqqx'))()
 end
 
 g.is_in_private_server = function()
@@ -2476,7 +2484,7 @@ end
     wait(0.15)
     local connector = (syn and syn.websocket and syn.websocket.connect) or (WebSocket and WebSocket.connect) or (websocket and websocket.connect)
     if not connector or typeof(connector) ~= "function" then g.notify("Error", "[Flames Hub - Chat]: No WebSocket support, unable to use Flames Hub | Custom Chat script.", 10); return end
-    pcall(function() loadstring(getgenv().http_get("https://pastefy.app/108vjy8A/raw"))() end)
+    pcall(function() loadstring(g.http_get("https://pastefy.app/108vjy8A/raw"))() end)
 end--]]
 
 -- [[ I wish they would remove this pointless ass integration. ]] --
@@ -3688,7 +3696,7 @@ if Bindable and Bindable:IsA("BindableEvent") then
     end)
 end
 
-if getgenv().get_enrolled_state == nil then
+if g.get_enrolled_state == nil then
     g.notify("Info", "Waiting until 'get_enrolled_state' exists...", 5)
     local attempts = 0
     local max_attempts = 15
@@ -3696,7 +3704,7 @@ if getgenv().get_enrolled_state == nil then
         task.wait()
         attempts = attempts + 1
     until (g.get_enrolled_state and g.get_enrolled_state ~= nil) or attempts >= max_attempts
-    if getgenv().get_enrolled_state then
+    if g.get_enrolled_state then
         g.notify("Success", "Found get_enrolled_state correctly.", 5)
     else
         g.notify("Error", "get_enrolled_state not found after "..tostring(max_attempts).." attempts.", 5)
@@ -4447,17 +4455,16 @@ g.already_loaded_workaround_script_flames_hub = g.already_loaded_workaround_scri
 g.already_patched_discord_button = g.already_patched_discord_button or false
 g.load_workaround_script = g.load_workaround_script or function()
 	if g.already_loaded_workaround_script_flames_hub then g.notify("Warning", "Chat Workaround has already been loaded.", 5); return end
-	local FL = getgenv().FlamesLibrary
 	local hidden_gui_main = gethui and gethui() or get_hidden_gui and get_hidden_gui() or g.CoreGui or g.PlayerGui
 	g.already_loaded_workaround_script_flames_hub = true
-	loadstring(getgenv().http_get('https://raw.githubusercontent.com/EnterpriseExperience/MicUpSource/refs/heads/main/Deadly_Chat_Backup_Script.lua'))()
+	loadstring(g.http_get('https://raw.githubusercontent.com/EnterpriseExperience/MicUpSource/refs/heads/main/Deadly_Chat_Backup_Script.lua'))()
     local function patch_button(frame)
         if g.already_patched_discord_button then return end
         for _, desc in ipairs(frame:GetDescendants()) do
             if desc:IsA("ImageButton") and desc.Name == "Discord" and desc.Image == "rbxassetid://7552532178" then
                 g.already_patched_discord_button = true
-                FL.disconnect("discord_button_activated")
-                FL.connect("discord_button_activated", desc.Activated:Connect(function()
+                lib.disconnect("discord_button_activated")
+                lib.connect("discord_button_activated", desc.Activated:Connect(function()
                     if http_requesting and typeof(http_requesting) then
                         http_requesting({
                             Url = 'http://127.0.0.1:6463/rpc?v=1',
@@ -4502,17 +4509,17 @@ g.load_workaround_script = g.load_workaround_script or function()
 		patch_button(chat_frame)
 	else
 		local conn
-		conn = FL.connect(hidden_gui_main, "ChildAdded", function(child)
+		conn = lib.connect(hidden_gui_main, "ChildAdded", function(child)
 			if child and child:IsA("ScreenGui") then
 				local frame = child:FindFirstChild("Chat System")
 				if frame and frame:IsA("Frame") then
-					FL.disconnect(conn)
+					lib.disconnect(conn)
 					patch_button(frame)
 					return
 				end
-				FL.connect(child, "ChildAdded", function(grandchild)
+				lib.connect(child, "ChildAdded", function(grandchild)
 					if grandchild.Name == "Chat System" and grandchild:IsA("Frame") then
-						FL.disconnect(conn)
+						lib.disconnect(conn)
 						patch_button(grandchild)
 					end
 				end)
@@ -4709,7 +4716,13 @@ end
 g.start_vehicle_fly = g.start_vehicle_fly or function()
     if g.vehiclefly_bg or g.vehiclefly_bv then return end
     local car = g.get_vehicle()
-    if not car then g.disable_vehicle_noclip(); task.wait(); g.cleanup(); getgenv().notify("Error", "You do not have a Vehicle spawned.", 3); return end
+    if not car then
+        g.disable_vehicle_noclip()
+        task.wait()
+        g.cleanup()
+        pcall(function() g.notify("Error", "You do not have a Vehicle spawned.", 3) end)
+        return
+    end
     local base = car.Base or car:FindFirstChild("Base")
     local bg = Instance.new("BodyGyro")
     bg.P = 3e4
@@ -4815,7 +4828,7 @@ end
 
 g.streamer_mode_script = g.streamer_mode_script or function()
     if g.hidden_loaded then g.notify("Warning", "Streamer Mode script is already loaded.", 3); return end
-    loadstring(getgenv().http_get("https://pastebin.com/raw/kVYwGVcy"))()
+    loadstring(g.http_get("https://pastebin.com/raw/kVYwGVcy"))()
 end
 
 g.unload_streamer_mode_script = g.unload_streamer_mode_script or function()
@@ -5035,7 +5048,6 @@ g.Pick_Vehicle_Color_Func = g.Pick_Vehicle_Color_Func or function(input)
 end
 
 g.RGB_Vehicle = g.RGB_Vehicle or function(state)
-    local lib = g.FlamesLibrary
     if state == true then
         if g.Rainbow_Vehicle then g.notify("Warning", "Flames Hub | Rainbow Vehicle is already enabled.", 5); return end
         g.Rainbow_Vehicle = true
@@ -5050,10 +5062,15 @@ g.RGB_Vehicle = g.RGB_Vehicle or function(state)
             end
         end)
     elseif state == false then
-        if not g.Rainbow_Vehicle then g.notify("Warning", "Flames Hub | Rainbow Vehicle is not enabled.", 5); return end
-        getgenv().Rainbow_Vehicle = false
+        if not g.Rainbow_Vehicle then
+            if g.notify and typeof(g.notify) == "function" then g.notify("Warning", "Flames Hub | Rainbow Vehicle is not enabled.", 5) end
+            return
+        end
+        g.Rainbow_Vehicle = false
         lib.disconnect("rgb_vehicle")
         g.notify("Success", "Flames Hub | Rainbow Vehicle is now disabled.", 5)
+    else
+        return 
     end
 end
 
