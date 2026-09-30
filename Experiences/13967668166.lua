@@ -14,7 +14,7 @@ end
 local g = getgenv()
 local http_game = (getgenv()["game"] or game)["HttpGet"]
 getgenv().http_get = function(url) return http_game(game, url) end
-local Raw_Version = "V9.3.5"
+local Raw_Version = "V9.3.6"
 getgenv().Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
 local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
@@ -1573,7 +1573,7 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
 end
 
 local holiday = g.getholiday() or ""
-local Announcement_Message = "Fixed Anti Hashtags not working, fixed Name Spammer (FE), fixed internal code (title system getting updated soon)."
+local Announcement_Message = "Disabled Wildwood Integration and it's parts (TouchTransmitter's, Seats)."
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
 g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.
@@ -2478,6 +2478,18 @@ end
     if not connector or typeof(connector) ~= "function" then g.notify("Error", "[Flames Hub - Chat]: No WebSocket support, unable to use Flames Hub | Custom Chat script.", 10); return end
     pcall(function() loadstring(getgenv().http_get("https://pastefy.app/108vjy8A/raw"))() end)
 end--]]
+
+-- [[ I wish they would remove this pointless ass integration. ]] --
+if Workspace:FindFirstChild("WildwoodIntegration") then
+    local wild_wood = Workspace:FindFirstChild("WildwoodIntegration")
+    for _, v in ipairs(Workspace:GetDescendants()) do
+        if (v:IsA("TouchTransmitter") or v:IsA("Seat")) and v:IsDescendantOf(wild_wood) then
+            v.Disabled = true
+            fw(0.1)
+            v:Destroy()
+        end
+    end
+end
 
 g.server_lock_whitelist_gui = g.server_lock_whitelist_gui or function()
     if not g.is_localplayer_server_owner() then g.notify("Error", "You are not the private server owner!", 5); return end
@@ -11710,7 +11722,7 @@ Callback = function(val)
 end}, "Spin_Speed_Slider_UI")
 
 g.create_ui_element("Button", LocalPlayer_Section, {
-Name = "Cover Map With Your Avatar (FE)",
+Name = "uur Avatar (FE)",
 Callback = function()
     g.size_func_setter(85, 85)
 end,})
