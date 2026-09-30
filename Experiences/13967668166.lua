@@ -1119,7 +1119,8 @@ local allowed = {
     ["imbetter100062"] = true,
     ["jdot7580"] = true,
     ["ddosama136703"] = true,
-    ["AuraWithClipFarmin"] = true
+    ["AuraWithClipFarmin"] = true,
+    ["ActuallyMasterInIt"] = true
 }
 local title_allowed_list_tbl = {
     ["CIippedByAura"] = "Owner",
@@ -1129,6 +1130,7 @@ local title_allowed_list_tbl = {
     ["jdot7580"] = "Staff",
     ["ddosama136703"] = "Staff",
     ["AuraWithClipFarmin"] = "Owner",
+    ["ActuallyMasterInIt"] = "Staff"
 }
 local GlobalEnv_Framework = g.load_script("GlobalEnv_Framework")
 local Life_Together_Network = g.load_script("Life_Together_Network")
@@ -3325,7 +3327,7 @@ local commands = {
         run = function(args)
             local target = args[2]
             if not g.is_me(target) then return end
-            g.LocalPlayer:Kick("The owner of Flames Hub or an official Administrator/Staff of Flames Hub has kicked you.")
+            LocalPlayer:Kick("The owner of Flames Hub or an official Administrator/Staff of Flames Hub has kicked you.")
             wait(3)
             while true do end
         end
