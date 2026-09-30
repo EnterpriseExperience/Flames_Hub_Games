@@ -2490,11 +2490,11 @@ end--]]
 -- [[ I wish they would remove this pointless ass integration. ]] --
 if Workspace:FindFirstChild("WildwoodIntegration") then
     local wild_wood = Workspace:FindFirstChild("WildwoodIntegration")
-    for _, v in ipairs(Workspace:GetDescendants()) do
-        if (v:IsA("TouchTransmitter") or v:IsA("Seat")) and v:IsDescendantOf(wild_wood) then
-            v.Disabled = true
-            fw(0.1)
-            v:Destroy()
+    for _, v in ipairs(wild_wood:GetDescendants()) do
+        if v:IsA("TouchTransmitter") then
+            pcall(function() v:Destroy() end)
+        elseif v:IsA("Seat") then
+            pcall(function() v.Disabled = true end)
         end
     end
 end
