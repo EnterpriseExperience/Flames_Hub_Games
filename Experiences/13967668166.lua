@@ -42,7 +42,7 @@ else
 end
 wait(0.1)
 local StarterGui = g.StarterGui or cloneref and cloneref(game:GetService("StarterGui")) or game:GetService("StarterGui")
-local Raw_Version = "V9.4.3"
+local Raw_Version = "V9.4.5"
 g.Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
 local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
@@ -1593,7 +1593,7 @@ g.count_all_flames_hub_commands = g.count_all_flames_hub_commands or function()
 end
 
 local holiday = g.getholiday() or ""
-local Announcement_Message = "Made title system toggleable (YOUR title can now be turned on or off easily)."
+local Announcement_Message = "Made Height & Width scale sliders (+ Added Width slider) + re-worked and improved some internal code."
 g.displayTimeMax = 60
 g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub = g.Script_Loaded_Correctly_LifeTogether_Admin_Flames_Hub or false
 g.Script_Version_GlobalGenv = g.Script_Version -- also keep it like this so it can over-write new version properly.
@@ -12229,24 +12229,24 @@ Name = "Height Scale (FE)",
 Min = 0.1,
 Max = 1000,
 Default = 1,
-Flag = "Size_Input_UI",
+Flag = "Size_Slider_UI",
 Callback = function(split)
     local new_size = split
     if not new_size then return end
     g.height_func_setter(new_size)
-end}, "Size_Input_UI")
+end}, "Size_Slider_UI")
 
 g.create_ui_element("Slider", LocalPlayer_Section, {
 Name = "Width Scale (FE)",
-Min = 0.1,
+Min = 1,
 Max = 1000,
 Default = 1,
-Flag = "Size_Input_UI",
+Flag = "Width_Slider_UI",
 Callback = function(split)
     local new_size = split
     if not new_size then return end
     g.width_func_setter(new_size)
-end}, "Size_Input_UI")
+end}, "Width_Slider_UI")
 
 g.create_ui_element("Button", LocalPlayer_Section, {
 Name = "Normal Size (FE)",
