@@ -1,18 +1,29 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
+local Is_Studio = game:GetService("RunService"):IsStudio() and true or false
+local g
+if Is_Studio then
+    g = _G
+else
+    g = getgenv()
+end
+wait(0.1)
 local function safe_wrapper(S)
-    if cloneref then
+    if Is_Studio then return game:GetService(S) end
+    if g[S] then return g[S] end
+    if cloneref and typeof(cloneref) == "function" then
         return cloneref(game:GetService(S))
     else
         return game:GetService(S)
     end
 end
 
+local parent_gui
 local Players = safe_wrapper("Players")
 local TweenService = safe_wrapper("TweenService")
 local CoreGui = safe_wrapper("CoreGui")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 3)
-local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui or PlayerGui
+local LocalPlayer = g.LocalPlayer or Players.LocalPlayer
+local PlayerGui = g.PlayerGui or LocalPlayer:FindFirstChildWhichIsA("PlayerGui") or LocalPlayer:FindFirstChildOfClass("PlayerGui")
+if Is_Studio then parent_gui = PlayerGui else parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui end
 local StarterGui = safe_wrapper("StarterGui")
 local GuiService = safe_wrapper("GuiService")
 local Workspace = safe_wrapper("Workspace")
@@ -20,7 +31,7 @@ local UserInputService = safe_wrapper("UserInputService")
 local LibraryName = "Notification Library"
 local NotificationLibrary = {}
 local library
-local templateFolder
+local Template_Folder
 local canvas
 
 function NotificationLibrary:Load()
@@ -30,21 +41,19 @@ function NotificationLibrary:Load()
         return false
     end
     library = objects[1]
-    templateFolder = library:FindFirstChild("Templates")
+    Template_Folder = library:FindFirstChild("Templates")
     canvas = library:FindFirstChild("list")
-    if not templateFolder or not canvas then
-        warn("[NotifyLib] asset structure invalid — Templates or list missing.")
+    if not Template_Folder or not canvas then
+        warn("[NotifyLib]: asset structure invalid — Templates or list missing.")
         return false
     end
     library.Name = LibraryName
     library.Parent = parent_gui
     return true
 end
-
 wait(0.25)
 NotificationLibrary:Load()
 wait(0.25)
-
 function NotificationLibrary:SendNotification(Mode, Text, Duration)
     local libaryCore = parent_gui:FindFirstChild(LibraryName)
     if not libaryCore then
@@ -52,18 +61,18 @@ function NotificationLibrary:SendNotification(Mode, Text, Duration)
         if not loaded then return end
     else
         library = libaryCore
-        templateFolder = library:FindFirstChild("Templates")
+        Template_Folder = library:FindFirstChild("Templates")
         canvas = library:FindFirstChild("list")
-        if not templateFolder or not canvas then
+        if not Template_Folder or not canvas then
             local loaded = NotificationLibrary:Load()
             if not loaded then return end
         end
     end
-    if not templateFolder then return end
-    if templateFolder:FindFirstChild(Mode) then
+    if not Template_Folder then return end
+    if Template_Folder:FindFirstChild(Mode) then
         task.spawn(function()
             local success, err = pcall(function()
-                local Notification = templateFolder:WaitForChild(Mode):Clone()
+                local Notification = Template_Folder:WaitForChild(Mode):Clone()
                 local filler = Notification.Filler
                 local bar = Notification.bar
                 Notification.Header.Text = Text
@@ -85,15 +94,12 @@ function NotificationLibrary:SendNotification(Mode, Text, Duration)
                 task.wait(0.25)
                 Notification:Destroy()
             end)
-            if not success then
-                warn("[NotifyLib] notification error: " .. tostring(err))
-            end
+            if not success then warn("[NotifyLib]: notification error: "..tostring(err)) end
         end)
     else
-        warn(tostring(Mode) .. " is not a valid Mode! (only: Warning, Success, Error).")
+        warn(tostring(Mode).." is not a valid 'Mode'! (only: Warning, Success, Error, Info).")
     end
 end
-
 wait(0.25)
 local NotificationLibrary_External = NotificationLibrary
 local Sound_ID_Windows = "rbxassetid://8183296024"
@@ -103,7 +109,7 @@ local Sound_ID_Universal = "rbxassetid://18595195017"
 local Notification_Wrapper = {}
 local function Device_Detector()
     local platform = UserInputService:GetPlatform()
-    local platformMap = {
+    local Platform_Map = {
         [Enum.Platform.Windows] = "Windows",
         [Enum.Platform.OSX] = "OSX",
         [Enum.Platform.IOS] = "iOS",
@@ -126,29 +132,26 @@ local function Device_Detector()
         [Enum.Platform.MetaOS] = "MetaOS",
         [Enum.Platform.None] = "Unknown Device"
     }
-    return platformMap[platform] or "Unknown Device"
+    return Platform_Map[platform] or "Unknown Device"
 end
 
-local devicePlatform = Device_Detector()
-
+local DevicePlatform = Device_Detector()
 function Play_Notification_Sound()
     local Notification_Sound = Instance.new("Sound")
     Notification_Sound.Parent = Workspace
     Notification_Sound.Volume = 1
-    if devicePlatform == "Windows" then
+    if DevicePlatform == "Windows" then
         Notification_Sound.SoundId = Sound_ID_Windows
-    elseif devicePlatform == "iOS" then
+    elseif DevicePlatform == "iOS" then
         Notification_Sound.SoundId = Sound_ID_iPhone
-    elseif devicePlatform == "Android" then
+    elseif DevicePlatform == "Android" then
         Notification_Sound.SoundId = Sound_ID_Android
     else
         Notification_Sound.SoundId = Sound_ID_Universal
     end
     task.wait()
     Notification_Sound:Play()
-    Notification_Sound.Ended:Connect(function()
-        Notification_Sound:Destroy()
-    end)
+    Notification_Sound.Ended:Connect(function() Notification_Sound:Destroy() end)
 end
 
 function Notification_Wrapper:External_Notification(Type, Content, Time)
@@ -167,35 +170,14 @@ function Notification_Wrapper:GuiService_Notify(title, content)
 end
 
 function Notification_Wrapper:StarterGui_Notify(title, content, duration)
+    if not duration then duration = 5 end
+    wait()
     Play_Notification_Sound()
     StarterGui:SetCore("SendNotification", {
         Title = tostring(title);
         Text = tostring(content);
         Duration = tonumber(duration);
         Icon = "rbxassetid://0";
-    })
-end
-
-wait(0.2)
-
-function Notification_Wrapper:Rayfield_Notify(title, content, duration)
-    if not getgenv().Rayfield then
-        return Notification_Wrapper:StarterGui_Notify("Error", "Please load one of my script hubs first!", 15)
-    end
-    Play_Notification_Sound()
-    getgenv().Rayfield:Notify({
-        Title = tostring(title),
-        Content = tostring(content),
-        Duration = tonumber(duration),
-        Image = 93594537601787,
-        Actions = {
-            Ignore = {
-                Name = "Alright.",
-                Callback = function()
-                    print("...")
-                end
-            },
-        },
     })
 end
 
