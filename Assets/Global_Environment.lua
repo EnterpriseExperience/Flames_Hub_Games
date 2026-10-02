@@ -677,66 +677,63 @@ getgenv().FlamesLibrary.modules = getgenv().FlamesLibrary.modules or {}
 getgenv().FlamesLibrary.module_utils = getgenv().FlamesLibrary.module_utils or {}
 getgenv().FlamesLibrary.table_lib = getgenv().FlamesLibrary.table_lib or {} -- new 'table' methods and usage, making us only more efficient.
 getgenv().FlamesLibrary.connect = function(name, connection)
-    local existing = getgenv().FlamesLibrary._connections[name]
-    if existing then
-        for _, item in ipairs(existing) do
-            if typeof(item) == "RBXScriptConnection" then
-                pcall(function() item:Disconnect() end)
-            elseif type(item) == "thread" then
-                pcall(task.cancel, item)
-            end
-        end
-    end
-    getgenv().FlamesLibrary._connections[name] = {connection}
+    local FL = getgenv().FlamesLibrary
+    if type(name) ~= "string" then return end
+    if typeof(connection) ~= "RBXScriptConnection" then return end
+    if type(FL._connections) ~= "table" then FL._connections = {} end
+    FL.disconnect(name)
+    FL._connections[name] = {connection}
     return connection
 end
 
 getgenv().FlamesLibrary.disconnect = function(name)
-	local list = getgenv().FlamesLibrary._connections[name]
-
-	if list then
-		for _, item in ipairs(list) do
-			if typeof(item) == "RBXScriptConnection" then
-				item:Disconnect()
-			elseif type(item) == "thread" then
-				pcall(task.cancel, item)
-			end
-		end
-		getgenv().FlamesLibrary._connections[name] = nil
-	end
+    local FL = getgenv().FlamesLibrary
+    if type(name) ~= "string" then return end
+    if type(FL._connections) ~= "table" then return end
+    local list = FL._connections[name]
+    FL._connections[name] = nil
+    if type(list) ~= "table" then return end
+    local current = coroutine.running()
+    for _, item in ipairs(list) do
+        if typeof(item) == "RBXScriptConnection" then
+            if item.Connected then pcall(item.Disconnect, item) end
+        elseif type(item) == "thread" then
+            if item ~= current and coroutine.status(item) ~= "dead" then pcall(task.cancel, item) end
+        end
+    end
 end
 
 getgenv().FlamesLibrary.spawn = function(name, mode, ...)
-	if not name or not mode then return end
-	if getgenv().FlamesLibrary._connections[name] then getgenv().FlamesLibrary.disconnect(name) end
-	getgenv().FlamesLibrary._connections[name] = {}
-    wait(0.1)
-	local thread
-	local args = {...}
-	if mode == "spawn" then
-		local func = args[1]
-		if type(func) ~= "function" then return end
-		thread = task.spawn(func, table.unpack(args, 2))
-	elseif mode == "defer" then
-		local func = args[1]
-		if type(func) ~= "function" then return end
-		thread = task.defer(func, table.unpack(args, 2))
-	elseif mode == "delay" then
-		local delay_time = args[1]
-		local func = args[2]
-		if type(delay_time) ~= "number" or type(func) ~= "function" then return end
-		thread = task.delay(delay_time, func, table.unpack(args, 3))
-	elseif mode == "wrap" then
-		local func = args[1]
-		if type(func) ~= "function" then return end
-		thread = coroutine.create(func)
-		coroutine.resume(thread, table.unpack(args, 2))
-	else
-		return
-	end
+    local FL = getgenv().FlamesLibrary
+    if type(name) ~= "string" or type(mode) ~= "string" then return end
+    if type(FL._connections) ~= "table" then FL._connections = {} end
+    if FL._connections[name] and type(FL.disconnect) == "function" then FL.disconnect(name) end
+    local args = table.pack(...)
+    local thread
+    if mode == "spawn" or mode == "defer" or mode == "wrap" then
+        local func = args[1]
+        if type(func) ~= "function" then return end
+        if mode == "spawn" then
+            thread = task.spawn(func, table.unpack(args, 2, args.n))
+        elseif mode == "defer" then
+            thread = task.defer(func, table.unpack(args, 2, args.n))
+        else
+            thread = coroutine.create(func)
+            coroutine.resume(thread, table.unpack(args, 2, args.n))
+        end
+    elseif mode == "delay" then
+        local delay_time, func = args[1], args[2]
+        if type(delay_time) ~= "number" or type(func) ~= "function" then return end
+        thread = task.delay(delay_time, func, table.unpack(args, 3, args.n))
+    else
+        return
+    end
 
-	table.insert(getgenv().FlamesLibrary._connections[name], thread)
-	return thread
+    if type(FL._connections) ~= "table" then FL._connections = {} end
+    local bucket = FL._connections[name]
+    if type(bucket) ~= "table" then bucket = {}; FL._connections[name] = bucket end
+    table.insert(bucket, thread)
+    return thread
 end
 
 getgenv().FlamesLibrary.is_thread_alive = function(input)

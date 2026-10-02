@@ -7278,7 +7278,6 @@ g.try_hide_pcm = g.try_hide_pcm or function(character)
     if not plr or plr == LocalPlayer then return end
     local pcm = character:FindFirstChild("PhoneCharacterModel")
     if not pcm then return end
-
     g.hide_pcm(pcm)
 end
 
@@ -7287,7 +7286,6 @@ g.scan_character = g.scan_character or function(character)
     task.defer(function() g.try_hide_pcm(character) end)
     local char_id = tostring(character) .. "_childadded"
     local cleanup_id = tostring(character) .. "_ancestry"
-
     for _, child in ipairs(character:GetChildren()) do
         if child:IsA("Model") and child.Name == "PhoneCharacterModel" then
             g._pcm_registry[child] = true
@@ -7297,11 +7295,7 @@ g.scan_character = g.scan_character or function(character)
     FlamesLibrary.connect(char_id, character.ChildAdded:Connect(function(child)
         if child:IsA("Model") and child.Name == "PhoneCharacterModel" then
             g._pcm_registry[child] = true
-            task.defer(function()
-                if g.HidePhoneModels then
-                    g.hide_pcm(child)
-                end
-            end)
+            task.defer(function() if g.HidePhoneModels then g.hide_pcm(child) end end)
         end
     end))
 
@@ -7313,17 +7307,12 @@ g.scan_character = g.scan_character or function(character)
     end))
 end
 
-g.hook_player = g.hook_player or function(plr)
-    if plr == LocalPlayer then return end
+g.hook_player = function(plr)
+    if plr == Players.LocalPlayer then return end
     local plr_id = tostring(plr.UserId)
-    FlamesLibrary.spawn(plr_id .. "_charwait", "spawn", function()
-        local char = g.get_char(plr, Players.RespawnTime + 0.75)
-        if char then g.scan_character(char) end
-    end)
-
-    FlamesLibrary.connect(plr_id .. "_charadded", plr.CharacterAdded:Connect(function(char)
-        g.scan_character(char)
-    end))
+    FlamesLibrary.connect(plr_id .. "_charwait", plr.CharacterAdded:Connect(function(char) g.scan_character(char) end))
+    local char = plr.Character or g.get_char(plr)
+    if char then g.scan_character(char) end
 end
 
 FlamesLibrary.disconnect("pmh_playeradded")
@@ -7398,13 +7387,8 @@ if not g.FlamesHub_CharacterAdded_Initialized then
         if not Character or not Character.Parent then Character = LocalPlayer.Character or g.get_char(LocalPlayer, Players.RespawnTime + 0.75) end
         if not Character or not Character.Parent then return end
         local Humanoid = g.Humanoid
-        if not Humanoid or not Humanoid.Parent then
-            Humanoid = Character:FindFirstChildOfClass("Humanoid") or Character:WaitForChild("Humanoid", 10) or g.get_human(LocalPlayer, Players.RespawnTime + 0.75)
-        end
-
-        if Humanoid and Humanoid.Parent then
-            Humanoid.JumpHeight = 7
-        end
+        if not Humanoid or not Humanoid.Parent then Humanoid = Character:FindFirstChildOfClass("Humanoid") or Character:WaitForChild("Humanoid", 10) or g.get_human(LocalPlayer, Players.RespawnTime + 0.75) end
+        if Humanoid and Humanoid.Parent then Humanoid.JumpHeight = 7 end
     end
 
     if g.Character or LocalPlayer.Character then character_added_jump_height_changer_Life_Together_RP(g.Character or LocalPlayer.Character) end
@@ -9880,17 +9864,124 @@ g.reset_to_original_size = g.reset_to_original_size or function()
     if g.size_setter_busy then return end
     if not g.session_original_width and not g.session_original_depth then return end
     g.size_func_setter(g.session_original_width, g.session_original_depth)
-    if g.session_original_skin then
-        task.delay(0.1, function()
-            g.apply_skin_tone(g.session_original_skin)
-        end)
-    end
-
+    if g.session_original_skin then task.delay(0.1, function() g.apply_skin_tone(g.session_original_skin) end) end
     task.delay(0.3, function()
         g.session_original_width = nil
         g.session_original_depth = nil
         g.session_original_skin = nil
         g.session_size_active = false
+    end)
+end
+
+g.width_setter_busy = g.width_setter_busy or false
+g.session_original_width_only = g.session_original_width_only or nil
+g.session_original_skin_w = g.session_original_skin_w or nil
+g.session_width_active = g.session_width_active or false
+g.last_width_scale_only = g.last_width_scale_only or nil
+g.prev_width_scale_only = g.prev_width_scale_only or nil
+g.last_skin_tone_w = g.last_skin_tone_w or nil
+g.prev_skin_tone_w = g.prev_skin_tone_w or nil
+g.width_func_setter = g.width_func_setter or function(width_input)
+    if g.width_setter_busy then return end
+    g.width_setter_busy = true
+    local char = g.Character or speaker.Character or g.get_char(speaker) or g.Char:get()
+    local hum = g.Humanoid or char and char:FindFirstChildOfClass("Humanoid") or g.get_human(speaker) or g.Char:get_human()
+    if not hum then
+        g.width_setter_busy = false
+        return
+    end
+
+    local desc = hum:GetAppliedDescription()
+    if not desc then
+        g.width_setter_busy = false
+        g.notify("Error", "Failed to grab HumanoidDescription.", 3)
+        return
+    end
+
+    local body_colors = char and char:FindFirstChildOfClass("BodyColors")
+    local current_skin = body_colors and g.avgSkin(body_colors)
+    if not g.session_width_active then
+        g.session_original_width_only = desc.WidthScale or 1
+        g.session_original_skin_w = current_skin
+        g.session_width_active = true
+    end
+
+    if current_skin then
+        g.prev_skin_tone_w = g.last_skin_tone_w or current_skin
+        g.last_skin_tone_w = current_skin
+    end
+
+    local width = tonumber(width_input) or desc.WidthScale or 1
+    g.prev_width_scale_only = g.last_width_scale_only or desc.WidthScale or 1
+    g.last_width_scale_only = width
+    local properties = {
+        Head = desc.Head or 0,
+        Torso = desc.Torso or 0,
+        LeftArm = desc.LeftArm or 0,
+        RightArm = desc.RightArm or 0,
+        LeftLeg = desc.LeftLeg or 0,
+        RightLeg = desc.RightLeg or 0,
+        Face = desc.Face or 0,
+        Shirt = desc.Shirt or 0,
+        Pants = desc.Pants or 0,
+        GraphicTShirt = desc.GraphicTShirt or 0,
+        RunAnimation = desc.RunAnimation or 0,
+        WalkAnimation = desc.WalkAnimation or 0,
+        JumpAnimation = desc.JumpAnimation or 0,
+        FallAnimation = desc.FallAnimation or 0,
+        ClimbAnimation = desc.ClimbAnimation or 0,
+        IdleAnimation = desc.IdleAnimation or 0,
+        SwimAnimation = desc.SwimAnimation or 0,
+        HeightScale = desc.HeightScale or 1,
+        WidthScale = width,
+        DepthScale = desc.DepthScale or 1,
+        HeadScale = desc.HeadScale or 1,
+        BodyTypeScale = desc.BodyTypeScale or 0,
+        ProportionScale = desc.ProportionScale or 0,
+    }
+
+    local accessories = {}
+    for _, acc in ipairs(desc:GetAccessories(true)) do
+        table.insert(accessories, {
+            Rotation = "  ",
+            Position = "  ",
+            Scale = "1 1 1",
+            IsLayered = acc.IsLayered,
+            AccessoryType = acc.AccessoryType.Name,
+            AssetId = acc.AssetId,
+            Order = acc.Order,
+            Puffiness = acc.Puffiness
+        })
+    end
+
+    pcall(function()
+        g.Send("wear_outfit_from_desc", {
+            accessories = accessories,
+            properties = properties
+        })
+    end)
+
+    task.delay(0.10, function()
+        if g.session_original_skin_w then
+            g.apply_skin_tone(g.session_original_skin_w)
+        end
+        g.width_setter_busy = false
+    end)
+end
+
+g.reset_to_original_width = g.reset_to_original_width or function()
+    if g.width_setter_busy then return end
+    if not g.session_original_width_only then return end
+    g.width_func_setter(g.session_original_width_only)
+    if g.session_original_skin_w then
+        task.delay(0.1, function()
+            g.apply_skin_tone(g.session_original_skin_w)
+        end)
+    end
+    task.delay(0.3, function()
+        g.session_original_width_only = nil
+        g.session_original_skin_w = nil
+        g.session_width_active = false
     end)
 end
 
@@ -12133,9 +12224,11 @@ Callback = function()
     g.size_func_setter(1, 1)
 end,})
 
-g.create_ui_element("Input", LocalPlayer_Section, {
-Name = "Size Character (FE)",
-PlaceholderText = "Enter size...",
+g.create_ui_element("Slider", LocalPlayer_Section, {
+Name = "Height Scale (FE)",
+Min = 0.1,
+Max = 1000,
+Default = 1,
 Flag = "Size_Input_UI",
 Callback = function(split)
     local new_size = split
@@ -12143,12 +12236,23 @@ Callback = function(split)
     g.height_func_setter(new_size)
 end}, "Size_Input_UI")
 
+g.create_ui_element("Slider", LocalPlayer_Section, {
+Name = "Width Scale (FE)",
+Min = 0.1,
+Max = 1000,
+Default = 1,
+Flag = "Size_Input_UI",
+Callback = function(split)
+    local new_size = split
+    if not new_size then return end
+    g.width_func_setter(new_size)
+end}, "Size_Input_UI")
+
 g.create_ui_element("Button", LocalPlayer_Section, {
 Name = "Normal Size (FE)",
 Callback = function()
-    pcall(function()
-        g.reset_to_original_height()
-    end)
+    if not g.reset_to_original_height or typeof(g.reset_to_original_height) ~= "function" then return end
+    pcall(function() g.reset_to_original_height() end)
 end}, "Normal_Size_Button_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
