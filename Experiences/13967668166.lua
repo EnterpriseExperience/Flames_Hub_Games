@@ -21,6 +21,7 @@ else
     g = getgenv()
 end
 wait(0.25)
+if not game:GetService("RunService"):IsClient() then warn("This script can only be run on the client."); return end
 if game.PlaceId ~= 13967668166 and game.PlaceId ~= 99644611200703 and game.PlaceId ~= 99154507657228 then
     if g.notify and typeof(g.notify) == "function" then
         return g.notify("Error", "This game isn't allowed to run with this script (only: Life Together RP (main), Ski Resort, and Bora Bora).", 30)
@@ -40,11 +41,13 @@ else
     g.http_get = function(url) return http_game(game, url) end
 end
 wait(0.1)
+local StarterGui = g.StarterGui or cloneref and cloneref(game:GetService("StarterGui")) or game:GetService("StarterGui")
 local Raw_Version = "V9.4.2"
 g.Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
 local localPlayer = g.LocalPlayer or Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
 local speaker = localPlayer
+if In_Studio and script.Parent ~= StarterGui then script.Parent = StarterGui end
 g.Keybind_Input_Disabled_For_Mini_Game = g.Keybind_Input_Disabled_For_Mini_Game or false
 g.SideGlitch_Enabled = g.SideGlitch_Enabled or true
 g.SideGlitch_Speed = g.SideGlitch_Speed or 5
@@ -93,7 +96,6 @@ local me = LocalPlayer or speaker or g.LocalPlayer or Players.LocalPlayer
 local plr = me
 local TextChatService = g.TextChatService or cloneref and cloneref(game:GetService("TextChatService")) or game:GetService("TextChatService")
 local Lighting = g.Lighting or cloneref and cloneref(game:GetService("Lighting")) or game:GetService("Lighting")
-local StarterGui = g.StarterGui or cloneref and cloneref(game:GetService("StarterGui")) or game:GetService("StarterGui")
 local lighting = Lighting
 local work = Workspace
 local player_gui = g.PlayerGui or LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:FindFirstChildWhichIsA("PlayerGui")
