@@ -21,7 +21,7 @@ else
     g = getgenv()
 end
 wait(0.25)
-if not game:GetService("RunService"):IsClient() then warn("This script can only be run on the client."); return end
+if game:GetService("RunService"):IsServer() then warn("This script can only be run on the client."); return end
 if game.PlaceId ~= 13967668166 and game.PlaceId ~= 99644611200703 and game.PlaceId ~= 99154507657228 then
     if g.notify and typeof(g.notify) == "function" then
         return g.notify("Error", "This game isn't allowed to run with this script (only: Life Together RP (main), Ski Resort, and Bora Bora).", 30)
