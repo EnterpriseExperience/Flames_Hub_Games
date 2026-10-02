@@ -21,9 +21,25 @@ else
     g = getgenv()
 end
 wait(0.25)
+if game.PlaceId ~= 13967668166 and game.PlaceId ~= 99644611200703 and game.PlaceId ~= 99154507657228 then
+    if g.notify and typeof(g.notify) == "function" then
+        return g.notify("Error", "This game isn't allowed to run with this script (only: Life Together RP (main), Ski Resort, and Bora Bora).", 30)
+    else
+        return warn("This game isn't allowed to run with this script (only: Life Together RP (main), Ski Resort, and Bora Bora).")
+    end
+end
+wait(0.1)
+local blank_F = g.blank_function or g.blankfunction or function(...) return ... end
 local cloneref = typeof(cloneref) == "function" and cloneref or function(instance) return instance end
-local http_game = (g["game"] or game)["HttpGet"]
-g.http_get = function(url) return http_game(game, url) end
+-- [[ Should no longer break in Roblox Studio. 😈🚬 ]] --
+local http_game
+if In_Studio then
+    http_game = blank_F
+else
+    http_game = (g["game"] or game)["HttpGet"]
+    g.http_get = function(url) return http_game(game, url) end
+end
+wait(0.1)
 local Raw_Version = "V9.4.2"
 g.Script_Version = tostring(Raw_Version).."-LifeHub"
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players") -- up here to let everything load first.
@@ -1354,14 +1370,6 @@ local function FindPlayer(query)
 end
 
 g.FindPlayer = g.FindPlayer or FindPlayer
-if game.PlaceId ~= 13967668166 and game.PlaceId ~= 99644611200703 and game.PlaceId ~= 99154507657228 then
-    if g.notify and typeof(g.notify) == "function" then
-        return g.notify("Error", "This game isn't allowed to run with this script (only: Life Together RP (main), Ski Resort, and Bora Bora).", 30)
-    else
-        return warn("This game isn't allowed to run with this script (only: Life Together RP (main), Ski Resort, and Bora Bora).")
-    end
-end
-
 -- [[ configuration GUI. ]] --
 if not CoreGui:FindFirstChild("FlamesAdminGUI", true) then loadstring(g.http_get("https://pastebin.com/raw/9qkZEvjw"))() end
 g._rgb_conns = g._rgb_conns or {}
