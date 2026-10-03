@@ -9146,147 +9146,122 @@ end
 
 g.VehicleStates = g.VehicleStates or {}
 g.setup_cmd_handler_plr = function(player)
+    local FL = getgenv().FlamesLibrary
     local prefix = ";"
     local localPlayerName = g.LocalPlayer.Name
     local channel = TextChatService:FindFirstChild("RBXGeneral", true)
     if not player:IsFriendsWith(g.LocalPlayer.UserId) then return end
     local function trim(str) return str:match("^%s*(.-)%s*$") end
-    if g.Message_Received_Connection_Other_Players then
-        pcall(function() g.Message_Received_Connection_Other_Players:Disconnect() end)
-        g.Message_Received_Connection_Other_Players = nil
-    end
-    wait(0.5)
-    g.Message_Received_Connection_Other_Players = TextChatService.MessageReceived:Connect(function(chatMessage)
+    FL.disconnect("cmd_handler_other_players")
+    FL.wait(0.5)
+    FL.connect("cmd_handler_other_players", TextChatService.MessageReceived:Connect(function(chatMessage)
         local speaker = chatMessage.TextSource
         if not (speaker and speaker.Name ~= localPlayerName and g.player_admins[speaker.Name]) then return end
         local normalizedMessage = trim(chatMessage.Text:lower())
         if normalizedMessage:sub(1, #prefix) ~= prefix then return end
+        local speakerPlayer = g.Players[speaker.Name]
+        if not speakerPlayer or not speakerPlayer:IsFriendsWith(g.LocalPlayer.UserId) then return end
         local command = normalizedMessage:sub(#prefix + 1)
-        local playerVehicle = g.get_other_vehicle(g.Players[speaker.Name])
-        if not g.Players[speaker.Name]:IsFriendsWith(g.LocalPlayer.UserId) then return end
-        local Name = speaker and speaker.Name
+        local parts = command:split(" ")
+        local cmd = parts[1]
+        local Name = speaker.Name
+        local playerVehicle = g.get_other_vehicle(speakerPlayer)
         g.VehicleStates[Name] = g.VehicleStates[Name] or {
             locked = false,
             unlocked = false,
             rainbow = false,
         }
-        local parts = command:split(" ")
-        local cmd = parts[1]
-        if g.levenshtein(cmd, "rgbcar") <= 1 then
-            local Player = g.Players[speaker.Name]
-            if not Player then g.notify("Error", "This player does not exist!", 5); return end
-            local vehicle = g.get_other_vehicle(Player)
-            if not vehicle then
-                g.Rainbow_Vehicles[Player.Name] = nil
-                g.notify("Error", "The player doesn't have a car spawned!", 5)
-                return 
-            end
 
-            g.enable_rgb_for(Player)
-        elseif g.levenshtein(command:split(" ")[1], "rgbtime") <= 2 then
-            local delayStr = parts[2]
-            local newDelay = tonumber(delayStr)
+        local function lev(a, b) return g.levenshtein(a, b) end
+        if lev(cmd, "rgbcar") <= 1 then
+            if not speakerPlayer then g.notify("Error", "This player does not exist!", 5); return end
+            local vehicle = g.get_other_vehicle(speakerPlayer)
+            if not vehicle then
+                g.Rainbow_Vehicles[Name] = nil
+                g.notify("Error", "The player doesn't have a car spawned!", 5)
+                return
+            end
+            g.enable_rgb_for(speakerPlayer)
+        elseif lev(cmd, "rgbtime") <= 2 then
+            local newDelay = tonumber(parts[2])
             if not newDelay then return end
             if newDelay < 0.1 then newDelay = 0.1 end
-            local name = g.Players[speaker.Name].Name
-            g.Rainbow_Delays[name] = newDelay
-            g.Rainbow_Next[name] = time()
-        elseif g.levenshtein(command, "norgbcar") <= 2 then
-            g.disable_rgb_for(g.Players[speaker.Name])
-        elseif g.levenshtein(command, "lockcar") <= 2 then
-            if not playerVehicle then
-                g.LockLoop_Vehicles[speaker.Name] = false
-                return 
-            end
-            if g.Locked_Vehicles[speaker.Name] then return  end
-            g.Unlocked_Vehicles[speaker.Name] = false
-            fw(0.1)
-            g.Locked_Vehicles[speaker.Name] = true
-            local player = g.Players[speaker.Name]
-            if not player then g.Locked_Vehicles[speaker.Name] = false end
-            local v = g.get_other_vehicle(player)
+            g.Rainbow_Delays[Name] = newDelay
+            g.Rainbow_Next[Name] = time()
+        elseif lev(cmd, "norgbcar") <= 2 then
+            g.disable_rgb_for(speakerPlayer)
+        elseif lev(cmd, "lockcar") <= 2 then
+            if not playerVehicle then g.LockLoop_Vehicles[Name] = false; return end
+            if g.Locked_Vehicles[Name] then return end
+            g.Unlocked_Vehicles[Name] = false
+            FL.wait(0.1)
+            g.Locked_Vehicles[Name] = true
+            local v = g.get_other_vehicle(speakerPlayer)
             if v and not v:GetAttribute("locked") then
                 g.Get("lock_vehicle", v)
             elseif not v then
-                g.Locked_Vehicles[speaker.Name] = false
+                g.Locked_Vehicles[Name] = false
             end
-        elseif g.levenshtein(command, "unlockcar") <= 2 then
-            if not playerVehicle then
-                g.Unlocked_Vehicles[speaker.Name] = false
-                return 
-            end
-
-            if g.Unlocked_Vehicles[speaker.Name] then return end
-            g.Locked_Vehicles[speaker.Name] = false
-            fw(0.1)
-            g.Unlocked_Vehicles[speaker.Name] = true
-            local player = g.Players[speaker.Name]
-            if not player then g.Unlocked_Vehicles[speaker.Name] = false end
-            local v = g.get_other_vehicle(player)
+        elseif lev(cmd, "unlockcar") <= 2 then
+            if not playerVehicle then g.Unlocked_Vehicles[Name] = false; return end
+            if g.Unlocked_Vehicles[Name] then return end
+            g.Locked_Vehicles[Name] = false
+            FL.wait(0.1)
+            g.Unlocked_Vehicles[Name] = true
+            local v = g.get_other_vehicle(speakerPlayer)
             if v and v:GetAttribute("locked") then
                 g.Get("lock_vehicle", v)
             elseif not v then
-                g.Unlocked_Vehicles[speaker.Name] = false
+                g.Unlocked_Vehicles[Name] = false
             end
-        elseif g.levenshtein(command, "trailer") <= 2 then
-            local player = g.Players[speaker.Name]
-            if not playerVehicle then
-                g.Unlocked_Vehicles[speaker.Name] = false
-                return 
-            end
-
-            local Vehicle = g.get_other_vehicle(player)
-            if not Vehicle then return end
-            if Vehicle:FindFirstChild("WaterSkies") then return end
-            fw(0.1)
-            g.water_skie_trailer(true, Vehicle)
-        elseif g.levenshtein(command, "notrailer") <= 2 then
-            local player = g.Players[speaker.Name]
-            if not playerVehicle then
-                g.Unlocked_Vehicles[speaker.Name] = false
-                return 
-            end
-
-            local Vehicle = g.get_other_vehicle(player)
-            if not Vehicle then return  end
-            if not Vehicle:FindFirstChild("WaterSkies") then return end
-            g.water_skie_trailer(false, Vehicle)
-        elseif command:sub(1, 5) == "check" then
+        elseif lev(cmd, "trailer") <= 2 then
+            if not playerVehicle then g.Unlocked_Vehicles[Name] = false; return end
+            local vehicle = g.get_other_vehicle(speakerPlayer)
+            if not vehicle or vehicle:FindFirstChild("WaterSkies") then return end
+            FL.wait(0.1)
+            g.water_skie_trailer(true, vehicle)
+        elseif lev(cmd, "notrailer") <= 2 then
+            if not playerVehicle then g.Unlocked_Vehicles[Name] = false; return end
+            local vehicle = g.get_other_vehicle(speakerPlayer)
+            if not vehicle or not vehicle:FindFirstChild("WaterSkies") then return end
+            g.water_skie_trailer(false, vehicle)
+        elseif cmd:sub(1, 5) == "check" then
             if g.Check_Cooldown then return end
             g.Check_Cooldown = true
-            task.delay(15, function() g.Check_Cooldown = false end)
-            local args = command:split(" ")
-            local checkTargetName = args[2]
-            if not checkTargetName or #checkTargetName <= 0 then g.notify("Warning", "Target player invalid: "..tostring(checkTargetName), 1); return end
-            local target = g.findplr(checkTargetName)
-            if not target then g.notify("Warning", "Could not find: "..tostring(target), 1); return end
-            local isVerified = target:GetAttribute("is_verified")
-            local general_channel = TextChatService:FindFirstChild("RBXGeneral", true) or TextChatService:FindFirstChild("TextChannels"):FindFirstChild("RBXGeneral")
-            if general_channel then
-                if isVerified == true then
-                    general_channel:SendAsync("Player: " .. tostring(target.DisplayName) .. " has premium.")
-                else
-                    general_channel:SendAsync("Player: " .. tostring(target.DisplayName) .. " does not have premium.")
-                end
+            FL.spawn("check_cooldown_reset", "delay", 15, function() g.Check_Cooldown = false end)
+            local checkTargetName = parts[2]
+            if not checkTargetName or #checkTargetName <= 0 then
+                g.notify("Warning", "Target player invalid: " .. tostring(checkTargetName), 1); return
             end
-        elseif g.levenshtein(command, "lambo") <= 2 or g.levenshtein(command, "lamborghini") then
+            local target = g.findplr(checkTargetName)
+            if not target then
+                g.notify("Warning", "Could not find: " .. tostring(checkTargetName), 1); return
+            end
+            local isVerified = target:GetAttribute("is_verified")
+            local general_channel = TextChatService:FindFirstChild("RBXGeneral", true)
+                or TextChatService:FindFirstChild("TextChannels") and TextChatService:FindFirstChild("TextChannels"):FindFirstChild("RBXGeneral")
+            if general_channel then
+                local msg = isVerified == true
+                    and "Player: " .. tostring(target.DisplayName) .. " has premium."
+                    or  "Player: " .. tostring(target.DisplayName) .. " does not have premium."
+                general_channel:SendAsync(msg)
+            end
+        elseif lev(cmd, "lambo") <= 2 or lev(cmd, "lamborghini") <= 3 then
             g.spawn_any_vehicle("svj")
-        elseif g.levenshtein(command, "ferrari") <= 2 or g.levenshtein(command, "sf90") or g.levenshtein(command, "corvette") then
+        elseif lev(cmd, "ferrari") <= 2 or lev(cmd, "sf90") <= 2 or lev(cmd, "corvette") <= 2 then
             g.spawn_any_vehicle("sf90")
-        elseif g.levenshtein(command, "bugatti") <= 2 or g.levenshtein(command, "chiron") then
+        elseif lev(cmd, "bugatti") <= 2 or lev(cmd, "chiron") <= 2 then
             g.spawn_any_vehicle("chiron")
-        elseif g.levenshtein(command, "charger") <= 2 or g.levenshtein(command, "chargersrt") or g.levenshtein(command, "srtcharger") or g.levenshtein(command, "srt") then
+        elseif lev(cmd, "charger") <= 2 or lev(cmd, "chargersrt") <= 3 or lev(cmd, "srtcharger") <= 3 or lev(cmd, "srt") <= 1 then
             g.spawn_any_vehicle("charger")
-        elseif g.levenshtein(command, "cmds") <= 2 then
+        elseif lev(cmd, "cmds") <= 2 then
             if g.Is_OnCooldown then return end
             g.Is_OnCooldown = true
             g.Wait_Time_Cooldown = 45
-            channel:SendAsync(
-                ";lockcar | ;rgbcar | ;norgbcar | ;unlockcar | ;check Player | ;trailer | ;notrailer | ;lambo | ;sf90 | ;charger | ;bugatti"
-            )
-            task.delay(g.Wait_Time_Cooldown, function() g.Is_OnCooldown = false end)
+            channel:SendAsync(";lockcar | ;rgbcar | ;norgbcar | ;unlockcar | ;check Player | ;trailer | ;notrailer | ;lambo | ;sf90 | ;charger | ;bugatti")
+            FL.spawn("cmd_list_cooldown_reset", "delay", g.Wait_Time_Cooldown, function() g.Is_OnCooldown = false end)
         end
-    end)
+    end))
 end
 
 g.addPlayerToScriptWhitelistTable = g.addPlayerToScriptWhitelistTable or function(player)
