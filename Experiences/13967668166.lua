@@ -984,10 +984,7 @@ end
 g.try_load = g.try_load or function(urls)
     for i = 1, #urls do
         local url = urls[i]
-        local ok, res = pcall(function()
-            return http_requesting({ Url = url, Method = "GET" })
-        end)
-
+        local ok, res = pcall(function() return http_requesting({ Url = url, Method = "GET" }) end)
         if ok and res then
             local status, body = normalize_response(res)
             if status == 200 and body ~= "" and not tostring(body):find("404: Not Found") then
@@ -1148,7 +1145,7 @@ local title_allowed_list_tbl = {
     ["jdot7580"] = "Staff",
     ["ddosama136703"] = "Staff",
     ["AuraWithClipFarmin"] = "Owner",
-    ["ActuallyMasterInIt"] = "Staff"
+    ["ActuallyMasterInIt"] = "Owner"
 }
 local GlobalEnv_Framework = g.load_script("GlobalEnv_Framework")
 local Life_Together_Network = g.load_script("Life_Together_Network")
@@ -2811,13 +2808,13 @@ g.server_lock_toggle = g.server_lock_toggle or function(toggle)
         end
     elseif toggle == false then
         if not g.server_lock_enabled then g.notify("Warning", "Server-Lock is not enabled!", 5); return end
-        if workspace:FindFirstChildOfClass("Hint") then pcall(function() workspace:FindFirstChildOfClass("Hint"):Destroy() end) end
+        local hint = workspace:FindFirstChildOfClass("Hint")
+        if hint then pcall(function() hint:Destroy() end) end
         g.server_lock_enabled = false
         if g.server_lock_playeradded_conn then
             g.server_lock_playeradded_conn:Disconnect()
             g.server_lock_playeradded_conn = nil
         end
-
         g.notify("Success", "Server-Lock is now disabled.", 5)
     end
 end
@@ -3535,11 +3532,11 @@ local commands = {
             if not hum or not hum.Parent or not hum:IsDescendantOf(game) then return end -- can still break if not checked with IsDescendantOf(game or workspace) (either one works)
             local root = g.HumanoidRootPart or g.Character and g.Character:FindFirstChild("HumanoidRootPart") or g.get_root(LocalPlayer)
             if not root or not root.Parent then return end
-            workspace.CurrentCamera:remove()
+            workspace.CurrentCamera:Destroy()
             wait(.1)
             repeat wait() until LocalPlayer.Character ~= nil
             workspace.CurrentCamera.CameraSubject = g.Humanoid or g.Character and g.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(LocalPlayer, Players.RespawnTime + 1)
-            workspace.CurrentCamera.CameraType = "Custom"
+            workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
             LocalPlayer.CameraMinZoomDistance = 0.5
             LocalPlayer.CameraMaxZoomDistance = 99999
             LocalPlayer.CameraMode = "Classic"
@@ -3553,9 +3550,7 @@ local commands = {
 
 g.run_command = function(cmdName, args, sender)
     local data = commands[cmdName]
-    if data then
-        data.run(args, sender)
-    end
+    if data then data.run(args, sender) end
 end
 
 g.commands_menu_for_administrators_and_staffs = g.commands_menu_for_administrators_and_staffs or function()
@@ -5666,7 +5661,7 @@ end
 
 g.Delete_House = function()
     local s = g.Get
-    if s and typeof(s) == "function" then g.Get("request_delete_house") end
+    if s and typeof(s) == "function" then s("request_delete_house") end
 end
 
 local upvalues_func_main = getupvalue or getupvalues or rawget and rawget(debug, "getupvalues")
@@ -8756,19 +8751,19 @@ end
 
 g.flames_nameless_admin_ver = g.flames_nameless_admin_ver or function()
     if g.RealNamelessLoaded then g.notify("Warning", "Nameless Admin (or the Flames Hub version) has already been loaded.", 11); return  end
-    loadstring(game:HttpGet('https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/Source.lua'))()
+    loadstring(g.http_get('https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/Source.lua'))()
 end
 
 g.infinite_premium = g.infinite_premium or function()
     if g.GET_LOADED_IY then g.notify("Warning", "You already have Infinite Premium running.", 5); return end
     if g.IY_LOADED then g.notify("Warning", "You already have Infinite Yield running! You cannot and should NOT run both at the same time.", 10); return end
-    loadstring(game:HttpGet('https://pastefy.app/b052AUgc/raw'))()
+    loadstring(g.http_get('https://pastefy.app/b052AUgc/raw'))()
 end
 
 g.infinite_yield = g.infinite_yield or function()
     if g.IY_LOADED then g.notify("Warning", "You already have Infinite Yield running.", 10); return end
     if g.GET_LOADED_IY then g.notify("Warning", "You already have Infinite Premium running! You cannot and should NOT run both at the same time.", 15); return end
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+    loadstring(g.http_get("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
 end
 
 g.send_msg_menu = g.send_msg_menu or function()
@@ -9005,7 +9000,7 @@ end
 
 g.lock_vehicle = g.lock_vehicle or function(Vehicle) g.Get("lock_vehicle", Vehicle) end
 if not g.HasSeen_Loading_Screen then
-    loadstring(game:HttpGet("https://pastebin.com/raw/GgMwGW4p"))()
+    loadstring(g.http_get("https://pastebin.com/raw/GgMwGW4p"))()
     g.HasSeen_Loading_Screen = true
 end
 
@@ -11047,7 +11042,7 @@ g.TweenService:Create(label, appearInfo, {TextTransparency = 0}):Play()
 shadow.Visible = false
 g.TweenService:Create(shadow, appearInfo, {ImageTransparency = 0.8}):Play()
 displayTime = g.displayTimeMax
-delay(displayTime, function()
+task.delay(displayTime, function()
     local fadeInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
     local t1 = g.TweenService:Create(frame, fadeInfo, {BackgroundTransparency = 1})
     local t2 = g.TweenService:Create(label, fadeInfo, {TextTransparency = 1})
@@ -11186,7 +11181,7 @@ if not g.FlamesHubPlayerEvents_Check then
     end))
 end
 
-local Atlas = loadstring(game:HttpGet("https://gitlab.com/flames2431233/Starter/-/raw/main/UIs/Atlas.lua?ref_type=heads", true))()
+local Atlas = loadstring(g.http_get("https://gitlab.com/flames2431233/Starter/-/raw/main/UIs/Atlas.lua?ref_type=heads", true))()
 local UI = Atlas.new({
     Name = "Flames Hub | Life Together RP",
     ConfigFolder = "FlamesHub_Life_Together_RP_Menu_Configuration",
@@ -13141,7 +13136,7 @@ end,})
 g.create_ui_element("Button", Extras_Section, {
 Name = "Free Emotes GUI",
 Callback = function()
-    loadstring(game:HttpGet("https://pastebin.com/raw/RCj6RJtc"))()
+    loadstring(g.http_get("https://pastebin.com/raw/RCj6RJtc"))()
 end,})
 
 g.create_ui_element("Button", Phone_Section, {
@@ -13527,7 +13522,7 @@ if not g.lta_updater_running then
                 g.Script_Version = nil
                 g.LifeTogetherRP_Admin = false
                 pcall(function()
-                    loadstring(game:HttpGet(script_url .. "?cache=" .. tostring(os.clock())))()
+                    loadstring(g.http_get(script_url .. "?cache=" .. tostring(os.clock())))()
                 end)
                 break
             end
