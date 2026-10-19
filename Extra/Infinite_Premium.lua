@@ -1,4 +1,4 @@
-if GET_LOADED_IY and not _G.DEBUGGING_IY_VER == true then
+if GET_LOADED_IY and not _G.DEBUGGING_IY_VER then
    -- error("Infinite Premium is already running!", 0)
    return 
 end
@@ -9,13 +9,14 @@ end
 
 pcall(function() getgenv().GET_LOADED_IY = true end)
 if not game:IsLoaded() then game.Loaded:Wait() end
-
 function missing(t, f, fallback)
    if type(f) == t then return f end
    return fallback
 end
 
 local g = getgenv()
+local http_game = (g["game"] or game)["HttpGet"]
+g.http_get = function(url) return http_game(game, url) end
 cloneref = missing("function", cloneref, function(...) return ... end)
 sethidden =  missing("function", sethiddenproperty or set_hidden_property or set_hidden_prop)
 gethidden =  missing("function", gethiddenproperty or get_hidden_property or get_hidden_prop)
@@ -25,7 +26,7 @@ everyClipboard = missing("function", setclipboard or toclipboard or set_clipboar
 firetouchinterest = missing("function", firetouchinterest)
 waxwritefile, waxreadfile = writefile, readfile
 writefile = missing("function", waxwritefile) and function(file, data, safe)
-   if safe == true then return pcall(waxwritefile, file, data) end
+   if safe == true then pcall(waxwritefile, file, data); return end
    waxwritefile(file, data)
 end
 readfile = missing("function", waxreadfile) and function(file, safe)
@@ -33,10 +34,8 @@ readfile = missing("function", waxreadfile) and function(file, safe)
    return waxreadfile(file)
 end
 isfile = missing("function", isfile, readfile and function(file)
-   local success, result = pcall(function()
-      return readfile(file)
-   end)
-   return success and result ~= nil and result ~= ""
+	local success, result = pcall(function() return readfile(file) end)
+	return success and result ~= nil and result ~= ""
 end)
 makefolder = missing("function", makefolder)
 isfolder = missing("function", isfolder)
@@ -50,18 +49,36 @@ getgc = missing("function", getgc or get_gc_objects)
 setthreadidentity = missing("function", setthreadidentity or (syn and syn.set_thread_identity) or syn_context_set or setthreadcontext)
 replicatesignal = missing("function", replicatesignal)
 getconnections = missing("function", getconnections or get_signal_cons)
-Services = setmetatable({}, {
-   __index = function(self, name)
-      local success, cache = pcall(function()
-         return cloneref(game:GetService(name))
-      end)
-      if success then
-         rawset(self, name, cache)
-         return cache
-      else
-         error("Invalid Service: " .. tostring(name))
-      end
-   end
+local Services = setmetatable({}, {
+	__index = function(self, name)
+		if type(name) ~= "string" or #name == 0 then error(("[services] bad key: '%s'"):format(tostring(name)), 2) end
+		local cached = rawget(self, name)
+		if cached ~= nil then return cached end
+		local gs_ok, gs_result = pcall(game.GetService, game, name)
+		if not gs_ok or gs_result == nil then error(("[services] invalid service: '%s'"):format(name), 2) end
+		if typeof(gs_result) ~= "Instance" then error(("[services] unexpected type for '%s': %s"):format(name, typeof(gs_result)), 2) end
+		local service = nil
+		if type(cloneref) == "function" then
+			local cr_ok, cr_result = pcall(cloneref, gs_result)
+			if cr_ok and cr_result ~= nil and typeof(cr_result) == "Instance" then
+				service = cr_result
+			else
+				service = gs_result
+			end
+		else
+			service = gs_result
+		end
+
+		rawset(self, name, service)
+		return service
+	end,
+
+	__newindex = function(self, name, value)
+		if type(name) ~= "string" or #name == 0 then error(("[services] bad key on write: '%s'"):format(tostring(name)), 2) end
+		if rawget(self, name) ~= nil then error(("[services] attempt to overwrite locked key: '%s'"):format(tostring(name)), 2) end
+		rawset(self, name, value)
+	end,
+	__metatable = "locked",
 })
 
 COREGUI = Services.CoreGui
@@ -94,6 +111,7 @@ TextChatService = Services.TextChatService
 CaptureService = Services.CaptureService
 VoiceChatService = Services.VoiceChatService
 SocialService = Services.SocialService
+speaker = Players.LocalPlayer
 IYMouse = cloneref and cloneref(Players.LocalPlayer:GetMouse()) or Players.LocalPlayer:GetMouse()
 PlayerGui = cloneref and cloneref(Players.LocalPlayer:FindFirstChildWhichIsA("PlayerGui")) or Players.LocalPlayer:FindFirstChildWhichIsA("PlayerGui")
 PlaceId, JobId = game.PlaceId, game.JobId
@@ -259,6 +277,24 @@ g.set_all_rgb_color = g.set_all_rgb_color or function(color)
 	end
 end
 
+getgenv().get_or_set = getgenv().get_or_set or function(name, value)
+	if rawget and rawset and typeof(rawget) == "function" and typeof(rawset) == "function" then
+		local existing = rawget(getgenv(), name)
+		if existing == nil then
+			rawset(getgenv(), name, value)
+			return value
+		end
+		return existing
+	end
+
+	local existing = getgenv()[name]
+	if existing == nil then
+		getgenv()[name] = value
+		return value
+	end
+	return existing
+end
+
 local iyassets = {
    ["infiniteyield/assets/bindsandplugins.png"] = "rbxassetid://5147695474",
    ["infiniteyield/assets/close.png"] = "rbxassetid://5054663650",
@@ -275,43 +311,31 @@ local iyassets = {
 }
 
 local function getcustomasset(asset)
-   if waxgetcustomasset then
-      local ok, result = pcall(function()
-         return waxgetcustomasset(asset)
-      end)
-      if ok and result and result ~= "" then
-         return result
-      end
-   end
-   return iyassets[asset]
+	if waxgetcustomasset then
+		local ok, result = pcall(function() return waxgetcustomasset(asset) end)
+		if ok and result and result ~= "" then return result end
+	end
+	return iyassets[asset]
 end
 
 if makefolder and isfolder and writefile and isfile then
-   pcall(function()
-      local baseUrl = "https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/"
-      for _, folderName in pairs({ "infiniteyield", "infiniteyield/assets" }) do
-         if not isfolder(folderName) then
-            makefolder(folderName)
-         end
-      end
+	pcall(function()
+		local baseUrl = "https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/"
+		for _, folderName in pairs({ "infiniteyield", "infiniteyield/assets" }) do if not isfolder(folderName) then makefolder(folderName) end end
+		local assetKeys = {}
+		for path in pairs(iyassets) do assetKeys[#assetKeys + 1] = path end
+		for i = 1, #assetKeys do
+			local assetPath = assetKeys[i]
+			if not isfile(assetPath) then
+				local url = assetPath:gsub("infiniteyield/", baseUrl)
+				writefile(assetPath, g.http_get(url))
+			end
+		end
 
-      local assetKeys = {}
-      for path in pairs(iyassets) do
-         assetKeys[#assetKeys + 1] = path
-      end
-
-      for i = 1, #assetKeys do
-         local assetPath = assetKeys[i]
-         if not isfile(assetPath) then
-            local url = assetPath:gsub("infiniteyield/", baseUrl)
-            writefile(assetPath, game:HttpGet(url))
-         end
-      end
-
-      if IsOnMobile then
-         writefile("infiniteyield/assets/.nomedia", "")
-      end
-   end)
+		if IsOnMobile then
+			writefile("infiniteyield/assets/.nomedia", "")
+		end
+	end)
 end
 
 currentVersion = "7.7.8"
@@ -631,76 +655,55 @@ do
 	end
 end
 
-getgenv().hasProp = getgenv().hasProp or function(inst, prop)
-   return inst and isProperty(inst, prop) ~= nil
-end
-
+getgenv().isProperty = getgenv().isProperty or function(inst, prop) local s, r = pcall(function() return inst[prop] end); if not s then return nil end; return r end
+getgenv().hasProp = getgenv().hasProp or function(inst, prop) return inst and g.isProperty(inst, prop) ~= nil end
 getgenv().setProperty = getgenv().setProperty or function(inst, prop, v)
 	local s, _ = pcall(function() inst[prop] = v end)
 	return s
 end
 
 getgenv().safeSet = getgenv().safeSet or function(inst, prop, val)
-   if inst and hasProp(inst, prop) then setProperty(inst, prop, val) end
+   if inst and g.hasProp(inst, prop) then g.setProperty(inst, prop, val) end
 end
 
 getgenv().anti_sit_enabled = getgenv().anti_sit_enabled or false
-
-local local_player = getgenv().LocalPlayer or Players.LocalPlayer
+local local_player = speaker
 local tag_name = "anti_sit_system"
 local function hook_character(character)
-   if not character or not character:FindFirstChild("HumanoidRootPart") then character:WaitForChild("HumanoidRootPart") end
-   local humanoid = getgenv().Humanoid or character:WaitForChild("Humanoid")
-   local seated_connection
-   seated_connection = humanoid.Seated:Connect(function(active)
-      if not getgenv().anti_sit_enabled then
-         return 
-      end
+	if not character or not character:FindFirstChild("HumanoidRootPart") then character:WaitForChild("HumanoidRootPart") end
+	local humanoid = getgenv().Humanoid or character:WaitForChild("Humanoid")
+	local seated_connection
+	seated_connection = humanoid.Seated:Connect(function(active)
+		if not getgenv().anti_sit_enabled then return  end
+		if active then
+			task.wait()
+			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+			humanoid.Sit = false
+		end
+	end)
 
-      if active then
-         task.wait()
-         humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-         humanoid.Sit = false
-      end
-   end)
-
-   getgenv().FlamesLibrary.connect(tag_name, seated_connection)
+	getgenv().FlamesLibrary.connect(tag_name, seated_connection)
 end
 
 local function start_anti_sit()
-   if getgenv().FlamesLibrary.is_alive(tag_name) then
-      return getgenv().notify("Warning", "Anti-Sit is already running!", 6)
-   end
-
-   if local_player.Character then
-      hook_character(local_player.Character)
-   end
-
-   local char_connection = local_player.CharacterAdded:Connect(function(character)
-      hook_character(character)
-   end)
-
-   getgenv().notify("Success", "Flames Anti-Sit is now enabled.", 5)
-   getgenv().FlamesLibrary.connect(tag_name, char_connection)
+	if getgenv().FlamesLibrary.is_alive(tag_name) then return  end
+	if local_player.Character then hook_character(local_player.Character) end
+	local char_connection = local_player.CharacterAdded:Connect(function(character) hook_character(character) end)
+	getgenv().FlamesLibrary.connect(tag_name, char_connection)
 end
 
 local function stop_anti_sit()
-   if not getgenv().FlamesLibrary.is_alive(tag_name) then
-      return getgenv().notify("Warning", "Anti-Sit is not enabled.", 5)
-   end
-
-   getgenv().FlamesLibrary.disconnect(tag_name)
-   getgenv().notify("Success", "Flames Anti-Sit is now disabled.", 5)
+	if not getgenv().FlamesLibrary.is_alive(tag_name) then return end
+	getgenv().FlamesLibrary.disconnect(tag_name)
 end
 
 getgenv().toggle_anti_sit = function(state)
-   getgenv().anti_sit_enabled = state
-
-   if state then
-      start_anti_sit()
-   else
-      stop_anti_sit()
-   end
+	getgenv().anti_sit_enabled = state
+	if state then
+		start_anti_sit()
+	else
+		stop_anti_sit()
+	end
 end
 
 Title.TextColor3 = Color3.new(1, 1, 1)
@@ -2277,7 +2280,6 @@ table.insert(text1,selectJoin)
 function create(data)
 	local insts = {}
 	for i,v in pairs(data) do insts[v[1]] = Instance.new(v[2]) end
-
 	for _,v in pairs(data) do
 		for prop,val in pairs(v[3]) do
 			if type(val) == "table" then
@@ -2292,22 +2294,18 @@ function create(data)
 end
 
 ViewportTextBox = (function()
-
 	local funcs = {}
 	funcs.Update = function(self)
 		local cursorPos = self.TextBox.CursorPosition
 		local text = self.TextBox.Text
-		if text == "" then self.TextBox.Position = UDim2.new(0,2,0,0) return end
+		if text == "" then self.TextBox.Position = UDim2.new(0,2,0,0); return end
 		if cursorPos == -1 then return end
-
 		local cursorText = text:sub(1,cursorPos-1)
 		local pos = nil
 		local leftEnd = -self.TextBox.Position.X.Offset
 		local rightEnd = leftEnd + self.View.AbsoluteSize.X
-
 		local totalTextSize = TextService:GetTextSize(text,self.TextBox.TextSize,self.TextBox.Font,Vector2.new(999999999,100)).X
 		local cursorTextSize = TextService:GetTextSize(cursorText,self.TextBox.TextSize,self.TextBox.Font,Vector2.new(999999999,100)).X
-
 		if cursorTextSize > rightEnd then
 			pos = math.max(-2,cursorTextSize - self.View.AbsoluteSize.X + 2)
 		elseif cursorTextSize < leftEnd then
@@ -2370,21 +2368,18 @@ ViewportTextBox.convert(Cmdbar_2).View.ZIndex = 10
 ViewportTextBox.convert(Cmdbar_3).View.ZIndex = 10
 
 function writefileExploit()
-	if writefile then
-		return true
-	end
+	if writefile and typeof(writefile) == "function" then return true end
+	return false
 end
 
 function readfileExploit()
-	if readfile then
-		return true
-	end
+	if readfile and typeof(readfile) == "function" then return true end
+	return false
 end
 
 function isNumber(str)
-	if tonumber(str) ~= nil or str == 'inf' then
-		return true
-	end
+	if tonumber(str) ~= nil or str == 'inf' then return true end
+	return false
 end
 
 function vtype(o, t)
@@ -2393,40 +2388,13 @@ function vtype(o, t)
 	return type(o) == t
 end
 
-getgenv().get_or_set = getgenv().get_or_set or function(name, value)
-	if rawget and rawset then
-		local existing = rawget(getgenv(), name)
-		if existing == nil then
-			rawset(getgenv(), name, value)
-			return value
-		end
-		return existing
-	end
-
-	local existing = getgenv()[name]
-
-	if existing == nil then
-		getgenv()[name] = value
-		return value
-	end
-
-	return existing
-end
-
-function hb()
-	local rs = cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
-	rs.Heartbeat:Wait()
-end
-
+function hb() RunService.Heartbeat:Wait() end
 local function wait_for_datamodel(inst)
 	if not inst then return false end
 	local attempts = 0
 	local maximum_attempts = 300
-
 	while attempts < maximum_attempts do
-		if inst.Parent and inst:IsDescendantOf(workspace) then
-			return true
-		end
+		if inst.Parent and inst:IsDescendantOf(workspace) then return true end
 		task.wait(0.1)
 		attempts += 1
 	end
@@ -2438,10 +2406,7 @@ local function wait_for_child(parent, name)
 	if not parent then return nil end
 	local existing = parent:FindFirstChild(name)
 	if existing then return existing end
-	local ok, obj = pcall(function()
-		return parent:WaitForChild(name, math.huge)
-	end)
-
+	local ok, obj = pcall(function() return parent:WaitForChild(name, math.huge) end)
 	return ok and obj or nil
 end
 
@@ -2451,7 +2416,6 @@ local function wait_for_descendant(parent, name)
 	if found then return found end
 	local conn
 	local result = nil
-
 	conn = parent.DescendantAdded:Connect(function(d)
 		if d.Name == name then
 			result = d
@@ -2474,24 +2438,15 @@ end
 
 local function wait_for_child_safe(parent, name)
 	if not parent then return nil end
-
-	local ok, obj = pcall(function()
-		return parent:WaitForChild(name, 9e9)
-	end)
-
-	if ok and obj then
-		return obj
-	end
-
+	local ok, obj = pcall(function() return parent:WaitForChild(name, 9e9) end)
+	if ok and obj then return obj end
 	return nil
 end
 
 local function retry_find(func, retries, delay)
 	for _ = 1, retries do
 		local ok, result = pcall(func)
-		if ok and result then
-			return result
-		end
+		if ok and result then return result end
 		task.wait(delay)
 	end
 	return nil
@@ -2500,12 +2455,9 @@ end
 local function wait_character(player, timeout)
 	timeout = timeout or 10
 	local start = os.clock()
-
 	while os.clock() - start < timeout do
 		local char = player.Character
-		if char and char.Parent then
-			return char
-		end
+		if char and char.Parent then return char end
 		hb()
 	end
 
@@ -2516,35 +2468,20 @@ local function wait_instance(parent, resolver, timeout)
 	timeout = timeout or 10
 	local start_time = os.clock()
 	local inst = resolver()
-	if inst then
-		return inst
-	end
-
+	if inst then return inst end
 	local conn
-	conn = parent.ChildAdded:Connect(function()
-		inst = resolver()
-	end)
-
-	while not inst and os.clock() - start_time < timeout do
-		hb()
-	end
-
-	if conn then
-		conn:Disconnect()
-	end
-
+	conn = parent.ChildAdded:Connect(function() inst = resolver() end)
+	while not inst and os.clock() - start_time < timeout do hb() end
+	if conn then conn:Disconnect() end
 	return inst
 end
 
 getgenv().return_char = getgenv().return_char or function(Player, timeout)
 	if not Player or not Player:IsA("Player") then return nil end
-
 	timeout = tonumber(timeout) or 5
 	local start = os.clock()
-
 	while os.clock() - start < timeout do
 		local char = Player.Character
-
 		if char and char.Parent and char:IsDescendantOf(game) then -- neat.
 			local hum = char:FindFirstChildOfClass("Humanoid")
 
@@ -2566,14 +2503,13 @@ function get_char(player, time_out)
 end
 
 function getRoot(char)
-	char = char or game.Players.LocalPlayer.Character or get_char(speaker or game.Players.LocalPlayer, 10)
-
+	char = char or Players.LocalPlayer.Character or get_char(speaker or Players.LocalPlayer, Players.RespawnTime + 1)
 	if not char then
 		local attempts = 0
 		repeat
 			task.wait(0.15)
 			attempts = attempts + 1
-			char = game.Players.LocalPlayer.Character
+			char = Players.LocalPlayer.Character
 		until char or attempts >= 5
 		if not char then
 			return nil
@@ -2600,23 +2536,21 @@ wait(0.1)
 getgenv().getRoot = getRoot
 
 function tools(plr)
-	if plr:FindFirstChildOfClass("Backpack"):FindFirstChildOfClass('Tool') or plr.Character:FindFirstChildOfClass('Tool') then
-		return true
-	end
+	if plr:FindFirstChildOfClass("Backpack"):FindFirstChildOfClass('Tool') or plr.Character:FindFirstChildOfClass('Tool') then return true end
+	return false
 end
 
 function r15(plr)
-	if plr.Character:FindFirstChildOfClass('Humanoid').RigType == Enum.HumanoidRigType.R15 then
-		return true
-	end
+	if plr.Character:FindFirstChildOfClass('Humanoid').RigType == Enum.HumanoidRigType.R15 then return true end
+	return false
 end
 
 function toClipboard(txt)
 	if everyClipboard then
 		everyClipboard(tostring(txt))
-		Notify_InfP("Clipboard", "Copied to clipboard")
+		if g.Notify_InfP then g.Notify_InfP("Clipboard", "Copied to clipboard") end
 	else
-		Notify_InfP("Clipboard", "Your exploit doesn't have the ability to use the clipboard")
+		if g.Notify_InfP then g.Notify_InfP("Clipboard", "Your exploit doesn't have the ability to use the clipboard") end
 	end
 end
 
@@ -2630,67 +2564,110 @@ function chatMessage(str)
 end
 
 getgenv().get_vehicle_for_inf_premium = function()
-	local players = cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
-	local workspaceRef = cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
-	local localPlayer = speaker or players.LocalPlayer
-	if not localPlayer then
-		Notify_InfP("Issue", "LocalPlayer not found? (issue?).")
+	local players_svc = cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
+	local workspace_svc = cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
+	local local_player = (speaker ~= nil and speaker) or players_svc.LocalPlayer
+	if not local_player then
+		if g.Notify_InfP then g.Notify_InfP("Issue", "LocalPlayer not found? (issue?).") end
 		return nil
 	end
-	local folder_names = {
-		"vehicles",
-		"vehicle",
-		"cars",
-		"car",
-		"playercars",
-		"plrcars"
+
+	local player_name = local_player.Name
+	local player_name_lower = player_name:lower()
+	local player_id = local_player.UserId
+	local folder_keywords = {
+		"vehicles", "vehicle", "cars", "car",
+		"playercars", "plrcars", "playercar", "plrcar",
+		"playersvehicles", "playervehicles",
+		"playerautos", "plrautos", "garage", "garages",
 	}
-	local value_names = {
-		"owner",
-		"player",
-		"driver",
-		"userid",
-		"user_id",
-		"username",
-		"name"
+
+	local vehicle_suffixes = {
+		"car", "cars", "vehicle", "vehicles",
+		"auto", "autos", "ride", "rides",
+		"whip", "whips", "wheels",
+		"truck", "trucks", "van", "vans",
+		"bike", "bikes", "vessel",
 	}
-	local function matches_folder(name)
+
+	local name_separators = { "", "'s", "s", "_", "-", " ", "s_", "s-" }
+	local function is_vehicle_folder(name)
 		name = tostring(name):lower()
-		for _, v in ipairs(folder_names) do
-			if name:find(v) then
+		for _, kw in ipairs(folder_keywords) do
+			if name:find(kw, 1, true) then
 				return true
 			end
 		end
 		return false
 	end
-	local function matches_value(val)
+
+	local function value_matches_player(val)
 		if val:IsA("ObjectValue") then
-			return val.Value == localPlayer
+			return val.Value == local_player
 		end
-
 		if val:IsA("StringValue") then
-			return tostring(val.Value):lower() == localPlayer.Name:lower()
+			return tostring(val.Value):lower() == player_name_lower
 		end
-
 		if val:IsA("IntValue") or val:IsA("NumberValue") then
-			return tonumber(val.Value) == localPlayer.UserId
+			return tonumber(val.Value) == player_id
+		end
+		return false
+	end
+
+	local function name_matches_player(model_name)
+		local mn = tostring(model_name):lower()
+		local pn = player_name_lower
+		if mn == pn then return true end
+		if mn:sub(1, #pn) == pn then
+			local remainder = mn:sub(#pn + 1)
+			if remainder == "" then
+				return true
+			end
+			for _, sep in ipairs(name_separators) do
+				for _, suffix in ipairs(vehicle_suffixes) do
+					if remainder == sep .. suffix then
+						return true
+					end
+				end
+			end
 		end
 
 		return false
 	end
 
-	for _, container in ipairs(workspaceRef:GetChildren()) do
-		if container:IsA("Folder") and matches_folder(container.Name) then
-			for _, model in ipairs(container:GetDescendants()) do
-				if model:IsA("Model") then
-					for _, obj in ipairs(model:GetDescendants()) do
-						if obj:IsA("ValueBase") then
-							if matches_value(obj) then
-								return model
-							end
-						end
-					end
+	local function has_player_value(model)
+		for _, obj in ipairs(model:GetDescendants()) do
+			if obj:IsA("ValueBase") and value_matches_player(obj) then
+				return true
+			end
+		end
+		return false
+	end
+
+	local function find_in_container(container)
+		for _, desc in ipairs(container:GetDescendants()) do
+			if desc:IsA("Model") then
+				if name_matches_player(desc.Name) or has_player_value(desc) then
+					return desc
 				end
+			end
+		end
+		return nil
+	end
+
+	for _, child in ipairs(workspace_svc:GetChildren()) do
+		if child:IsA("Folder") and is_vehicle_folder(child.Name) then
+			local result = find_in_container(child)
+			if result then
+				return result
+			end
+		end
+	end
+
+	for _, child in ipairs(workspace_svc:GetChildren()) do
+		if child:IsA("Model") then
+			if name_matches_player(child.Name) or has_player_value(child) then
+				return child
 			end
 		end
 	end
@@ -2705,7 +2682,7 @@ getgenv().vehiclefly_control_inf_premium_tbl = getgenv().vehiclefly_control_inf_
 getgenv().vehiclefly_noclip_inf_premium_toggled = getgenv().vehiclefly_noclip_inf_premium_toggled or false
 getgenv().vehiclefly_collisions_tbl_infinite_premium = getgenv().vehiclefly_collisions_tbl_infinite_premium or {}
 local controlModule
-if UserInputService.TouchEnabled then controlModule = require(game.Players.LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"):WaitForChild("ControlModule")) end
+if UserInputService.TouchEnabled then controlModule = require(Players.LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"):WaitForChild("ControlModule")) end
 getgenv().cleanup_vehicle_fly_main_inf_premium = function()
 	for _, c in pairs(getgenv().vehiclefly_conns_infinite_premium) do
 		pcall(function() c:Disconnect() end)
@@ -2740,7 +2717,6 @@ end
 getgenv().disable_vehicle_noclip_inf_yield_prem = function()
 	if not getgenv().enable_vehicle_noclip_inf_yield_prem then return end
 	getgenv().enable_vehicle_noclip_inf_yield_prem = false
-
 	for part, state in pairs(getgenv().vehiclefly_collisions_tbl_infinite_premium) do
 		if part and part.Parent then
 			part.CanCollide = state
@@ -2751,13 +2727,12 @@ end
 
 getgenv().inf_yield_vehicle_fly_main = function(model)
 	if getgenv().vehiclefly_bg_infinite_premium_instance or getgenv().vehiclefly_bv_for_inf_premium then return end
-   local car = getgenv().get_vehicle_for_inf_premiu() or speaker.Character:FindFirstChildWhichIsA("Humanoid").SeatPart
+	local car = getgenv().get_vehicle_for_inf_premiu() or speaker.Character:FindFirstChildWhichIsA("Humanoid").SeatPart
 	if not car then
-		Notify_InfP("Issue", "Could not find a Vehicle, using default (IY) method.")
+		if g and g.Notify_InfP then g.Notify_InfP("Issue", "Could not find a Vehicle, using default (IY) method.") end
 		return 
 	end
-   local base = car.Base or car:FindFirstChild("Base")
-
+	local base = car.Base or car:FindFirstChild("Base")
 	local bg = Instance.new("BodyGyro")
 	bg.P = 3e4
 	bg.D = 1e3
@@ -2769,23 +2744,17 @@ getgenv().inf_yield_vehicle_fly_main = function(model)
 	bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
 	bv.Velocity = Vector3.zero
 	bv.Parent = base
-
 	getgenv().vehiclefly_bg_infinite_premium_instance = bg
 	getgenv().vehiclefly_bv_for_inf_premium = bv
 	getgenv().vehiclefly_conns_infinite_premium.render = RunService.RenderStepped:Connect(function()
 		if not getgenv().vehicle_fly_inf_premium_ver then return end
-
 		base.AssemblyAngularVelocity = Vector3.zero
-
 		local cam = workspace.CurrentCamera
 		local look = cam.CFrame.LookVector
 		local yaw = math.atan2(-look.X, -look.Z)
-
 		bg.CFrame = CFrame.new(base.Position) * CFrame.Angles(0, yaw, 0)
-
 		local forward, right, up = 0, 0, 0
-
-		if is_mobile then
+		if IsOnMobile then
 			local mv = controlModule:GetMoveVector()
 			forward = -mv.Z
 			right = mv.X
@@ -2799,7 +2768,7 @@ getgenv().inf_yield_vehicle_fly_main = function(model)
 		bv.Velocity = bv.Velocity:Lerp(target, 0.25)
 	end)
 
-	if not is_mobile then
+	if not IsOnMobile then
 		getgenv().vehiclefly_conns_infinite_premium.down = UserInputService.InputBegan:Connect(function(i, g)
 			if g then return end
 			if i.KeyCode == Enum.KeyCode.W then getgenv().vehiclefly_control_inf_premium_tbl.f = 1 end
@@ -2823,7 +2792,7 @@ end
 
 getgenv().stop_vehicle_fly_inf_yield_premium = function()
 	getgenv().disable_vehicle_noclip_inf_yield_prem()
-	cleanup_vehicle_fly_main_inf_premium()
+	g.cleanup_vehicle_fly_main_inf_premium()
 	getgenv().vehiclefly_control_inf_premium_tbl = {f=0,b=0,l=0,r=0,q=0,e=0}
 end
 
@@ -2976,7 +2945,7 @@ eventEditor = (function()
 						if cmdSet == 0 then
 							metCondition = metCondition and (tostring(Players.LocalPlayer) == argVal)
 						elseif cmdSet ~= 1 then
-							metCondition = metCondition and table.find(getPlayer(cmdSet,Players.LocalPlayer),argVal)
+							metCondition = metCondition and table.find(g.getPlayer(cmdSet,Players.LocalPlayer),argVal)
 						end
 					elseif condType == "String" then
 						if cmdSet ~= 0 then
@@ -2991,14 +2960,16 @@ eventEditor = (function()
 				end
 
 				if metCondition then
-					pcall(task.spawn(function()
-						local cmdStr = cmd[1]
-						for count,arg in pairs(args) do
-							cmdStr = cmdStr:gsub("%$"..count,arg)
-						end
-						wait(cmd[3] or 0)
-						execCmd(cmdStr)
-					end))
+					task.spawn(function()
+						pcall(function()
+							local cmd_str = tostring(cmd[1])
+							for count, arg in pairs(args) do
+								cmd_str = cmd_str:gsub("%$" .. count, tostring(arg))
+							end
+							task.wait(cmd[3] or 0)
+							if g.execCmd then g.execCmd(cmd_str) end
+						end)
+					end)
 				end
 			end
 		end
@@ -3637,7 +3608,6 @@ currentShade3 = Color3.fromRGB(78, 78, 79)
 currentText1 = Color3.new(1, 1, 1)
 currentText2 = Color3.new(0, 0, 0)
 currentScroll = Color3.fromRGB(78,78,79)
-
 defaultGuiScale = IsOnMobile and 0.9 or 1
 defaultsettings = {
 	prefix = ';';
@@ -3983,6 +3953,8 @@ function Notify_InfP(text,text2,length)
 		end
 	end)
 end
+wait(0.1)
+g.Notify_InfP = Notify_InfP
 
 local lastMessage = nil
 local lastLabel = nil
@@ -4084,7 +4056,7 @@ function CreateJoinLabel(plr,ID)
 	scroll_3.CanvasSize = UDim2.new(0, 0, 0, listlayout.AbsoluteContentSize.Y)
 	scroll_3.CanvasPosition = Vector2.new(0,scroll_2.CanvasPosition.Y+infoFrame.AbsoluteSize.Y)
 	wait()
-	local user = game:HttpGet("https://users.roblox.com/v1/users/"..ID)
+	local user = g.http_get("https://users.roblox.com/v1/users/"..ID)
 	local json = HttpService:JSONDecode(user)
 	local date = json["created"]:sub(1,10)
 	local splitDates = string.split(date,"-")
@@ -4688,7 +4660,7 @@ function sendChatWebhook(player, message)
 		local log = HttpService:JSONEncode({
 			content = message,
 			avatar_url = avatar,
-			username = formatUsername(player),
+			username = g.formatUsername(player),
 			allowed_mentions = {parse = {}}
 		})
 		httprequest({
@@ -5173,7 +5145,8 @@ CMDs[#CMDs + 1] = {NAME = 'console', DESC = 'Loads Roblox console'}
 CMDs[#CMDs + 1] = {NAME = 'oldconsole', DESC = 'Loads old Roblox console'}
 CMDs[#CMDs + 1] = {NAME = 'explorer / dex', DESC = 'Opens DEX by Moon'}
 CMDs[#CMDs + 1] = {NAME = 'olddex / odex', DESC = 'Opens Old DEX by Moon'}
-CMDs[#CMDs + 1] = {NAME = 'remotespy / rspy', DESC = 'Opens Simple Spy V3'}
+CMDs[#CMDs + 1] = {NAME = 'remotespy / rspy', DESC = 'Opens Cobalt to intercept incoming and outgoing network traffic'}
+CMDs[#CMDs + 1] = {NAME = 'simplespy / sspy', DESC = 'Opens Simple Spy V3 to intercept remote calls from the client to the server'}
 CMDs[#CMDs + 1] = {NAME = 'audiologger / alogger', DESC = 'Opens Edges audio logger'}
 CMDs[#CMDs + 1] = {NAME = 'serverinfo / info', DESC = 'Gives you info about the server'}
 CMDs[#CMDs + 1] = {NAME = 'jobid', DESC = 'Copies the games JobId to your clipboard'}
@@ -5734,13 +5707,8 @@ spDelay = 0.1
 Players.LocalPlayer.CharacterAdded:Connect(function()
 	NOFLY()
 	Floating = false
-
-	if not Clip then
-		execCmd('clip')
-	end
-
+	if not Clip then g.execCmd('clip') end
 	repeat wait() until getRoot(Players.LocalPlayer.Character)
-
 	pcall(function()
 		if spawnpoint and not refreshCmd and spawnpos ~= nil then
 			wait(spDelay)
@@ -5750,9 +5718,7 @@ Players.LocalPlayer.CharacterAdded:Connect(function()
 
 	onDied()
 end)
-
 onDied()
-
 function getstring(begin)
 	local start = begin-1
 	local AA = '' for i,v in pairs(cargs) do
@@ -6235,9 +6201,7 @@ end
 function getPlayer(list,speaker)
 	if list == nil then return {speaker.Name} end
 	local nameList = splitString(list,",")
-
 	local foundList = {}
-
 	for _,name in pairs(nameList) do
 		if string.sub(name,1,1) ~= "+" and string.sub(name,1,1) ~= "-" then name = "+"..name end
 		local tokens = toTokens(name)
@@ -6278,20 +6242,21 @@ function getPlayer(list,speaker)
 
 	local foundNames = {}
 	for i,v in pairs(foundList) do table.insert(foundNames,v.Name) end
-
 	return foundNames
 end
+wait(0.1)
+g.getPlayer = getPlayer
 
 function formatUsername(player)
-    if player.DisplayName ~= player.Name then
-        return string.format("%s (%s)", player.Name, player.DisplayName)
-    end
+    if player.DisplayName ~= player.Name then return string.format("%s (%s)", player.Name, player.DisplayName) end
     return player.Name
 end
+wait(0.1)
+g.formatUsername = formatUsername
 
 getprfx=function(strn)
-	if strn:sub(1,string.len(prefix))==prefix then return{'cmd',string.len(prefix)+1}
-	end return
+	if strn:sub(1,string.len(prefix))==prefix then return{'cmd',string.len(prefix)+1} end
+	return
 end
 
 function do_exec(str, plr)
@@ -6300,17 +6265,16 @@ function do_exec(str, plr)
 	if not t then return end
 	str = str:sub(t[2])
 	if t[1]=='cmd' then
-		execCmd(str, plr, true)
+		g.execCmd(str, plr, true)
 		IndexContents('',true,false,true)
 		CMDsF.CanvasPosition = canvasPos
 	end
 end
 
 lastTextBoxString,lastTextBoxCon,lastEnteredString = nil,nil,nil
-
 UserInputService.TextBoxFocused:Connect(function(obj)
 	if lastTextBoxCon then lastTextBoxCon:Disconnect() end
-	if obj == Cmdbar then lastTextBoxString = nil return end
+	if obj == Cmdbar then lastTextBoxString = nil; return end
 	lastTextBoxString = obj.Text
 	lastTextBoxCon = obj:GetPropertyChangedSignal("Text"):Connect(function()
 		if not (UserInputService:IsKeyDown(Enum.KeyCode.Return) or UserInputService:IsKeyDown(Enum.KeyCode.KeypadEnter)) then
@@ -6360,7 +6324,7 @@ tabAllowed = true
 Cmdbar.FocusLost:Connect(function(enterpressed)
 	if enterpressed then
 		local cmdbarText = Cmdbar.Text:gsub("^"..prefix,"")
-		execCmd(cmdbarText,Players.LocalPlayer,true)
+		g.execCmd(cmdbarText,Players.LocalPlayer,true)
 	end
 	if tabComplete then tabComplete:Disconnect() end
 	wait()
@@ -6416,8 +6380,8 @@ function ESP(plr, logic)
 			ESPholder.Name = plr.Name..'_ESP'
 			ESPholder.Parent = COREGUI
 			repeat wait(1) until plr.Character and getRoot(plr.Character) and plr.Character:FindFirstChildOfClass("Humanoid")
-			for b,n in pairs (plr.Character:GetChildren()) do
-				if (n:IsA("BasePart")) then
+			for _, n in ipairs(plr.Character:GetChildren()) do
+				if n:IsA("BasePart") then
 					local a = Instance.new("BoxHandleAdornment")
 					a.Name = plr.Name
 					a.Parent = ESPholder
@@ -6426,8 +6390,12 @@ function ESP(plr, logic)
 					a.ZIndex = 10
 					a.Size = n.Size
 					a.Transparency = espTransparency
-					if logic == true then
-						a.Color = BrickColor.new(plr.TeamColor == Players.LocalPlayer.TeamColor and "Bright green" or "Bright red")
+					if logic then
+						if plr.TeamColor == Players.LocalPlayer.TeamColor then
+							a.Color = BrickColor.new("Bright green")
+						else
+							a.Color = BrickColor.new("Bright red")
+						end
 					else
 						a.Color = plr.TeamColor
 					end
@@ -6697,9 +6665,7 @@ function refreshbinds()
 end
 
 refreshbinds()
-
 toggleOn = {}
-
 function unkeybind(cmd,key)
 	for i = #binds,1,-1 do
 		if binds[i].COMMAND == cmd and binds[i].KEY == key then
@@ -6717,7 +6683,7 @@ function unkeybind(cmd,key)
 end
 
 PositionsFrame.Delete.MouseButton1Click:Connect(function()
-	execCmd('cpos')
+	g.execCmd('cpos')
 end)
 
 function refreshwaypoints()
@@ -6745,10 +6711,10 @@ function refreshwaypoints()
 			table.insert(text2,newpoint.Text.TP)
 			Holder_4.CanvasSize = UDim2.new(0,0,0, Position + 30)
 			newpoint.Text.Delete.MouseButton1Click:Connect(function()
-				execCmd('dpos '..WayPoints[i].NAME)
+				g.execCmd('dpos '..WayPoints[i].NAME)
 			end)
 			newpoint.Text.TP.MouseButton1Click:Connect(function()
-				execCmd("loadpos "..WayPoints[i].NAME)
+				g.execCmd("loadpos "..WayPoints[i].NAME)
 			end)
 			num = num+1
 		end
@@ -6768,10 +6734,10 @@ function refreshwaypoints()
 			table.insert(text2,newpoint.Text.TP)
 			Holder_4.CanvasSize = UDim2.new(0,0,0, Position + 30)
 			newpoint.Text.Delete.MouseButton1Click:Connect(function()
-				execCmd('dpos '..pWayPoints[i].NAME)
+				g.execCmd('dpos '..pWayPoints[i].NAME)
 			end)
 			newpoint.Text.TP.MouseButton1Click:Connect(function()
-				execCmd("loadpos "..pWayPoints[i].NAME)
+				g.execCmd("loadpos "..pWayPoints[i].NAME)
 			end)
 			num = num+1
 		end
@@ -6802,14 +6768,13 @@ function refreshaliases()
 			table.insert(text2,newalias.Text.Delete)
 			Holder_3.CanvasSize = UDim2.new(0,0,0, Position + 30)
 			newalias.Text.Delete.MouseButton1Click:Connect(function()
-				execCmd('removealias '..aliases[i].ALIAS)
+				g.execCmd('removealias '..aliases[i].ALIAS)
 			end)
 		end
 	end
 end
 
 local bindChosenKeyUp = false
-
 BindTo.MouseButton1Click:Connect(function()
 	awaitingInput = true
 	BindTo.Text = 'Press something'
@@ -6890,12 +6855,12 @@ function onInputBegan(input,gameProcessed)
 						local isOn = toggleOn[v] == true
 						toggleOn[v] = not isOn
 						if isOn then
-							execCmd(v.TOGGLE,Players.LocalPlayer)
+							g.execCmd(v.TOGGLE,Players.LocalPlayer)
 						else
-							execCmd(v.COMMAND,Players.LocalPlayer)
+							g.execCmd(v.COMMAND,Players.LocalPlayer)
 						end
 					else
-						execCmd(v.COMMAND,Players.LocalPlayer)
+						g.execCmd(v.COMMAND,Players.LocalPlayer)
 					end
 				end
 			end
@@ -6908,7 +6873,7 @@ function onInputEnded(input,gameProcessed)
 		for i,v in pairs(binds) do
 			if v.ISKEYUP then
 				if (input.UserInputType == Enum.UserInputType.Keyboard and v.KEY:lower()==tostring(input.KeyCode):lower()) or (input.UserInputType == Enum.UserInputType.MouseButton1 and v.KEY:lower()=='leftclick') or (input.UserInputType == Enum.UserInputType.MouseButton2 and v.KEY:lower()=='rightclick') then
-					execCmd(v.COMMAND,Players.LocalPlayer)
+					g.execCmd(v.COMMAND,Players.LocalPlayer)
 				end
 			end
 		end
@@ -6917,7 +6882,6 @@ end
 
 UserInputService.InputBegan:Connect(onInputBegan)
 UserInputService.InputEnded:Connect(onInputEnded)
-
 ClickTP.Select.MouseButton1Click:Connect(function()
 	if keySelected then
 		addbind('clicktp',keyPressed,bindChosenKeyUp)
@@ -6991,7 +6955,6 @@ IYMouse.Button1Down:Connect(function()
 end)
 
 PluginsGUI = PluginEditor.background
-
 function addPlugin(name)
 	if name:lower() == 'plugin file name' or name:lower() == 'iy_fe.iy' or name == 'iy_fe' then
 		Notify_InfP('Plugin Error','Please enter a valid plugin')
@@ -7076,6 +7039,8 @@ function refreshplugins(dontSave)
 		end
 	end
 end
+wait(0.1)
+g.refreshplugins = refreshplugins
 
 local PluginCache
 function LoadPlugin(val,startup)
@@ -10527,12 +10492,12 @@ addcmd("sitwalk", {}, function(args, speaker)
 	speaker.Character:FindFirstChildWhichIsA("Humanoid").HipHeight = not r15(speaker) and -1.5 or 0.5
 end)
 
-get_or_set("wait_for_datamodel", wait_for_datamodel)
-get_or_set("wait_for_child", wait_for_child)
-get_or_set("wait_for_descendant", wait_for_descendant)
-get_or_set("wait_for_child_safe", wait_for_child_safe)
-get_or_set("wait_instance", wait_instance)
-get_or_set("retry_find", retry_find)
+g.get_or_set("wait_for_datamodel", wait_for_datamodel)
+g.get_or_set("wait_for_child", wait_for_child)
+g.get_or_set("wait_for_descendant", wait_for_descendant)
+g.get_or_set("wait_for_child_safe", wait_for_child_safe)
+g.get_or_set("wait_instance", wait_instance)
+g.get_or_set("retry_find", retry_find)
 getgenv().get_root = getgenv().get_root or function(player, time_out)
 	time_out = time_out and tonumber(time_out) or 5
 	local char = wait_character(player, time_out)
@@ -10553,22 +10518,9 @@ getgenv().get_human = getgenv().get_human or function(player, time_out)
 	end, time_out)
 end
 
-getgenv().hasProp = getgenv().hasProp or function(inst, prop)
-   return inst and isProperty(inst, prop) ~= nil
-end
-
-getgenv().setProperty = getgenv().setProperty or function(inst, prop, v)
-	local s, _ = pcall(function() inst[prop] = v end)
-	return s
-end
-
-getgenv().safeSet = getgenv().safeSet or function(inst, prop, val)
-   if inst and hasProp(inst, prop) then setProperty(inst, prop, val) end
-end
-
 getgenv().anti_sit_enabled = getgenv().anti_sit_enabled or false
 getgenv().anti_sit_connections = getgenv().anti_sit_connections or {}
-local local_player = speaker or game.Players.LocalPlayer or cloneref and cloneref(game:GetService("Players")).LocalPlayer or game:GetService("Players").LocalPlayer
+local local_player = speaker or cloneref and cloneref(game:GetService("Players")).LocalPlayer or game:GetService("Players").LocalPlayer
 local function cleanup_connections()
 	for _, conn in pairs(getgenv().anti_sit_connections) do
 		if conn and conn.Connected then
@@ -11438,7 +11390,12 @@ function low_level_executor()
 	return false
 end
 
-addcmd('remotespy',{'rspy'},function(args, speaker)
+addcmd("remotespy", {"rspy", "cobalt", "cspy"}, function(args, speaker)
+    Notify_InfP("Loading", "Hold on a sec")
+    loadstring(game:HttpGet("https://gitlab.com/upio/cobalt/-/releases/permalink/latest/downloads/Cobalt.luau"))()
+end)
+
+addcmd('simplyspy',{'sspy'},function(args, speaker)
 	if low_level_executor() then return Notify_InfP("Issue", "Your executor does not support this script.") end
 	if game.PlaceId == 7041939546 or game.PlaceId == 891852901 then
 		Notify_InfP("Hold on a sec", "Loading Hydroxide RemoteSpy (bypass).")
@@ -11465,8 +11422,8 @@ addcmd('loopgoto', {}, function(args, speaker)
       loopgoto = nil
       local humanoid = speaker.Character and speaker.Character:FindFirstChildOfClass('Humanoid')
       if humanoid then
-         speaker.Character:FindFirstChildOfClass('Humanoid').Sit = false
-         speaker.Character:FindFirstChildWhichIsA("Humanoid"):ChangeState(3)
+         humanoid.Sit = false
+         humanoid:ChangeState(3)
          wait()
       end
 
@@ -11476,21 +11433,31 @@ addcmd('loopgoto', {}, function(args, speaker)
 
       repeat
          local targetPlayer = Players:FindFirstChild(v)
-         local myRoot = getRoot(speaker.Character)
-
-         if targetPlayer and targetPlayer.Character then
-            local targetRoot = getRoot(targetPlayer.Character)
-
-            if speaker.Character:FindFirstChildOfClass("Humanoid").Sit or speaker.Character:FindFirstChildOfClass("Humanoid").Sit == true then
-               speaker.Character:FindFirstChildOfClass('Humanoid').Sit = false
-               speaker.Character:FindFirstChildWhichIsA("Humanoid"):ChangeState(3)
-            end
-
-            if myRoot and targetRoot and targetRoot.Position.Y > -1000 then
-               myRoot.CFrame = targetRoot.CFrame + Vector3.new(distance, 1, 0)
-            end
-         else
+         if not targetPlayer then
             loopgoto = nil
+            break
+         end
+
+         if not targetPlayer.Character then
+            local respawned = targetPlayer.CharacterAdded:Wait()
+            if loopgoto ~= Players[v] then break end
+            targetPlayer.Character = respawned
+         end
+
+         local myChar = speaker.Character
+         local myHumanoid = myChar and myChar:FindFirstChildOfClass("Humanoid")
+         local myRoot = myChar and getRoot(myChar)
+         local targetChar = targetPlayer.Character
+         local targetRoot = targetChar and getRoot(targetChar)
+         local targetHumanoid = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
+
+         if myHumanoid and myHumanoid.Sit then
+            myHumanoid.Sit = false
+            myHumanoid:ChangeState(3)
+         end
+
+         if myRoot and targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
+            myRoot.CFrame = targetRoot.CFrame + Vector3.new(distance, 1, 0)
          end
 
          wait(lDelay)
@@ -11498,7 +11465,7 @@ addcmd('loopgoto', {}, function(args, speaker)
    end
 end)
 
-addcmd('unloopgoto',{'noloopgoto'},function(args, speaker)
+addcmd('unloopgoto', {'noloopgoto'}, function(args, speaker)
    loopgoto = nil
 end)
 
