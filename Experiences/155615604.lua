@@ -41,7 +41,7 @@ else
     g.http_get = function(url) return http_game(game, url) end
 end
 wait(0.1)
-local Raw_Version = "V1.3.7"
+local Raw_Version = "V1.3.8"
 g.Script_Version = tostring(Raw_Version).."-PrisonLife"
 local StarterGui = g.StarterGui or cloneref and cloneref(game:GetService("StarterGui")) or game:GetService("StarterGui")
 local StarterPlayer = g.StarterPlayer or cloneref and cloneref(game:GetService("StarterPlayer")) or game:GetService("StarterPlayer")
@@ -89,6 +89,8 @@ g.fence_godmode_on = g.fence_godmode_on or false
 g.silent_aim_team_check = g.silent_aim_team_check or true
 g.esp_cache = g.esp_cache or {}
 g.esp_active = g.esp_active or false
+g.inf_jump_on = g.inf_jump_on or false
+g.inf_jump_debounce = g.inf_jump_debounce or false
 local has_gethui = (typeof(gethui) == "function") or (typeof(g.gethui) == "function")
 local has_gethidden = (typeof(get_hidden_gui) == "function") or (typeof(g.get_hidden_gui) == "function")
 local RunService = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
@@ -782,6 +784,26 @@ g.noclip_toggle = function(state)
     end
 end
 
+g.inf_jump_toggle = function(state)
+    g.inf_jump_on = state
+    if state then
+        FlamesLibrary.connect("inf_jump", UserInputService.JumpRequest:Connect(function()
+            if g.inf_jump_debounce then return end
+            local Char = g.Character or speaker.Character or g.get_char(speaker)
+            if not Char or not Char:IsDescendantOf(workspace or game) then return end
+            local Human = g.Humanoid or Char and Char:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
+            if not Human or not Human.Parent then return end
+            g.inf_jump_debounce = true
+            Human:ChangeState(Enum.HumanoidStateType.Jumping)
+            task.wait()
+            g.inf_jump_debounce = false
+        end))
+    else
+        FlamesLibrary.disconnect("inf_jump")
+        g.inf_jump_debounce = false
+    end
+end
+
 local AMMO_KEYS = {MaxAmmo = true, CurrentAmmo = true, Local_CurrentAmmo = true}
 local function find_gun_remotes_folder()
     local cache = g.gun_remotes_folder_RS
@@ -1387,6 +1409,14 @@ Flag = "Walkspeed_Slider_UI",
 Callback = function(val)
     g.walkspeed_value = val
 end,}, "Walkspeed_Slider_UI")
+
+g.create_ui_element("Toggle", LocalPlayer_Section, {
+Name = "Infinite Jump (FE)",
+Default = g.inf_jump_on or false,
+Flag = "Inf_Jump_Toggle_UI",
+Callback = function(state)
+    g.inf_jump_toggle(state)
+end,}, "Inf_Jump_Toggle_UI")
 
 g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "Auto Reset On Criminal (FE)",
