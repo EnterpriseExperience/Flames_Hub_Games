@@ -400,28 +400,26 @@ g.get_weapons = function(choice)
     local remote = g.giver_pressed_remote_RS or find_giver_remote()
     if not remote or not remote:IsA("RemoteEvent") then return end
     local char = g.Character or speaker.Character or g.get_char(speaker)
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    local ren_giver = find_touch_giver_by_name("Remington 870")
-    if not ren_giver then return end
-    local target_giver = ren_giver
+    if not char or not char:IsDescendantOf(workspace or game) then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart") or g.get_root(speaker)
+    if not hrp or not hrp.Parent then return end
+    local target_giver = find_touch_giver_by_name("Remington 870")
+    if not target_giver then return end
+    local done = false
     local function stop()
-        RunService:UnbindFromRenderStep("gw_restore")
-        FlamesLibrary.disconnect("get_weapons")
+        if done then return end
+        done = true
         FlamesLibrary.disconnect("get_weapons_backpack")
     end
 
-    FlamesLibrary.connect("get_weapons", RunService.Heartbeat:Connect(function()
+    local function fire_giver(giver)
         local old_cf = hrp.CFrame
-        local giver_pos = target_giver:GetPivot().Position
-        hrp.CFrame = CFrame.new(giver_pos + Vector3.new(0, 0, 10))
-        pcall(remote.FireServer, remote, target_giver)
-        RunService:BindToRenderStep("gw_restore", 101, function()
-            hrp.CFrame = old_cf
-            RunService:UnbindFromRenderStep("gw_restore")
-        end)
-    end))
+        hrp.CFrame = CFrame.new(giver:GetPivot().Position + Vector3.new(0, 0, 10))
+        task.wait()
+        pcall(remote.FireServer, remote, giver)
+        task.wait()
+        hrp.CFrame = old_cf
+    end
 
     FlamesLibrary.connect("get_weapons_backpack", speaker.Backpack.ChildAdded:Connect(function(c)
         local name = tostring(c)
@@ -429,17 +427,16 @@ g.get_weapons = function(choice)
             if choice and choice ~= "" then
                 local next_giver = find_touch_giver_by_name(choice)
                 if next_giver then
-                    target_giver = next_giver
-                else
-                    stop()
+                    fire_giver(next_giver)
                 end
-            else
-                stop()
             end
-        elseif name == choice or (choice == nil or choice == "") then
+            stop()
+        elseif name == choice then
             stop()
         end
     end))
+
+    fire_giver(target_giver)
 end
 
 g.auto_reset_team_toggle = function(state)
@@ -505,14 +502,14 @@ g.fence_godmode_toggle = function(state)
     g.fence_godmode_on = state
     if state then
         for _, v in ipairs(folder:GetDescendants()) do
-            if v:IsA("TouchTransmitter") then
+            if v:IsA("BasePart") and v:FindFirstChildWhichIsA("TouchTransmitter") then
                 g.fence_transmitters[v] = v.Parent
-                v.Parent = AssetService
+                pcall(function() v.Parent = AssetService end)
             end
         end
     else
-        for transmitter, original_parent in pairs(g.fence_transmitters) do
-            pcall(function() transmitter.Parent = original_parent end)
+        for part, original_parent in pairs(g.fence_transmitters) do
+            pcall(function() part.Parent = original_parent end)
         end
         g.fence_transmitters = {}
     end
@@ -1503,7 +1500,7 @@ end,}, "Fence_Godmode_Toggle_UI")
 g.create_ui_element("Button", Weapons_Section, {
 Name = "Get Remington 870 (FE)",
 Callback = function()
-    g.get_weapons()
+    g.get_weapons("Remington 870")
 end,})
 
 g.create_ui_element("Button", Weapons_Section, {
