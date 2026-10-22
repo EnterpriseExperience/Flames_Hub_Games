@@ -403,40 +403,26 @@ g.get_weapons = function(choice)
     if not char or not char:IsDescendantOf(workspace or game) then return end
     local hrp = char:FindFirstChild("HumanoidRootPart") or g.get_root(speaker)
     if not hrp or not hrp.Parent then return end
-    local target_giver = find_touch_giver_by_name("Remington 870")
-    if not target_giver then return end
-    local done = false
-    local function stop()
-        if done then return end
-        done = true
-        FlamesLibrary.disconnect("get_weapons_backpack")
-    end
-
-    local function fire_giver(giver)
+    local backpack = g.Backpack or speaker:FindFirstChildOfClass("Backpack")
+    if not backpack then return end
+    local target_name = choice or "Remington 870"
+    local maximum_attempts = 10
+    local function has_in_backpack(name) return backpack:FindFirstChild(name) ~= nil end
+    local function fire_at_giver(giver)
         local old_cf = hrp.CFrame
-        hrp.CFrame = CFrame.new(giver:GetPivot().Position + Vector3.new(0, 0, 10))
-        task.wait()
-        pcall(remote.FireServer, remote, giver)
-        task.wait()
+        hrp.CFrame = CFrame.new(giver:GetPivot().Position + Vector3.new(0, 0, 2))
+        task.wait(0.2)
+        local start = os.clock()
+        while (os.clock() - start) < maximum_attempts do
+            if has_in_backpack(target_name) then break end
+            pcall(remote.FireServer, remote, giver)
+            task.wait(0.5)
+        end
         hrp.CFrame = old_cf
     end
-
-    FlamesLibrary.connect("get_weapons_backpack", speaker.Backpack.ChildAdded:Connect(function(c)
-        local name = tostring(c)
-        if name == "Remington 870" then
-            if choice and choice ~= "" then
-                local next_giver = find_touch_giver_by_name(choice)
-                if next_giver then
-                    fire_giver(next_giver)
-                end
-            end
-            stop()
-        elseif name == choice then
-            stop()
-        end
-    end))
-
-    fire_giver(target_giver)
+    local giver = find_touch_giver_by_name(target_name)
+    if not giver then g.notify("Error", "Could not find giver for: " .. target_name, 3); return end
+    fire_at_giver(giver)
 end
 
 g.auto_reset_team_toggle = function(state)
@@ -870,8 +856,8 @@ g.is_hostile = function(Player)
 end
 
 g.get_team_color = function(Player)
-    if g.is_hostile(Player) then return Color3.fromRGB(255, 0, 0) end
     if Player.Team and Player.Team.Name == "Inmates" then return Color3.fromRGB(255, 140, 0) end
+    if g.is_hostile(Player) then return Color3.fromRGB(255, 0, 0) end
     if Player.Team and speaker.Team and Player.Team == speaker.Team then return Player.Team.TeamColor.Color end
     return Color3.fromRGB(255, 0, 0)
 end
