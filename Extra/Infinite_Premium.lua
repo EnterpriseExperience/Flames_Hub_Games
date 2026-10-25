@@ -666,37 +666,227 @@ getgenv().safeSet = getgenv().safeSet or function(inst, prop, val)
    if inst and g.hasProp(inst, prop) then g.setProperty(inst, prop, val) end
 end
 
-getgenv().anti_sit_enabled = getgenv().anti_sit_enabled or false
-local local_player = speaker
-local tag_name = "anti_sit_system"
-local function hook_character(character)
-	if not character or not character:FindFirstChild("HumanoidRootPart") then character:WaitForChild("HumanoidRootPart") end
-	local humanoid = getgenv().Humanoid or character:WaitForChild("Humanoid")
-	local seated_connection
-	seated_connection = humanoid.Seated:Connect(function(active)
-		if not getgenv().anti_sit_enabled then return  end
-		if active then
-			task.wait()
-			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-			humanoid.Sit = false
-		end
-	end)
+function hb() RunService.Heartbeat:Wait() end
+g.get_or_set = g.get_or_set or function(name, value)
+    if rawget and rawset and typeof(rawget) == "function" and typeof(rawset) == "function" then
+        local existing = rawget(g, name)
+        if existing == nil then
+            rawset(g, name, value)
+            return value
+        end
+        return existing
+    end
 
-	getgenv().FlamesLibrary.connect(tag_name, seated_connection)
+    local existing = g[name]
+    if existing == nil then
+        g[name] = value
+        return value
+    end
+
+    return existing
+end
+
+local function wait_for_datamodel(inst)
+    if not inst then return false end
+    local start_time = os.clock()
+    local timeout = Players.RespawnTime + 0.75
+    while os.clock() - start_time < timeout do
+        local ok, result = pcall(function() return inst.Parent and inst:IsDescendantOf(workspace) and inst:IsDescendantOf(game) end)
+        if ok and result then return true end
+        hb()
+    end
+    return false
+end
+wait(0.1)
+g.get_or_set("wait_for_datamodel", wait_for_datamodel)
+local function wait_for_child(parent, name, timeout)
+    if not parent or not parent:IsDescendantOf(game) then return nil end
+    local existing = parent:FindFirstChild(name)
+    if existing then return existing end
+    timeout = timeout or 10
+    local start_time = os.clock()
+    local result = nil
+    while os.clock() - start_time < timeout do
+        if not parent or not parent:IsDescendantOf(game) then break end
+        local ok, found = pcall(function() return parent:FindFirstChild(name) end)
+        if ok and found then
+            result = found
+            break
+        end
+        hb()
+    end
+    return result
+end
+wait(0.1)
+g.get_or_set("wait_for_child", wait_for_child)
+local function wait_for_descendant(parent, name, timeout)
+    if not parent or not parent:IsDescendantOf(game) then return nil end
+    local found = parent:FindFirstChild(name, true)
+    if found then return found end
+    timeout = timeout or 10
+    local start_time = os.clock()
+    local result = nil
+    local conn
+    pcall(function()
+        conn = parent.DescendantAdded:Connect(function(d)
+            if d.Name == name then
+                result = d
+            end
+        end)
+    end)
+    while not result and os.clock() - start_time < timeout do
+        if not parent or not parent:IsDescendantOf(game) then break end
+        local ok, check = pcall(function() return parent:FindFirstChild(name, true) end)
+        if ok and check then
+            result = check
+            break
+        end
+        hb()
+    end
+    pcall(function() if conn then conn:Disconnect() end end)
+    return result
+end
+wait(0.1)
+g.get_or_set("wait_for_descendant", wait_for_descendant)
+local function wait_for_child_safe(parent, name, timeout)
+    if not parent or not parent:IsDescendantOf(game) then return nil end
+    local existing = parent:FindFirstChild(name)
+    if existing then return existing end
+    timeout = timeout or 10
+    local start_time = os.clock()
+    while os.clock() - start_time < timeout do
+        if not parent or not parent:IsDescendantOf(game) then break end
+        local ok, found = pcall(function() return parent:FindFirstChild(name) end)
+        if ok and found then return found end
+        hb()
+    end
+    return nil
+end
+g.get_or_set("wait_for_child_safe", wait_for_child_safe)
+
+local function retry_find(func, retries, delay)
+    for _ = 1, retries do
+        local ok, result = pcall(func)
+        if ok and result then return result end
+        getgenv().FlamesLibrary.wait(delay)
+    end
+    return nil
+end
+g.get_or_set("retry_find", retry_find)
+
+getgenv().return_char = function(player, timeout)
+    if not player or not player:IsA("Player") then return nil end
+    timeout = tonumber(timeout) or Players.RespawnTime + 1
+    local start = os.clock()
+    while os.clock() - start < timeout do
+        local char = player.Character
+        if char and char:IsDescendantOf(workspace) and char:IsDescendantOf(game) then
+            local ok, hum = pcall(function() return char:FindFirstChildOfClass("Humanoid") end)
+            if ok and hum and hum.Health > 0 then return char end
+        end
+        hb()
+    end
+    return nil
+end
+
+g.get_char = function(player, time_out)
+    time_out = tonumber(time_out) or Players.RespawnTime + 1
+    if not player or not player:IsA("Player") then return nil end
+    local char = player.Character
+    if char and char:IsDescendantOf(workspace) and char:IsDescendantOf(game) then return char end
+    local start = os.clock()
+    while os.clock() - start < time_out do
+        char = player.Character
+        if char and wait_for_datamodel(char) then return char end
+        hb()
+    end
+    return nil
+end
+
+g.get_human = function(player, time_out)
+    time_out = tonumber(time_out) or Players.RespawnTime + 1
+    local char = g.get_char(player, time_out)
+    if not char then return nil end
+    local existing = char:FindFirstChildOfClass("Humanoid")
+    if existing then return existing end
+    return wait_for_child_safe(char, "Humanoid", time_out)
+end
+
+g.get_root = function(player, time_out)
+    time_out = tonumber(time_out) or Players.RespawnTime + 1
+    local char = g.get_char(player, time_out)
+    if not char then return nil end
+    local existing = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+    if existing then return existing end
+    return wait_for_child_safe(char, "HumanoidRootPart", time_out)
+        or wait_for_child_safe(char, "UpperTorso", time_out)
+        or wait_for_child_safe(char, "Torso", time_out)
+end
+
+getgenv().anti_sit_enabled = getgenv().anti_sit_enabled or false
+getgenv().anti_sit_connections = getgenv().anti_sit_connections or {}
+local local_player = speaker or Players.LocalPlayer
+local function cleanup_connections()
+	for _, conn in pairs(getgenv().anti_sit_connections) do
+		if conn and conn.Connected then
+			conn:Disconnect()
+		end
+	end
+	getgenv().anti_sit_connections = {}
+end
+
+local function unseat(humanoid)
+	if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+	task.spawn(function()
+		if humanoid and humanoid.SeatPart then
+			local seat_part = humanoid.SeatPart
+			for _, child in pairs(seat_part:GetChildren()) do
+				if child:IsA("Weld") or child:IsA("Motor6D") or child:IsA("WeldConstraint") then
+					child:Destroy()
+				end
+			end
+			local prox = seat_part:FindFirstChildOfClass("ProximityPrompt")
+			if prox and prox.Enabled == false then
+				prox.Enabled = true
+			end
+		end
+		local jump_enabled = humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping) or false
+		if not jump_enabled then humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true) end
+		for _ = 1, 5 do
+			task.wait()
+			if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then  humanoid.Sit = false end
+			if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then  humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
+		end
+		if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then  humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true) end
+		if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) and not jump_enabled then humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false) end
+	end)
+end
+
+local function hook_character(character)
+	if not character or not speaker.Character then character = speaker.Character or g.get_char(local_player, Players.RespawnTime + 1) end
+	if not character then return end
+	if not character:FindFirstChild("HumanoidRootPart") then character:WaitForChild("HumanoidRootPart") end
+	local humanoid = character:FindFirstChildWhichIsA("Humanoid") or g.get_human(local_player, 10)
+	if not humanoid or not humanoid.Parent or not humanoid:IsDescendantOf(game) then return end
+	local conn
+	conn = humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
+		if not getgenv().anti_sit_enabled then return end
+		if humanoid.Sit then unseat(humanoid) end
+	end)
+	table.insert(getgenv().anti_sit_connections, conn)
+	if humanoid.Sit then
+		unseat(humanoid)
+	end
 end
 
 local function start_anti_sit()
-	if getgenv().FlamesLibrary.is_alive(tag_name) then return  end
-	if local_player.Character then hook_character(local_player.Character) end
-	local char_connection = local_player.CharacterAdded:Connect(function(character) hook_character(character) end)
-	getgenv().FlamesLibrary.connect(tag_name, char_connection)
+	if #getgenv().anti_sit_connections > 0 then return end
+	hook_character(local_player.Character)
+	local char_conn = local_player.CharacterAdded:Connect(function(character) hook_character(character) end)
+	table.insert(getgenv().anti_sit_connections, char_conn)
 end
 
-local function stop_anti_sit()
-	if not getgenv().FlamesLibrary.is_alive(tag_name) then return end
-	getgenv().FlamesLibrary.disconnect(tag_name)
-end
-
+local function stop_anti_sit() cleanup_connections() end
 getgenv().toggle_anti_sit = function(state)
 	getgenv().anti_sit_enabled = state
 	if state then
@@ -2386,114 +2576,6 @@ function vtype(o, t)
 	if o == nil then return false end
 	if type(o) == "userdata" then return typeof(o) == t end
 	return type(o) == t
-end
-
-function hb() RunService.Heartbeat:Wait() end
-local function wait_for_datamodel(inst)
-	if not inst then return false end
-	local attempts = 0
-	local maximum_attempts = 300
-	while attempts < maximum_attempts do
-		if inst.Parent and inst:IsDescendantOf(workspace) then return true end
-		task.wait(0.1)
-		attempts += 1
-	end
-
-	return false
-end
-
-local function wait_for_child(parent, name)
-	if not parent then return nil end
-	local existing = parent:FindFirstChild(name)
-	if existing then return existing end
-	local ok, obj = pcall(function() return parent:WaitForChild(name, math.huge) end)
-	return ok and obj or nil
-end
-
-local function wait_for_descendant(parent, name)
-	if not parent then return nil end
-	local found = parent:FindFirstChild(name, true)
-	if found then return found end
-	local conn
-	local result = nil
-	conn = parent.DescendantAdded:Connect(function(d)
-		if d.Name == name then
-			result = d
-			conn:Disconnect()
-		end
-	end)
-
-	while not result do
-		local check = parent:FindFirstChild(name, true)
-		if check then
-			result = check
-			conn:Disconnect()
-			break
-		end
-		task.wait()
-	end
-
-	return result
-end
-
-local function wait_for_child_safe(parent, name)
-	if not parent then return nil end
-	local ok, obj = pcall(function() return parent:WaitForChild(name, 9e9) end)
-	if ok and obj then return obj end
-	return nil
-end
-
-local function retry_find(func, retries, delay)
-	for _ = 1, retries do
-		local ok, result = pcall(func)
-		if ok and result then return result end
-		task.wait(delay)
-	end
-	return nil
-end
-
-local function wait_character(player, timeout)
-	timeout = timeout or 10
-	local start = os.clock()
-	while os.clock() - start < timeout do
-		local char = player.Character
-		if char and char.Parent then return char end
-		hb()
-	end
-
-	return nil
-end
-
-local function wait_instance(parent, resolver, timeout)
-	timeout = timeout or 10
-	local start_time = os.clock()
-	local inst = resolver()
-	if inst then return inst end
-	local conn
-	conn = parent.ChildAdded:Connect(function() inst = resolver() end)
-	while not inst and os.clock() - start_time < timeout do hb() end
-	if conn then conn:Disconnect() end
-	return inst
-end
-
-getgenv().return_char = getgenv().return_char or function(Player, timeout)
-	if not Player or not Player:IsA("Player") then return nil end
-	timeout = tonumber(timeout) or 5
-	local start = os.clock()
-	while os.clock() - start < timeout do
-		local char = Player.Character
-		if char and char.Parent and char:IsDescendantOf(game) then -- neat.
-			local hum = char:FindFirstChildOfClass("Humanoid")
-
-			if hum and hum.Health > 0 then
-				return char
-			end
-		end
-
-		task.wait()
-	end
-
-	return nil
 end
 
 function get_char(player, time_out)
@@ -10118,16 +10200,16 @@ addcmd("god", {}, function(args, speaker)
     local Char, Pos = speaker.Character, Cam.CFrame
     local Human = Char and Char:FindFirstChildWhichIsA("Humanoid")
     local nHuman = Human:Clone()
-    nHuman.Parent = char
+    nHuman.Parent = Char
     speaker.Character = nil
     nHuman:SetStateEnabled(15, false)
     nHuman:SetStateEnabled(1, false)
     nHuman:SetStateEnabled(0, false)
     nHuman.BreakJointsOnDeath = true
     Human:Destroy()
-    speaker.Character = char
+    speaker.Character = Char
     Cam.CameraSubject = nHuman
-    Cam.CFrame = task.wait() and pos
+    Cam.CFrame = task.wait() and Pos
     nHuman.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
     local Script = Char:FindFirstChild("Animate")
     if Script then
@@ -10154,7 +10236,6 @@ addcmd('invisible',{'invis'},function(args, speaker)
 	local Void = workspace.FallenPartsDestroyHeight
 	InvisibleCharacter.Name = ""
 	local CF
-
 	local invisFix = RunService.Stepped:Connect(function()
 		pcall(function()
 			local IsInteger
@@ -10171,11 +10252,11 @@ addcmd('invisible',{'invis'},function(args, speaker)
 			local Z = tonumber(Pos_Seperate[3])
 			if IsInteger == true then
 				if Y <= Void then
-					Respawn()
+					g.Respawn()
 				end
 			elseif IsInteger == false then
 				if Y >= Void then
-					Respawn()
+					g.Respawn()
 				end
 			end
 		end)
@@ -10209,14 +10290,16 @@ addcmd('invisible',{'invis'},function(args, speaker)
 				wait()
 				Character.Parent = workspace
 				Character:FindFirstChildWhichIsA'Humanoid':Destroy()
-				TurnVisible()
+				g.TurnVisible()
 			end)
 		end
 	end
+	wait(0.1)
+	g.Respawn = Respawn
 
 	local invisDied
 	invisDied = InvisibleCharacter:FindFirstChildOfClass'Humanoid'.Died:Connect(function()
-		Respawn()
+		g.Respawn()
 		invisDied:Disconnect()
 	end)
 
@@ -10233,10 +10316,9 @@ addcmd('invisible',{'invis'},function(args, speaker)
 	InvisibleCharacter.Parent = workspace
 	InvisibleCharacter.HumanoidRootPart.CFrame = CF_1
 	Player.Character = InvisibleCharacter
-	execCmd('fixcam')
+	if g.execCmd and typeof(g.execCmd) == "function" then g.execCmd('fixcam') end
 	Player.Character.Animate.Disabled = true
 	Player.Character.Animate.Disabled = false
-
 	function TurnVisible()
 		if IsInvis == false then return end
 		invisFix:Disconnect()
@@ -10252,27 +10334,30 @@ addcmd('invisible',{'invis'},function(args, speaker)
 		Player.Character.Animate.Disabled = true
 		Player.Character.Animate.Disabled = false
 		invisDied = Character:FindFirstChildOfClass'Humanoid'.Died:Connect(function()
-			Respawn()
+			g.Respawn()
 			invisDied:Disconnect()
 		end)
 		invisRunning = false
 	end
+	wait(0.1)
+	g.TurnVisible = TurnVisible
 	Notify_InfP('Invisible','You now appear invisible to other players')
 end)
 
 addcmd("visible", {"vis","uninvisible"}, function(args, speaker)
-	TurnVisible()
+	g.TurnVisible()
 end)
 
 addcmd("toggleinvis", {}, function(args, speaker)
-	execCmd(invisRunning and "visible" or "invisible")
+	g.execCmd(invisRunning and "visible" or "invisible")
 end)
 
 addcmd('toolinvisible',{'toolinvis','tinvis'},function(args, speaker)
-	local Char  = Players.LocalPlayer.Character
+	local Char  = Players.LocalPlayer.Character or g.get_char(Players.LocalPlayer)
 	local touched = false
 	local tpdback = false
 	local box = Instance.new('Part')
+	local loc = Char.HumanoidRootPart.Position or Vector3.new(0, 0, 0)
 	box.Anchored = true
 	box.CanCollide = true
 	box.Size = Vector3.new(10,1,10)
@@ -10367,38 +10452,35 @@ end)
 
 addcmd("maxslopeangle", {"msa"}, function(args, speaker)
 	local sangle = args[1] or 89
-	if isNumber(sangle) then
-		speaker.Character:FindFirstChildWhichIsA("Humanoid").MaxSlopeAngle = sangle
-	end
+	local humanoid = speaker.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
+	if isNumber(sangle) then if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then humanoid.MaxSlopeAngle = sangle end end
 end)
 
 addcmd("gravity", {"grav"}, function(args, speaker)
 	local grav = args[1] or oldgrav
-	if isNumber(grav) then
-		workspace.Gravity = grav
-	end
+	if isNumber(grav) then workspace.Gravity = grav end
 end)
 
 addcmd("hipheight", {"hheight"}, function(args, speaker)
     local hipHeight = args[1] or (r15(speaker) and 2.1 or 0)
-    if isNumber(hipHeight) then
-        speaker.Character:FindFirstChildWhichIsA("Humanoid").HipHeight = hipHeight
-    end
+	local humanoid = speaker.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
+    if isNumber(hipHeight) then if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then humanoid.HipHeight = hipHeight end end
 end)
 
 addcmd("dance", {}, function(args, speaker)
-	pcall(execCmd, "undance")
+	pcall(g.execCmd, "undance")
+	local humanoid = speaker.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
 	local dances = {"27789359", "30196114", "248263260", "45834924", "33796059", "28488254", "52155728"}
 	if r15(speaker) then
 		dances = {"3333432454", "4555808220", "4049037604", "4555782893", "10214311282", "10714010337", "10713981723", "10714372526", "10714076981", "10714392151", "11444443576"}
 	end
 	local animation = Instance.new("Animation")
 	animation.AnimationId = "rbxassetid://" .. dances[math.random(1, #dances)]
-	danceTrack = speaker.Character:FindFirstChildWhichIsA("Humanoid"):LoadAnimation(animation)
+	danceTrack = humanoid and humanoid:LoadAnimation(animation)
 	danceTrack.Looped = true
 	danceTrack:Play()
 end)
-
+	
 addcmd("undance", {"nodance"}, function(args, speaker)
 	danceTrack:Stop()
 	danceTrack:Destroy()
@@ -10469,149 +10551,46 @@ addcmd('nolegs',{'rlegs'},function(args, speaker)
 end)
 
 addcmd("sit", {}, function(args, speaker)
-	speaker.Character:FindFirstChildWhichIsA("Humanoid").Sit = true
+	local humanoid = speaker.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
+	if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then humanoid.Sit = true end
 end)
 
 addcmd("lay", {"laydown"}, function(args, speaker)
-	local humanoid = speaker.Character:FindFirstChildWhichIsA("Humanoid")
-	humanoid.Sit = true
+	local humanoid = speaker.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
+	if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then humanoid.Sit = true end
+	local root = speaker.Character:FindFirstChild("HumanoidRootPart") or g.get_root(speaker)
 	task.wait(0.1)
-	humanoid.RootPart.CFrame = humanoid.RootPart.CFrame * CFrame.Angles(math.pi * 0.5, 0, 0)
-	for _, v in ipairs(humanoid:GetPlayingAnimationTracks()) do
-		v:Stop()
-	end
+	if root and root.Parent then root.CFrame = root.CFrame * CFrame.Angles(math.pi * 0.5, 0, 0) end
+	for _, v in ipairs(humanoid:GetPlayingAnimationTracks()) do v:Stop() end
 end)
 
 addcmd("sitwalk", {}, function(args, speaker)
-	local anims = speaker.Character.Animate
-	local sit = anims.sit:FindFirstChildWhichIsA("Animation").AnimationId
-	anims.idle:FindFirstChildWhichIsA("Animation").AnimationId = sit
-	anims.walk:FindFirstChildWhichIsA("Animation").AnimationId = sit
-	anims.run:FindFirstChildWhichIsA("Animation").AnimationId = sit
-	anims.jump:FindFirstChildWhichIsA("Animation").AnimationId = sit
-	speaker.Character:FindFirstChildWhichIsA("Humanoid").HipHeight = not r15(speaker) and -1.5 or 0.5
+	local anims = speaker.Character:FindFirstChild("Animate")
+	local humanoid = speaker.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
+	local sit = anims and anims.sit and anims.sit:FindFirstChildWhichIsA("Animation") and anims.sit:FindFirstChildWhichIsA("Animation").AnimationId
+	if sit then
+		if anims.idle and anims.idle:FindFirstChildWhichIsA("Animation") then anims.idle:FindFirstChildWhichIsA("Animation").AnimationId = sit end
+		if anims.walk and anims.walk:FindFirstChildWhichIsA("Animation") then anims.walk:FindFirstChildWhichIsA("Animation").AnimationId = sit end
+		if anims.run and anims.run:FindFirstChildWhichIsA("Animation") then anims.run:FindFirstChildWhichIsA("Animation").AnimationId = sit end
+		if anims.jump and anims.jump:FindFirstChildWhichIsA("Animation") then anims.jump:FindFirstChildWhichIsA("Animation").AnimationId = sit end
+	end
+	if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then humanoid.HipHeight = not r15(speaker) and -1.5 or 0.5 end
 end)
-
-g.get_or_set("wait_for_datamodel", wait_for_datamodel)
-g.get_or_set("wait_for_child", wait_for_child)
-g.get_or_set("wait_for_descendant", wait_for_descendant)
-g.get_or_set("wait_for_child_safe", wait_for_child_safe)
-g.get_or_set("wait_instance", wait_instance)
-g.get_or_set("retry_find", retry_find)
-getgenv().get_root = getgenv().get_root or function(player, time_out)
-	time_out = time_out and tonumber(time_out) or 5
-	local char = wait_character(player, time_out)
-	if not char then return nil end
-	return wait_instance(char, function()
-		return char:FindFirstChild("HumanoidRootPart")
-			or char:FindFirstChild("UpperTorso")
-			or char:FindFirstChild("Torso")
-	end, time_out)
-end
-
-getgenv().get_human = getgenv().get_human or function(player, time_out)
-	time_out = tonumber(time_out) or 5
-	local char = wait_character(player, time_out)
-	if not char then return nil end
-	return wait_instance(char, function()
-		return char:FindFirstChildWhichIsA("Humanoid")
-	end, time_out)
-end
-
-getgenv().anti_sit_enabled = getgenv().anti_sit_enabled or false
-getgenv().anti_sit_connections = getgenv().anti_sit_connections or {}
-local local_player = speaker or cloneref and cloneref(game:GetService("Players")).LocalPlayer or game:GetService("Players").LocalPlayer
-local function cleanup_connections()
-	for _, conn in pairs(getgenv().anti_sit_connections) do
-		if conn and conn.Connected then
-			conn:Disconnect()
-		end
-	end
-	getgenv().anti_sit_connections = {}
-end
-
-local function unseat(humanoid)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
-	task.spawn(function()
-		if humanoid.SeatPart then
-			local seat_part = humanoid.SeatPart
-			for _, child in pairs(seat_part:GetChildren()) do
-				if child:IsA("Weld") or child:IsA("Motor6D") or child:IsA("WeldConstraint") then
-					child:Destroy()
-				end
-			end
-			local prox = seat_part:FindFirstChildOfClass("ProximityPrompt")
-			if prox and prox.Enabled == false then
-				prox.Enabled = true
-			end
-		end
-		local jump_enabled = humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping) or false
-		if not jump_enabled then
-			humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
-		end
-		for _ = 1, 5 do
-			task.wait()
-			humanoid.Sit = false
-			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-		end
-		humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-		if not jump_enabled then
-			humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-		end
-	end)
-end
-
-local function hook_character(character)
-	if not character then
-		character = get_char(local_player, 10)
-	end
-	if not character then return end
-	if not character:FindFirstChild("HumanoidRootPart") then
-		character:WaitForChild("HumanoidRootPart")
-	end
-	local humanoid = get_human(local_player, 10)
-	if not humanoid then return end
-	local conn
-	conn = humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
-		if not getgenv().anti_sit_enabled then return end
-		if humanoid.Sit then
-			unseat(humanoid)
-		end
-	end)
-	table.insert(getgenv().anti_sit_connections, conn)
-	if humanoid.Sit then
-		unseat(humanoid)
-	end
-end
-
-local function start_anti_sit()
-	if #getgenv().anti_sit_connections > 0 then return end
-	hook_character(local_player.Character)
-	local char_conn = local_player.CharacterAdded:Connect(function(character) hook_character(character) end)
-	table.insert(getgenv().anti_sit_connections, char_conn)
-end
-
-local function stop_anti_sit() cleanup_connections() end
-getgenv().toggle_anti_sit = function(state)
-	getgenv().anti_sit_enabled = state
-	if state then
-		start_anti_sit()
-	else
-		stop_anti_sit()
-	end
-end
 
 addcmd("nosit", {"antisit"}, function(args, speaker)
 	if getgenv().anti_sit_enabled then return end
+	Notify_InfP("Anti-Sit enabled")
 	getgenv().toggle_anti_sit(true)
 end)
 
 addcmd("unnosit", {}, function(args, speaker)
+	Notify_InfP("Anti-Sit disabled")
 	getgenv().toggle_anti_sit(false)
 end)
 
 addcmd("jump", {}, function(args, speaker)
-	speaker.Character:FindFirstChildWhichIsA("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+	local humanoid = speaker.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
+	if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
 end)
 
 local inf_jump
@@ -10622,9 +10601,8 @@ addcmd("infjump", {"infinitejump"}, function(args, speaker)
 	inf_jump = UserInputService.JumpRequest:Connect(function()
 		if not inf_jump_debounce then
 			inf_jump_debounce = true
-
-			local humanoid = speaker.Character:FindFirstChildWhichIsA("Humanoid")
-			if humanoid then
+			local humanoid = speaker.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
+			if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then
 				repeat
 					humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 					task.wait(0.15)
@@ -10646,7 +10624,8 @@ local flyjump
 addcmd("flyjump", {}, function(args, speaker)
 	if flyjump then flyjump:Disconnect() end
 	flyjump = UserInputService.JumpRequest:Connect(function()
-		speaker.Character:FindFirstChildWhichIsA("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+		local humanoid = speaker.Character:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
+		if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
 	end)
 end)
 
