@@ -836,7 +836,7 @@ local function cleanup_connections()
 end
 
 local function unseat(humanoid)
-	if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+	if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false) end
 	task.spawn(function()
 		if humanoid and humanoid.SeatPart then
 			local seat_part = humanoid.SeatPart
