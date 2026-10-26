@@ -1095,13 +1095,14 @@ g.toggle_esp = function(state)
     end
 end
 
+local rand = Random.new()
 local function create_fov_circle()
     local existing = g.silent_aim_fov_circle
     if existing then return existing end
     if not has_drawing_lib() then return nil end
     local circle = Drawing.new("Circle")
     circle.Visible = false
-    circle.Radius = g.silent_aim_fov
+    circle.Radius = g.silent_aim_fov or 120
     circle.Color = Color3.fromRGB(255, 255, 255)
     circle.Thickness = 1.5
     circle.Filled = false
@@ -1120,23 +1121,47 @@ local function destroy_fov_circle()
     end
 end
 
+local function get_mouse_position()
+    if UserInputService.TouchEnabled then return Camera.ViewportSize / 2 end
+    return UserInputService:GetMouseLocation()
+end
+
 local function is_valid_target(Player)
-    if g.is_hostile(Player) then return true end
+    if g.silent_aim_team_check ~= false then if Player.Team and speaker.Team and Player.Team == speaker.Team then return false end end
+    if g.is_hostile and g.is_hostile(Player) then return true end
     if Player.Team and Player.Team.Name == "Criminal" then return true end
+    if not g.is_hostile then return true end
     return false
 end
 
 local function update_fov_and_target()
     local circle = g.silent_aim_fov_circle
-    local mouse_pos = UserInputService:GetMouseLocation()
+    local mouse_pos = get_mouse_position()
     local center = Vector2.new(mouse_pos.X, mouse_pos.Y)
     if circle then
         circle.Position = center
-        circle.Radius = g.silent_aim_fov
+        circle.Radius = g.silent_aim_fov or 120
         circle.Visible = g.silent_aim_on and g.silent_aim_fov_visible ~= false
     end
-    local hitpart_name = g.silent_aim_hitpart or "Head"
-    local fov = g.silent_aim_fov
+
+    local hit_chance = g.silent_aim_hit_chance or 85
+    if rand:NextNumber(0, 100) > hit_chance then
+        g.silent_aim_cached_part = nil
+        g.silent_aim_cached_hrp = nil
+        return
+    end
+
+    local headshot_chance = g.silent_aim_headshot_chance or 65
+    local prefer_head = rand:NextNumber(0, 100) < headshot_chance
+    local hitpart_name
+    if prefer_head then
+        hitpart_name = "Head"
+    else
+        hitpart_name = g.silent_aim_hitpart or "Head"
+    end
+
+    local fov = g.silent_aim_fov or 120
+    local mode = g.silent_aim_mode or "Mouse"
     local best_dist = math.huge
     local best_part = nil
     local best_hrp = nil
@@ -1145,19 +1170,32 @@ local function update_fov_and_target()
         if not is_valid_target(p) then continue end
         local target_char = p.Character or g.get_char(p)
         if not target_char or not target_char:IsDescendantOf(workspace) then continue end
-        local target_part = target_char:FindFirstChild(hitpart_name) or target_char:FindFirstChild("Head")
+        local target_part = target_char:FindFirstChild(hitpart_name) or target_char:FindFirstChild("Head") or g.get_head(p)
         local target_hrp = target_char:FindFirstChild("HumanoidRootPart") or g.get_root(p)
         local target_hum = target_char:FindFirstChildWhichIsA("Humanoid") or g.get_human(p)
         if not (target_part and target_hrp and target_hum and target_hum.Health > 0) then continue end
-        local screen_pos, on_screen = Camera:WorldToViewportPoint(target_part.Position)
-        if not on_screen then continue end
-        local dist = (Vector2.new(screen_pos.X, screen_pos.Y) - center).Magnitude
-        if dist <= fov and dist < best_dist then
-            best_dist = dist
-            best_part = target_part
-            best_hrp = target_hrp
+        if mode == "Mouse" then
+            local screen_pos, on_screen = Camera:WorldToViewportPoint(target_part.Position)
+            if not on_screen then continue end
+            local dist = (Vector2.new(screen_pos.X, screen_pos.Y) - center).Magnitude
+            if dist <= fov and dist < best_dist then
+                best_dist = dist
+                best_part = target_part
+                best_hrp = target_hrp
+            end
+        elseif mode == "Position" then
+            local range = g.silent_aim_fov or 120
+            local local_root = g.get_root(speaker)
+            if not local_root then continue end
+            local world_dist = (target_hrp.Position - local_root.Position).Magnitude
+            if world_dist <= range and world_dist < best_dist then
+                best_dist = world_dist
+                best_part = target_part
+                best_hrp = target_hrp
+            end
         end
     end
+
     g.silent_aim_cached_part = best_part
     g.silent_aim_cached_hrp = best_hrp
 end
@@ -1170,31 +1208,39 @@ local function find_cast_ray()
     return results and results[1] or nil
 end
 
+local function find_bullet_func()
+    if not filtergc or typeof(filtergc) ~= "function" then return nil end
+    local results = filtergc("function", {Name = "Bullet"}, false)
+    return results and results[1] or nil
+end
+
 g.silent_aim_toggle = function(state)
     if state and not has_drawing_lib() then
-        g.notify("Error", "Drawing library not available.", 3)
+        if g.notify then g.notify("Error", "Drawing library not available.", 3) end
         return
     end
     if state and not (typeof(hookfunction) == "function" and typeof(newcclosure) == "function" and typeof(filtergc) == "function") then
-        g.notify("Error", "Executor missing required functions.", 3)
+        if g.notify then g.notify("Error", "Executor missing required functions.", 3) end
         return
     end
+
     g.silent_aim_on = state
     if state then
         local circle = create_fov_circle()
         if not circle then return end
         circle.Visible = g.silent_aim_fov_visible ~= false
-        FlamesLibrary.connect("silent_aim_update", RunService.RenderStepped:Connect(function()
-            update_fov_and_target()
-        end))
+        FlamesLibrary.connect("silent_aim_update", RunService.RenderStepped:Connect(function() update_fov_and_target() end))
         if cast_ray_original then return end
         local target = find_cast_ray()
-        if not target then
-            g.notify("Error", "castRay not found.", 3)
+        local bullet_target = find_bullet_func()
+        local hook_target = target or bullet_target
+        if not hook_target then
+            if g.notify then g.notify("Error", "Hook target not found.", 3) end
             return
         end
-        cast_ray_ref = target
-        cast_ray_original = hookfunction(target, newcclosure(function(origin, aim, spread)
+
+        cast_ray_ref = hook_target
+        cast_ray_original = hookfunction(hook_target, newcclosure(function(origin, aim, spread)
             if g.silent_aim_on then
                 local part = g.silent_aim_cached_part
                 local hrp = g.silent_aim_cached_hrp
