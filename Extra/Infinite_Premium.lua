@@ -838,7 +838,7 @@ end
 local function unseat(humanoid)
 	if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) then humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false) end
 	task.spawn(function()
-		if humanoid and humanoid.SeatPart then
+		if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) and humanoid.SeatPart then
 			local seat_part = humanoid.SeatPart
 			for _, child in pairs(seat_part:GetChildren()) do
 				if child:IsA("Weld") or child:IsA("Motor6D") or child:IsA("WeldConstraint") then
@@ -874,9 +874,7 @@ local function hook_character(character)
 		if humanoid.Sit then unseat(humanoid) end
 	end)
 	table.insert(getgenv().anti_sit_connections, conn)
-	if humanoid.Sit then
-		unseat(humanoid)
-	end
+	if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) and humanoid.Sit then unseat(humanoid) end
 end
 
 local function start_anti_sit()
