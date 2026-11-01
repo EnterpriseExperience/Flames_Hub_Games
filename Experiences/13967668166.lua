@@ -12,13 +12,15 @@ if not game:IsLoaded() then
 end
 
 -- [[     INITIALIZATION (Roblox Environment)     ]] --
+local function valid_t(t) if t and typeof(t) == "table" then return t end; return false end
 local In_Studio = false
 local g
+-- [[ Really secure checking below. ]] --
 if game:GetService("RunService"):IsStudio() then
-    g = _G
+    g = valid_t(_G) or {}
     In_Studio = true
 else
-    g = getgenv()
+    g = valid_t(getgenv and getgenv()) or valid_t(_G) or {}
 end
 wait(0.25)
 if game:GetService("RunService"):IsServer() then warn("This script can only be run on the client."); return end
