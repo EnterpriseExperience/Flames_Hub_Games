@@ -586,13 +586,9 @@ end
 
 g.originalIO.resolveWithListfiles = function(target)
     local lf = g.originalIO.listfiles
-    if type(lf) ~= "function" then
-        return nil
-    end
+    if type(lf) ~= "function" then return nil end
     local dir, filename = target:match('^(.*)[/\\]([^/\\]+)$')
-    if not dir or filename == '' then
-        return nil
-    end
+    if not dir or filename == '' then return nil end
     local dirVariants = g.originalIO.pathVariants(dir)
     local results = {}
     local lowered = filename:lower()
@@ -607,9 +603,7 @@ g.originalIO.resolveWithListfiles = function(target)
             end
         end
     end
-    if #results > 0 then
-        return results
-    end
+    if #results > 0 then return results end
     return nil
 end
 
@@ -790,17 +784,13 @@ end
 if g.notify then g.notify("Info", "One moment, we're initializing basic services...", 5) end
 local executor_string = nil
 local function executor_contains(substr)
-    if type(executor_string) ~= "string" then
-        return false
-    end
+    if type(executor_string) ~= "string" then return false end
     return string.find(string.lower(executor_string), string.lower(substr), 1, true) ~= nil
 end
 
 local function retrieve_executor()
     local name
-    if identifyexecutor then
-        name = identifyexecutor()
-    end
+    if identifyexecutor then name = identifyexecutor() end
     return { Name = name or "Unknown Executor" }
 end
 
@@ -819,7 +809,6 @@ end
 wait(0.1)
 local are_we_low_level = low_level_executor()
 if are_we_low_level == true then g.notify("Error", "Your executor cannot run this script, it requires a better executor like: Potassium, Volt, Wave, Delta etc, we apologize!", 60); return end
-
 g.randomString = g.randomString or function()
     local length = math.random(10,20)
     local array = {}
@@ -5351,7 +5340,6 @@ g.unmutesounds = g.unmutesounds or function()
 
     for _,p in ipairs(g.Players:GetPlayers()) do
         local c = p.Character or g.get_char(p, 3)
-
         if c and c:IsDescendantOf(game) then
             for _,v in ipairs(c:GetDescendants()) do
                 if v:IsA("Sound") then
@@ -11063,7 +11051,6 @@ if not g.SetupGone_Through_Flames_Hub then
         g.LocalPlayer:SetSuperSafeChat(false)
         g.LocalPlayer.CameraMaxZoomDistance = 100000
         g.LocalPlayer.CameraMinZoomDistance = 0.5
-    
         if g.LocalPlayer.CameraMaxZoomDistance > 90000 then
             g.notify("Success", "Set CameraMaxZoomDistance to: "..tostring(g.LocalPlayer.CameraMaxZoomDistance), 7)
         else
@@ -11090,7 +11077,6 @@ if not g.SetupGone_Through_Flames_Hub then
             g.notify("Success", "Enabled Leaderboard.", 5)
         end
     end)
-
     g.SetupGone_Through_Flames_Hub = true
 end
 
@@ -11980,7 +11966,7 @@ Callback = function(split)
     local function wait_for_bus(timeout)
         local t = 0
         while t < timeout do
-            for _, v in ipairs(g.Workspace.Vehicles:GetChildren()) do
+            for _, v in ipairs(Workspace.Vehicles:GetChildren()) do
                 if v:IsA("Model") and v.Name == "SchoolBus" and v:FindFirstChild("owner") and v.owner.Value == g.LocalPlayer then
                     return v
                 end
@@ -12194,29 +12180,36 @@ Callback = function()
     g.size_func_setter(1, 1)
 end,})
 
-g.create_ui_element("Slider", LocalPlayer_Section, {
-Name = "Height Scale (FE)",
-Min = 0.1,
-Max = 1000,
-Default = 1,
-Flag = "Size_Slider_UI",
-Callback = function(split)
-    local new_size = split
-    if not new_size then return end
-    g.height_func_setter(new_size)
-end}, "Size_Slider_UI")
+function Is_Number(str)
+	if tonumber(str) ~= nil or str == 'inf' then return true end
+	return false
+end
 
-g.create_ui_element("Slider", LocalPlayer_Section, {
-Name = "Width Scale (FE)",
-Min = 1,
-Max = 1000,
-Default = 1,
-Flag = "Width_Slider_UI",
+g.create_ui_element("Input", LocalPlayer_Section, {
+Name = "Height Scale (FE)",
+PlaceholderText = "Enter number...",
+Flag = "Size_Input_UI",
 Callback = function(split)
-    local new_size = split
-    if not new_size then return end
-    g.width_func_setter(new_size)
-end}, "Width_Slider_UI")
+    if not Is_Number(split) then
+        g.notify("Warning", "Enter a valid number!", 3)
+        return
+    end
+    g.height_func_setter(tonumber(split))
+    g.notify("Success", "Height scale set to: " .. tostring(split), 3)
+end}, "Size_Input_UI")
+
+g.create_ui_element("Input", LocalPlayer_Section, {
+Name = "Width Scale (FE)",
+PlaceholderText = "Enter number...",
+Flag = "Width_Input_UI",
+Callback = function(split)
+    if not Is_Number(split) then
+        g.notify("Warning", "Enter a valid number!", 3)
+        return
+    end
+    g.width_func_setter(tonumber(split))
+    g.notify("Success", "Width scale set to: " .. tostring(split), 3)
+end}, "Width_Input_UI")
 
 g.create_ui_element("Button", LocalPlayer_Section, {
 Name = "Normal Size (FE)",
