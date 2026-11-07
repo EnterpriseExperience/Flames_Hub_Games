@@ -79,7 +79,7 @@ local PlayerGui = g.PlayerGui or speaker:FindFirstChildOfClass("PlayerGui") or s
 local lib = g.FlamesLibrary or getgenv().FlamesLibrary
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.7.4"
+local Raw_Version = "V1.7.5"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -260,7 +260,8 @@ end
 wait(0.1)
 if not g.Lamp_Post_Remote_Event_Found_RS then pcall(function() Hit_Lamp_Post_Remote_Event() end) end
 
-local PROXIMITY_RADIUS = 100
+local PROXIMITY_RADIUS_ROADS = 200
+local PROXIMITY_RADIUS_BUILDINGS = 300
 g.Hit_All_Lamp_Posts = function()
     local Roads = g.Roads_Folder_Found_WS or Find_Roads_Folder_WS()
     local Buildings = g.Buildings_Folder_Found_WS or Find_Buildings_Folder_WS()
@@ -274,7 +275,7 @@ g.Hit_All_Lamp_Posts = function()
             local part = v:IsA("Model") and v:FindFirstChildOfClass("Part")
             if part and part.Color == Color3.fromRGB(86, 66, 54) then
                 local part_pos = part.Position
-                if (part_pos - origin).Magnitude <= PROXIMITY_RADIUS then remote:FireServer(v, part_pos) end
+                if (part_pos - origin).Magnitude <= PROXIMITY_RADIUS_ROADS then remote:FireServer(v, part_pos) end
             end
         end
     end
@@ -284,9 +285,24 @@ g.Hit_All_Lamp_Posts = function()
             local part = v:IsA("Model") and v:FindFirstChildOfClass("Part")
             if part and part.Color == Color3.fromRGB(163, 162, 165) then
                 local part_pos = part.Position
-                if (part_pos - origin).Magnitude <= PROXIMITY_RADIUS then remote:FireServer(v, part_pos) end
+                if (part_pos - origin).Magnitude <= PROXIMITY_RADIUS_BUILDINGS then remote:FireServer(v, part_pos) end
             end
         end
+    end
+end
+
+g.Hit_Down_All_Poles_Near_LP = function(state)
+    g.Knocking_Down_All_Poles = state
+    if state then
+        lib.spawn("knock_down_poles", "spawn", function()
+            while g.Knocking_Down_All_Poles == true do
+                task.wait(1)
+                g.Hit_All_Lamp_Posts()
+            end
+        end)
+    else
+        g.Knocking_Down_All_Poles = false
+        lib.disconnect("knock_down_poles")
     end
 end
 
@@ -2017,6 +2033,14 @@ Name = "Hit All LampPosts Near You (FE)",
 Callback = function()
     g.Hit_All_Lamp_Posts()
 end,})
+
+g.create_ui_element("Toggle", Vehicles_Section, {
+Name = "Hit Down All Poles Near You (FE) (BUGGY!)",
+Default = g.Knocking_Down_All_Poles or false,
+Flag = "Hit_Down_All_Poles_Near_LP_Toggle_UI",
+Callback = function(state)
+    g.Hit_Down_All_Poles_Near_LP(state)
+end}, "Hit_Down_All_Poles_Near_LP_Toggle_UI")
 
 g.create_ui_element("Slider", LocalPlayer_Section, {
 Name = "WalkSpeed (FE)",
