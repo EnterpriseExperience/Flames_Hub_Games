@@ -257,17 +257,26 @@ end
 wait(0.1)
 if not g.Lamp_Post_Remote_Event_Found_RS then pcall(function() Hit_Lamp_Post_Remote_Event() end) end
 
+local PROXIMITY_RADIUS = 100
 g.Hit_All_Lamp_Posts = function()
     local Roads = g.Roads_Folder_Found_WS or Find_Roads_Folder_WS()
-    if not Roads or not Roads:IsA("Folder") then g.notify("Error", "Roads Folder not found.", 3); return end
+    if not Roads or not Roads:IsA("Folder") then
+        g.notify("Error", "Roads folder not found.", 3)
+        return
+    end
+
     local remote = g.Lamp_Post_Remote_Event_Found_RS or Hit_Lamp_Post_Remote_Event()
     if not remote or not remote:IsA("RemoteEvent") then return end
+    local root = g.HumanoidRootPart or g.get_root(speaker)
+    if not root then return end
+    local origin = root.Position
     for _, v in ipairs(Roads:GetChildren()) do
-        if v:IsA("Model") and v:FindFirstChildOfClass("Part") and v:FindFirstChildOfClass("Part").Color == Color3.fromRGB(86, 66, 54) then
-            if remote and remote:IsA("RemoteEvent") then remote:FireServer(v, Vector3.new(v:FindFirstChildOfClass("Part").Position)) end
+        local part = v:IsA("Model") and v:FindFirstChildOfClass("Part")
+        if part and part.Color == Color3.fromRGB(86, 66, 54) then
+            local part_pos = part.Position
+            if (part_pos - origin).Magnitude <= PROXIMITY_RADIUS then remote:FireServer(v, part_pos) end
         end
     end
-    return nil
 end
 
 local function Find_Apply_Customization_Remote_Function()
