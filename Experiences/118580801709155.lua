@@ -115,9 +115,11 @@ wait(0.1)
 if not g.Vehicle_Catalog_Remote_Function_Found then pcall(function() Find_Vehicle_Catalog_Remote_Function() end) end
 if g.notify and typeof(g.notify) == "function" then g.notify("Success", "Sweeping Vehicle names, one moment...", 3) end
 task.wait(0.15)
-local V_Catalog = g.Vehicle_Catalog_Remote_Function_Found or Find_Vehicle_Catalog_Remote_Function()
-if V_Catalog and V_Catalog.Parent and V_Catalog:IsA("RemoteFunction") then
-    local hit = V_Catalog:InvokeServer()
+task.spawn(function()
+    local V_Catalog = g.Vehicle_Catalog_Remote_Function_Found or Find_Vehicle_Catalog_Remote_Function()
+    if not V_Catalog or not V_Catalog.Parent or not V_Catalog:IsA("RemoteFunction") then return end
+    local ok, hit = pcall(function() return V_Catalog:InvokeServer() end)
+    if not ok or type(hit) ~= "table" then return end
     local function sweep_catalog(tbl)
         for k, v in pairs(tbl) do
             if k == "label" and type(v) == "string" then
@@ -127,9 +129,8 @@ if V_Catalog and V_Catalog.Parent and V_Catalog:IsA("RemoteFunction") then
             end
         end
     end
-
     sweep_catalog(hit)
-end
+end)
 
 function Validate_Number(str)
 	if tonumber(str) ~= nil or str == 'inf' then return true end
@@ -355,7 +356,7 @@ local function patch_ClientReport_remote(remote)
         end
     end
 end
-
+wait(0.25)
 local function full_bypass()
     if g.Bypassed_Anti_Cheat then return end
     g.Bypassed_Anti_Cheat = true
@@ -421,14 +422,14 @@ local function full_bypass()
         end
     end)
 end
-
+wait(0.25)
 if not g.Bypassed_Anti_Cheat then
     task.spawn(function()
         task.wait(0.1)
         full_bypass()
     end)
 end
-
+wait(0.25)
 lib.connect("warden_ui_watchdog", RunService.Heartbeat:Connect(function()
     local w = PlayerGui:FindFirstChild("Warden")
     if w and typeof(w) == "Instance" and w:IsA("ScreenGui") then
