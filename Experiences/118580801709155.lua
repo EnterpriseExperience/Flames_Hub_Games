@@ -79,7 +79,7 @@ local PlayerGui = g.PlayerGui or speaker:FindFirstChildOfClass("PlayerGui") or s
 local lib = g.FlamesLibrary or getgenv().FlamesLibrary
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.8.0"
+local Raw_Version = "V1.8.1"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -229,30 +229,32 @@ wait(0.1)
 if not g.Buildings_Folder_Found_WS then pcall(function() Find_Buildings_Folder_WS() end) end
 
 g.Pole_Collision_Cache = g.Pole_Collision_Cache or {}
-local function matches_color(model, target_color)
-    local primary = model:FindFirstChildOfClass("Part")
-    return primary and primary.Color == target_color
-end
-
-local function register_part(part)
-    if not part:IsA("BasePart") then return end
-    if g.Pole_Collision_Cache[part] then return end
-    g.Pole_Collision_Cache[part] = {
-        CanCollide = part.CanCollide,
-        CanQuery   = part.CanQuery,
-        CanTouch   = part.CanTouch,
-    }
-    part.CanCollide = false
-    part.CanQuery   = false
-    part.CanTouch   = false
-end
-
-local function scan_folder(folder, target_color)
+local function disable_folder_poles(folder, target_color)
     if not folder or not folder:IsA("Folder") then return end
     for _, v in ipairs(folder:GetChildren()) do
-        if v:IsA("Model") and matches_color(v, target_color) then
-            for _, part in ipairs(v:GetDescendants()) do
-                register_part(part)
+        if v:IsA("Model") then
+            local matched = false
+            for _, child in ipairs(v:GetChildren()) do
+                if child:IsA("BasePart") and child.Color == target_color then
+                    matched = true
+                    break
+                end
+            end
+            if matched then
+                for _, part in ipairs(v:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        if not g.Pole_Collision_Cache[part] then
+                            g.Pole_Collision_Cache[part] = {
+                                CanCollide = part.CanCollide,
+                                CanQuery   = part.CanQuery,
+                                CanTouch   = part.CanTouch,
+                            }
+                        end
+                        part.CanCollide = false
+                        part.CanQuery   = false
+                        part.CanTouch   = false
+                    end
+                end
             end
         end
     end
@@ -262,39 +264,15 @@ g.Disable_Pole_Collision = function(state)
     g.Disable_Pole_Collision_State = state
     if state then
         g.Pole_Collision_Cache = {}
-        local Roads     = g.Roads_Folder_Found_WS     or Find_Roads_Folder_WS()
-        local Buildings = g.Buildings_Folder_Found_WS or Find_Buildings_Folder_WS()
-        scan_folder(Roads,     Color3.fromRGB(86,  66,  54))
-        scan_folder(Buildings, Color3.fromRGB(163, 162, 165))
-        if Roads and Roads:IsA("Folder") then
-            lib.connect("pole_roads_added", Roads.ChildAdded:Connect(function(d)
-                local model = d:FindFirstAncestorOfClass("Model")
-                if model and matches_color(model, Color3.fromRGB(86, 66, 54)) then register_part(d) end
-            end))
-        end
-
-        if Buildings and Buildings:IsA("Folder") then
-            lib.connect("pole_buildings_added", Buildings.ChildAdded:Connect(function(d)
-                local model = d:FindFirstAncestorOfClass("Model")
-                if model and matches_color(model, Color3.fromRGB(163, 162, 165)) then register_part(d) end
-            end))
-        end
-
         lib.connect("pole_collision_disable", RunService.Heartbeat:Connect(function()
-            for part in pairs(g.Pole_Collision_Cache) do
-                if part:IsA("BasePart") and part.Parent then
-                    if part.CanCollide or part.CanQuery or part.CanTouch then
-                        part.CanCollide = false
-                        part.CanQuery   = false
-                        part.CanTouch   = false
-                    end
-                end
-            end
+            local Roads     = g.Roads_Folder_Found_WS     or Find_Roads_Folder_WS()
+            local Buildings = g.Buildings_Folder_Found_WS or Find_Buildings_Folder_WS()
+            disable_folder_poles(Roads,     Color3.fromRGB(86,  66,  54))
+            disable_folder_poles(Buildings, Color3.fromRGB(163, 162, 165))
+            disable_folder_poles(Roads,     Color3.fromRGB(27, 42, 53))
         end))
     else
         lib.disconnect("pole_collision_disable")
-        lib.disconnect("pole_roads_added")
-        lib.disconnect("pole_buildings_added")
         for part, original in pairs(g.Pole_Collision_Cache) do
             if part:IsA("BasePart") and part.Parent then
                 part.CanCollide = original.CanCollide
