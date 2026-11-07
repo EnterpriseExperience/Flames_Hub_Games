@@ -200,6 +200,31 @@ g.all_available_colors = {
     ["Paint_purple_5"] = "#33005C",
 }
 
+local function Find_Roads_Folder_WS()
+    local cache = g.Roads_Folder_Found_WS
+    if cache and cache:IsA("Folder") then return cache end
+    for _, v in ipairs(Workspace:GetChildren()) do
+        if typeof(v) == "Instance" and v:IsA("Folder") and v.Name:lower():find("roads") then
+            g.Roads_Folder_Found_WS = v
+            return v
+        end
+    end
+    return nil
+end
+wait(0.1)
+if not g.Roads_Folder_Found_WS then pcall(function() Find_Roads_Folder_WS() end) end
+
+local function Get_Lamp_Post_Model()
+    local Roads = g.Roads_Folder_Found_WS or Find_Roads_Folder_WS()
+    if not Roads or not Roads:IsA("Folder") then g.notify("Error", "Roads folder not found.", 3); return end
+    for _, v in ipairs(Roads:GetChildren()) do
+        if v:IsA("Model") and v:FindFirstChildOfClass("Part") and v:FindFirstChildOfClass("Part").Color == Color3.fromRGB(86, 66, 54) then
+            return v
+        end
+    end
+    return nil
+end
+
 local function find_remotes_folder()
     local cache = g.Remotes_Folder_Found_RS
     if cache and typeof(cache) == "Instance" and cache:IsA("Folder") then return cache end
@@ -215,6 +240,35 @@ local function find_remotes_folder()
 end
 wait(0.1)
 if not g.Remotes_Folder_Found_RS then pcall(function() find_remotes_folder() end) end
+
+local function Hit_Lamp_Post_Remote_Event()
+    local cache = g.Lamp_Post_Remote_Event_Found_RS
+    if cache and cache:IsA("RemoteEvent") then return cache end
+    local remotes = g.Remotes_Folder_Found_RS or find_remotes_folder()
+    if not remotes or not remotes:IsA("Folder") then return nil end
+    for _, v in ipairs(remotes:GetChildren()) do
+        if v:IsA("RemoteEvent") and v.Name:lower():find("lamp") and v.Name:lower():find("post") then
+            g.Lamp_Post_Remote_Event_Found_RS = v
+            return v
+        end
+    end
+    return nil
+end
+wait(0.1)
+if not g.Lamp_Post_Remote_Event_Found_RS then pcall(function() Hit_Lamp_Post_Remote_Event() end) end
+
+g.Hit_All_Lamp_Posts = function()
+    local Roads = g.Roads_Folder_Found_WS or Find_Roads_Folder_WS()
+    if not Roads or not Roads:IsA("Folder") then g.notify("Error", "Roads Folder not found.", 3); return end
+    local remote = g.Lamp_Post_Remote_Event_Found_RS or Hit_Lamp_Post_Remote_Event()
+    if not remote or not remote:IsA("RemoteEvent") then return end
+    for _, v in ipairs(Roads:GetChildren()) do
+        if v:IsA("Model") and v:FindFirstChildOfClass("Part") and v:FindFirstChildOfClass("Part").Color == Color3.fromRGB(86, 66, 54) then
+            if remote and remote:IsA("RemoteEvent") then remote:FireServer(v, Vector3.new(v:FindFirstChildOfClass("Part").Position)) end
+        end
+    end
+    return nil
+end
 
 local function Find_Apply_Customization_Remote_Function()
     local cache = g.Apply_Customization_Remote_Function_Found_RS
@@ -1937,6 +1991,12 @@ Flag = "Walk_Vehicles_Menu_Toggle_UI",
 Callback = function(state)
     g.allow_walking_with_vehicles_menu_opened(state)
 end}, "Walk_Vehicles_Menu_Toggle_UI")
+
+g.create_ui_element("Button", Vehicles_Section, {
+Name = "Hit All LampPosts Near You (FE)",
+Callback = function()
+    g.Hit_All_Lamp_Posts()
+end,})
 
 g.create_ui_element("Slider", LocalPlayer_Section, {
 Name = "WalkSpeed (FE)",
