@@ -10,7 +10,6 @@ if not game:IsLoaded() then
     msg_instance:Destroy()
     hint_instance:Destroy()
 end
-
 -- [[     INITIALIZATION (Roblox Environment)     ]] --
 local function valid_t(t) if t and typeof(t) == "table" then return t end; return false end
 local In_Studio = false
@@ -22,7 +21,7 @@ if game:GetService("RunService"):IsStudio() then
 else
     g = valid_t(getgenv and getgenv()) or valid_t(_G) or {}
 end
-wait(0.25)
+task.wait(0.25)
 if game:GetService("RunService"):IsServer() then warn("This script can only be run on the client."); return end
 if game.PlaceId ~= 118580801709155 then
     if g.notify and typeof(g.notify) == "function" then
@@ -31,16 +30,30 @@ if game.PlaceId ~= 118580801709155 then
         return warn("This game isn't allowed to run with this script (only: Carolina Leaners).")
     end
 end
-wait(0.1)
+task.wait(0.1)
+if g.Carolina_Leaners_Script_Hub_Running then
+    if g.notify and typeof(g.notify) == "function" then
+        g.notify("Error", "Carolina Leaners Script Hub is already running, please click 'Destroy GUI' at the bottom of the script to exit the menu.", 15)
+        return 
+    else
+        warn("Carolina Leaners Script Hub is already running.")
+        return 
+    end
+end
 local blank_F = g.blank_function or g.blankfunction or function(...) return ... end
 local cloneref = typeof(cloneref) == "function" and cloneref or function(instance) return instance end
 -- [[ Should no longer break in Roblox Studio. 😈🚬 ]] --
-local http_game
 if In_Studio then
-    http_game = blank_F
+    g.http_get = blank_F
 else
-    http_game = (g["game"] or game)["HttpGet"]
-    g.http_get = function(url) return http_game(game, url) end
+    g.http_get = function(url)
+        local ok, result = pcall(function() return game:HttpGet(url) end)
+        if ok then return result end
+        local ok2, result2 = pcall(function() return game:GetService("HttpService"):GetAsync(url) end)
+        if ok2 then return result2 end
+        warn("Http request failed for: " .. tostring(url))
+        return nil
+    end
 end
 wait(0.1)
 if not In_Studio then
@@ -59,12 +72,14 @@ local UserInputService = g.UserInputService or cloneref and cloneref(game:GetSer
 local StarterPlayer = g.StarterPlayer or cloneref and cloneref(game:GetService("StarterPlayer")) or game:GetService("StarterPlayer")
 local TweenService = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
 local Lighting = g.Lighting or cloneref and cloneref(game:GetService("Lighting")) or game:GetService("Lighting")
+local StarterGui = g.StarterGui or cloneref and cloneref(game:GetService("StarterGui")) or game:GetService("StarterGui")
+local GuiService = g.GuiService or cloneref and cloneref(game:GetService("GuiService")) or game:GetService("GuiService")
 local speaker = g.LocalPlayer or Players.LocalPlayer or Players:GetAttributeChangedSignal("LocalPlayer"):Wait()
 local PlayerGui = g.PlayerGui or speaker:FindFirstChildOfClass("PlayerGui") or speaker:FindFirstChildWhichIsA("PlayerGui")
 local lib = g.FlamesLibrary or getgenv().FlamesLibrary
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.5.0"
+local Raw_Version = "V1.6.8"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -146,6 +161,283 @@ function low_level_client()
     return false
 end
 
+g.all_available_colors = {
+    ["Paint_white"]    = "#FFFFFF",
+    ["Paint_silver"]   = "#C0C0C0",
+    ["Paint_gray"]     = "#808080",
+    ["Paint_charcoal"] = "#363636",
+    ["Paint_black"]    = "#1B1B1B",
+    ["Paint_red_1"]    = "#FFBFBF",
+    ["Paint_red_2"]    = "#F77C7C",
+    ["Paint_red_3"]    = "#E02D2D",
+    ["Paint_red_4"]    = "#9E0808",
+    ["Paint_red_5"]    = "#5C0000",
+    ["Paint_orange_1"] = "#FFDCBF",
+    ["Paint_orange_2"] = "#F7B37C",
+    ["Paint_orange_3"] = "#E07E2D",
+    ["Paint_orange_4"] = "#9E4B08",
+    ["Paint_orange_5"] = "#5C2900",
+    ["Paint_yellow_1"] = "#FFF3BF",
+    ["Paint_yellow_2"] = "#F7E07C",
+    ["Paint_yellow_3"] = "#E0BE2D",
+    ["Paint_yellow_4"] = "#9E8208",
+    ["Paint_yellow_5"] = "#5C4A00",
+    ["Paint_green_1"]  = "#C1FFBF",
+    ["Paint_green_2"]  = "#7EF77C",
+    ["Paint_green_3"]  = "#30E02D",
+    ["Paint_green_4"]  = "#0B9E08",
+    ["Paint_green_5"]  = "#025C00",
+    ["Paint_blue_1"]   = "#BFE0FF",
+    ["Paint_blue_2"]   = "#7CBCF7",
+    ["Paint_blue_3"]   = "#2D8AE0",
+    ["Paint_blue_4"]   = "#08569E",
+    ["Paint_blue_5"]   = "#00305C",
+    ["Paint_purple_1"] = "#E3BFFF",
+    ["Paint_purple_2"] = "#C17CF7",
+    ["Paint_purple_3"] = "#912DE0",
+    ["Paint_purple_4"] = "#5C089E",
+    ["Paint_purple_5"] = "#33005C",
+}
+
+local function find_remotes_folder()
+    local cache = g.Remotes_Folder_Found_RS
+    if cache and typeof(cache) == "Instance" and cache:IsA("Folder") then return cache end
+
+    for _, v in ipairs(ReplicatedStorage:GetChildren()) do
+        if typeof(v) == "Instance" and v:IsA("Folder") and v.Name:lower():find("remotes") then
+            g.Remotes_Folder_Found_RS = v
+            return v
+        end
+    end
+
+    return nil
+end
+wait(0.1)
+if not g.Remotes_Folder_Found_RS then pcall(function() find_remotes_folder() end) end
+
+local function Find_Apply_Customization_Remote_Function()
+    local cache = g.Apply_Customization_Remote_Function_Found_RS
+    if cache and cache:IsA("RemoteFunction") then return cache end
+    local remotes = g.Remotes_Folder_Found_RS or find_remotes_folder()
+    if not remotes or not remotes:IsA("Folder") then return nil end
+    for _, v in ipairs(remotes:GetChildren()) do
+        if v:IsA("RemoteFunction") and v.Name:lower():find("apply") and v.Name:lower():find("customization") then
+            g.Apply_Customization_Remote_Function_Found_RS = v
+            return v
+        end
+    end
+    return nil
+end
+wait(0.1)
+if not g.Apply_Customization_Remote_Function_Found_RS then pcall(function() Find_Apply_Customization_Remote_Function() end) end
+
+g.Apply_Paint_Customization = function(color)
+    local remote = g.Apply_Customization_Remote_Function_Found_RS or Find_Apply_Customization_Remote_Function()
+    if not remote or not remote:IsA("RemoteFunction") then return end
+    local veh = g.get_lp_vehicle()
+    if not veh or not veh:IsA("Model") or not veh:IsDescendantOf(game or workspace) then g.notify("Error", "You do not have a Vehicle spawned.", 3); return end
+    remote:InvokeServer(
+        veh.Name,
+        {
+            category = "Paint",
+            optionId = color,
+            subcategory = "Color1"
+        }
+    )
+end
+
+local function find_Warden_Remote_Event()
+    local cache = g.Warden_Remote_Event_Found_RS
+    if cache and typeof(cache) == "Instance" and cache:IsA("RemoteEvent") then return cache end
+    local remotes = g.Remotes_Folder_Found_RS or find_remotes_folder()
+    if not remotes or typeof(remotes) ~= "Instance" or not remotes:IsA("Folder") then return nil end
+
+    for _, v in ipairs(remotes:GetChildren()) do
+        if typeof(v) == "Instance" and v:IsA("RemoteEvent") and v.Name:lower():find("warden") then
+            g.Warden_Remote_Event_Found_RS = v
+            return v
+        end
+    end
+    return nil
+end
+wait(0.1)
+if not g.Warden_Remote_Event_Found_RS then pcall(function() find_Warden_Remote_Event() end) end
+
+local function nuke_warden_ui()
+    local w_gui = PlayerGui:FindFirstChild("Warden")
+    if w_gui and typeof(w_gui) == "Instance" and w_gui:IsA("ScreenGui") then w_gui:Destroy() end
+    pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true) end)
+    pcall(function() GuiService.SelectedObject = nil end)
+end
+
+local function patch_remote(remote)
+    if hookfunction and typeof(hookfunction) == "function" and newcclosure and typeof(newcclosure) == "function" then
+        local original_fire = remote.FireServer
+        if original_fire and typeof(original_fire) == "function" then
+            hookfunction(original_fire, newcclosure(function(self, ...) return end))
+        end
+    end
+end
+
+local function blind_incoming(remote)
+    if getconnections and typeof(getconnections) == "function" then
+        local conns = getconnections(remote.OnClientEvent)
+        if conns then
+            for _, c in ipairs(conns) do
+                pcall(function()
+                    if c.Disable and typeof(c.Disable) == "function" then c:Disable() end
+                    task.wait(0)
+                    if c.Disconnect and typeof(c.Disconnect) == "function" then c:Disconnect() end
+                end)
+            end
+        end
+    end
+end
+
+local function find_ClientState_Remote_Event()
+    local cache = g.ClientState_Remote_Event_Found_RS
+    if cache and typeof(cache) == "Instance" and cache:IsA("RemoteEvent") then return cache end
+    local remotes = g.Remotes_Folder_Found_RS or find_remotes_folder()
+    if not remotes or typeof(remotes) ~= "Instance" or not remotes:IsA("Folder") then return nil end
+
+    for _, v in ipairs(remotes:GetChildren()) do
+        if typeof(v) == "Instance" and v:IsA("RemoteEvent") and v.Name:lower():find("clientstate") then
+            g.ClientState_Remote_Event_Found_RS = v
+            return v
+        end
+    end
+    return nil
+end
+wait(0.1)
+if not g.ClientState_Remote_Event_Found_RS then pcall(function() find_ClientState_Remote_Event() end) end
+
+local function patch_ClientState_remote(remote)
+    if hookfunction and typeof(hookfunction) == "function" and newcclosure and typeof(newcclosure) == "function" then
+        local original_fire = remote.FireServer
+        if original_fire and typeof(original_fire) == "function" then
+            hookfunction(original_fire, newcclosure(function(self, ...)
+                if rawequal and typeof(rawequal) == "function" and rawequal(self, remote) then
+                    local args = table.pack(...)
+                    local payload = args[1]
+                    if typeof(payload) == "table" and payload.r == 2 then return end
+                end
+                return original_fire(self, ...)
+            end))
+        end
+    end
+end
+
+local function find_ClientReport_Remote_Event()
+    local cache = g.ClientReport_Remote_Event_Found_RS
+    if cache and typeof(cache) == "Instance" and cache:IsA("RemoteEvent") then return cache end
+    local remotes = g.Remotes_Folder_Found_RS or find_remotes_folder()
+    if not remotes or typeof(remotes) ~= "Instance" or not remotes:IsA("Folder") then return nil end
+
+    for _, v in ipairs(remotes:GetChildren()) do
+        if typeof(v) == "Instance" and v:IsA("RemoteEvent") and v.Name:lower():find("clientreport") then
+            g.ClientReport_Remote_Event_Found_RS = v
+            return v
+        end
+    end
+    return nil
+end
+wait(0.1)
+if not g.ClientReport_Remote_Event_Found_RS then pcall(function() find_ClientReport_Remote_Event() end) end
+
+local function patch_ClientReport_remote(remote)
+    if hookfunction and typeof(hookfunction) == "function" and newcclosure and typeof(newcclosure) == "function" then
+        local original_fire = remote.FireServer
+        if original_fire and typeof(original_fire) == "function" then
+            hookfunction(original_fire, newcclosure(function(self, ...)
+                if rawequal and typeof(rawequal) == "function" and rawequal(self, remote) then return end
+                return original_fire(self, ...)
+            end))
+        end
+    end
+end
+
+local function full_bypass()
+    if g.Bypassed_Anti_Cheat then return end
+    g.Bypassed_Anti_Cheat = true
+    local remote = g.Warden_Remote_Event_Found_RS or find_Warden_Remote_Event()
+    if remote and typeof(remote) == "Instance" and remote:IsA("RemoteEvent") then
+        blind_incoming(remote)
+        patch_remote(remote)
+        g.notify("Success", "Warden neutered — incoming event blinded, outbound patched.", 3)
+    else
+        g.notify("Warning", "Warden remote not found yet — polling...", 3)
+    end
+
+    for _, v in ipairs(speaker:GetDescendants()) do
+        if v:IsA("ModuleScript") and v.Name:lower():find("warden") then
+            g.notify("Warning", "Warden ModuleScript found — hooking before destroy...", 3)
+            pcall(function() v:Destroy() end)
+            task.wait(0.75)
+            g.notify("Success", "Warden neutralized and destroyed.", 3)
+        end
+    end
+    task.wait(0.1)
+    local cs_remote = g.ClientState_Remote_Event_Found_RS or find_ClientState_Remote_Event()
+    if cs_remote and typeof(cs_remote) == "Instance" and cs_remote:IsA("RemoteEvent") then
+        g.notify("Success", "Patching ClientState RemoteEvent to prevent session-report payloads...", 3)
+        patch_ClientState_remote(cs_remote)
+        task.wait(0.75)
+        g.notify("Success", "ClientState RemoteEvent patched & blocked.", 3)
+        task.wait(0.1)
+        pcall(function() cs_remote:Destroy() end)
+        g.notify("Success", "ClientState RemoteEvent destroyed.", 3)
+    else
+        g.notify("Warning", "ClientState remote not found yet — polling...", 3)
+    end
+    task.wait(0.1)
+    local cr_remote = g.ClientReport_Remote_Event_Found_RS or find_ClientReport_Remote_Event()
+    if cr_remote and typeof(cr_remote) == "Instance" and cr_remote:IsA("RemoteEvent") then
+        g.notify("Success", "Patching ClientReport RemoteEvent to prevent analytical payloads...", 3)
+        patch_ClientReport_remote(cr_remote)
+        task.wait(0.75)
+        g.notify("Success", "ClientReport RemoteEvent patched & blocked.", 3)
+        task.wait(0.1)
+        pcall(function() cr_remote:Destroy() end)
+        g.notify("Success", "ClientReport RemoteEvent destroyed.", 3)
+    else
+        g.notify("Warning", "ClientReport remote not found yet — polling...", 3)
+    end
+    task.wait(0.1)
+    nuke_warden_ui()
+    task.spawn(function()
+        local attempts = 0
+        local max_attempts = 60
+        while attempts < max_attempts do
+            task.wait(0.5)
+            attempts = attempts + 1
+            local r = g.Warden_Remote_Event_Found_RS or find_Warden_Remote_Event()
+            if r and typeof(r) == "Instance" and r:IsA("RemoteEvent") then
+                blind_incoming(r)
+                patch_remote(r)
+                g.notify("Success", "Warden Anti-Cheat has been successfully disabled, you may continue.", 5)
+                break
+            end
+            nuke_warden_ui()
+        end
+    end)
+end
+
+if not g.Bypassed_Anti_Cheat then
+    task.spawn(function()
+        task.wait(0.1)
+        full_bypass()
+    end)
+end
+
+lib.connect("warden_ui_watchdog", RunService.Heartbeat:Connect(function()
+    local w = PlayerGui:FindFirstChild("Warden")
+    if w and typeof(w) == "Instance" and w:IsA("ScreenGui") then
+        w:Destroy()
+        pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true) end)
+        g.notify("Warning", "Warden ScreenGui tried to respawn, attempt blocked.", 1)
+    end
+end))
+
 local function get_vehicles_folder()
     local cache = g.Main_Vehicles_Folder_Found_WS
     if cache and cache:IsA("Folder") then return cache end
@@ -173,6 +465,95 @@ g.get_lp_vehicle = function()
     return nil
 end
 
+g.get_lp_trailer = function()
+    local vehicles_folder = g.Main_Vehicles_Folder_Found_WS or get_vehicles_folder()
+    if not vehicles_folder or not vehicles_folder:IsA("Folder") then return nil end
+    for _, v in ipairs(vehicles_folder:GetChildren()) do
+        if v:IsA("Model") and v:GetAttribute("owner") == speaker.UserId and v:FindFirstChild("trailerConfig") and v:FindFirstChild("trailerConfig"):IsA("ModuleScript") then
+            return v
+        end
+    end
+
+    return nil
+end
+
+g.Get_Current_Sitting_In_Vehicle = function()
+    local char = g.Character or speaker.Character or g.get_char(speaker)
+    if not char or not char:IsDescendantOf(game or workspace) then return nil end
+    local humanoid = g.Humanoid
+        or (char and char:FindFirstChildOfClass("Humanoid"))
+        or g.get_human(speaker)
+    if not humanoid or not humanoid.Parent or not humanoid:IsDescendantOf(game) then return nil end
+    if not humanoid.Sit or not humanoid.SeatPart then return nil end
+    local seat = humanoid.SeatPart
+    if not seat or not seat:IsDescendantOf(game) then return nil end
+    local vehicles_folder = g.Main_Vehicles_Folder_Found_WS or get_vehicles_folder()
+    if not vehicles_folder or not vehicles_folder:IsA("Folder") then return nil end
+    if not seat:IsDescendantOf(vehicles_folder) then return nil end
+    local cursor = seat
+    while cursor and cursor.Parent and cursor.Parent ~= vehicles_folder do cursor = cursor.Parent end
+    if cursor and cursor.Parent == vehicles_folder and cursor:IsA("Model") then return cursor end
+    local fallback = seat:FindFirstAncestorWhichIsA("Model")
+    if fallback and fallback:IsDescendantOf(vehicles_folder) then return fallback end
+    return nil
+end
+
+g.Fire_All_Doors_Running = g.Fire_All_Doors_Running or false
+g.Fire_All_Doors_Last = g.Fire_All_Doors_Last or 0
+local COOLDOWN = 1
+local DOOR_ARGS = {"Tailgate", "FLDoor", "FRDoor", "RRDoor", "RLDoor"}
+g.Fire_All_Doors = function()
+    local now = os.clock()
+    if g.Fire_All_Doors_Running then return end
+    if (now - g.Fire_All_Doors_Last) < COOLDOWN then return end
+    local vehicles_folder = g.Main_Vehicles_Folder_Found_WS or get_vehicles_folder()
+    if not vehicles_folder or not vehicles_folder:IsA("Folder") then return end
+    local char = g.Character or speaker.Character or g.get_char(speaker)
+    if not char or not char:IsDescendantOf(game or workspace) then return end
+    local hrp = g.HumanoidRootPart or char and char:FindFirstChild("HumanoidRootPart") or g.get_root(speaker)
+    local humanoid = g.Humanoid or char and char:FindFirstChildOfClass("Humanoid") or g.get_human(speaker)
+    if not hrp or not hrp.Parent or not humanoid or not humanoid.Parent or not humanoid:IsDescendantOf(game) then return end
+    g.Fire_All_Doors_Running = true
+    g.Fire_All_Doors_Last = now
+    local OldCFrame = hrp.CFrame
+    local function safe_return()
+        if hrp and hrp.Parent then hrp.CFrame = OldCFrame end
+        g.Fire_All_Doors_Running = false
+    end
+
+    if humanoid and humanoid.Parent and humanoid:IsDescendantOf(game) and humanoid.Sit then
+        if humanoid then humanoid.Sit = false end
+        task.wait(0.2)
+    end
+    task.wait(0.15)
+    local lp_vehicle = g.get_lp_vehicle()
+    pcall(function()
+        for _, v in pairs(vehicles_folder:GetDescendants()) do
+            if v:IsA("RemoteEvent") then
+                local lower = v:GetFullName():lower()
+                if lower:find("door") and lower:find("remote") then
+                    local is_own = lp_vehicle ~= nil and v:IsDescendantOf(lp_vehicle)
+                    if not is_own then
+                        local vehicle_model = v.Parent.Parent.Parent
+                        local anchor = vehicle_model and (vehicle_model.PrimaryPart or vehicle_model:FindFirstChildWhichIsA("BasePart"))
+                        if anchor then
+                            hrp.CFrame = anchor.CFrame * CFrame.new(0, 4, 0)
+                            task.wait(0.1)
+                        end
+                        for _, arg in ipairs(DOOR_ARGS) do
+                            pcall(function() v:FireServer(arg) end)
+                            task.wait(0.05)
+                        end
+                        task.wait(0.05)
+                    end
+                end
+            end
+        end
+    end)
+
+    safe_return()
+end
+
 g.find_vehicle_Fuel_Remote_Event = function()
     local vehicle = g.get_lp_vehicle()
     if not vehicle or not vehicle:IsA("Model") then return nil end
@@ -182,6 +563,69 @@ g.find_vehicle_Fuel_Remote_Event = function()
         end
     end
     return nil
+end
+
+local function Find_Job_Action_RF()
+    local cache = g.Job_Action_RF_Found
+    if cache and cache:IsA("RemoteFunction") then return cache end
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteFunction") and v.Name:lower():find("job") and v.Name:lower():find("action") then
+            g.Job_Action_RF_Found = v
+            return v
+        end
+    end
+    return nil
+end
+
+g.all_jobs_available = {} -- dynamic update
+g.collect_all_jobs_available = function()
+    local Event = g.Job_Action_RF_Found or Find_Job_Action_RF()
+    if not Event or not Event.Parent or not Event:IsA("RemoteFunction") then return end
+    local payload = Event:InvokeServer("list")
+    if payload and type(payload.jobs) == "table" then
+        for _, job in pairs(payload.jobs) do
+            if job.available and not job.locked then
+                table.insert(g.all_jobs_available, job)
+            end
+        end
+    end
+end
+wait(0.1)
+if #g.all_jobs_available == 0 then pcall(g.collect_all_jobs_available) end -- only collect if empty
+
+g.Start_Job = function(job_id)
+    if not g.all_jobs_available or not g.all_jobs_available[job_id] then return nil end
+    local Event = g.Job_Action_RF_Found or Find_Job_Action_RF()
+    if not Event or not Event.Parent or not Event:IsA("RemoteFunction") then return end
+    local payload = Event:InvokeServer("start", tostring(job_id))
+    return payload
+end
+
+g.Clock_Off = function()
+    local Event = g.Job_Action_RF_Found or Find_Job_Action_RF()
+    if not Event or not Event.Parent or not Event:IsA("RemoteFunction") then return end
+    Event:InvokeServer("end")
+end
+
+local function Find_GetBalance_Remote_Function()
+    local cache = g.GetBalance_Remote_Function_Found
+    if cache and cache:IsA("RemoteFunction") then return cache end
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteFunction") and v.Name:lower():find("get") and v.Name:lower():find("balance") then
+            g.GetBalance_Remote_Function_Found = v
+            return v
+        end
+    end
+    return nil
+end
+wait(0.1)
+if not g.GetBalance_Remote_Function_Found then pcall(function() Find_GetBalance_Remote_Function() end) end
+
+g.Get_Balance = function()
+    local Event = g.GetBalance_Remote_Function_Found or Find_GetBalance_Remote_Function()
+    if not Event or not Event.Parent or not Event:IsA("RemoteFunction") then return nil end
+    local payload = Event:InvokeServer()
+    return tostring(payload) -- number > string
 end
 
 local function find_Despawn_Vehicle_Remote_Function()
@@ -197,6 +641,51 @@ local function find_Despawn_Vehicle_Remote_Function()
 end
 wait(0.1)
 if not g.Despawn_Vehicle_Remote_Function_Found then pcall(function() find_Despawn_Vehicle_Remote_Function() end) end
+
+local function find_Spawn_Vehicle_Remote_Function()
+    local cache = g.Spawn_Vehicle_Remote_Function_Found
+    if cache and cache:IsA("RemoteFunction") then return cache end
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteFunction") and v.Name:lower():find("spawn") and v.Name:lower():find("vehicle") then
+            g.Spawn_Vehicle_Remote_Function_Found = v
+            return v
+        end
+    end
+    return nil
+end
+wait(0.1)
+if not g.Spawn_Vehicle_Remote_Function_Found then pcall(function() find_Spawn_Vehicle_Remote_Function() end) end
+
+local function Get_Owned_Vehicles_RF()
+    local cache = g.Get_Owned_Vehicles_RF_Found
+    if cache and cache:IsA("RemoteFunction") then return cache end
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteFunction") and v.Name:lower():find("get") and v.Name:lower():find("owned") and v.Name:lower():find("vehicles") then
+            g.Get_Owned_Vehicles_RF_Found = v
+            return v
+        end
+    end
+    return nil
+end
+wait(0.1)
+if not g.Get_Owned_Vehicles_RF_Found then pcall(function() Get_Owned_Vehicles_RF() end) end
+
+g.Target_Vehicle_Copy_Id = nil
+g.resolve_target_vehicle = function()
+    local rf = g.Get_Owned_Vehicles_RF_Found or Get_Owned_Vehicles_RF()
+    if not rf or not rf.Parent or not rf:IsA("RemoteFunction") then return false end
+    local payload = rf:InvokeServer()
+    if not payload or type(payload.copies) ~= "table" then return false end
+    for _, copy in pairs(payload.copies) do
+        if type(copy) == "table" and copy.id then
+            g.Target_Vehicle_Copy_Id = copy.id
+            return true
+        end
+    end
+    return false
+end
+wait(0.1)
+if not g.Target_Vehicle_Copy_Id then pcall(g.resolve_target_vehicle) end
 
 local function find_Vehicles_Screen_Gui_PlayerGui()
     local cache = g.Vehicles_Screen_Gui_PlayerGui_Found
@@ -248,11 +737,22 @@ g.allow_walking_with_vehicles_menu_opened = function(state)
     apply_walk()
 end
 
+local function find_A_Chassis_Screen_Gui()
+    for _, v in ipairs(PlayerGui:GetChildren()) do
+        if v:IsA("ScreenGui") and v.Name:lower():find("a") and v.Name:lower():find("chassis") and v.Name:lower():find("interface") then
+            return v
+        end
+    end
+    return nil
+end
+
 g.toggle_vehicle_state = function(state)
     if typeof(state) ~= "boolean" then return end
     local vehicle = g.get_lp_vehicle()
     if not vehicle or not vehicle:IsA("Model") then return end
-    for _, v in ipairs(vehicle:GetDescendants()) do
+    local interface = find_A_Chassis_Screen_Gui()
+    if not interface or not interface:IsA("ScreenGui") then g.notify("Error", "A-Chassis Interface ScreenGui not found.", 3); return end
+    for _, v in ipairs(interface:GetChildren()) do
         if v:IsA("BoolValue") and v.Name:lower():find("ison") and v.Parent:IsA("ScreenGui") then
             v.Value = state or false
         end
@@ -324,19 +824,27 @@ if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
     if ok then control_module = result end
 end
 
-g.vehicle_fly            = g.vehicle_fly or false
-g.vehicle_fly_speed      = g.vehicle_fly_speed or 3
-g.vehiclefly_conns       = g.vehiclefly_conns or {}
-g.vehiclefly_control     = g.vehiclefly_control or {f=0,b=0,l=0,r=0,q=0,e=0}
-g.vehiclefly_noclip      = g.vehiclefly_noclip or false
-g.vehiclefly_collisions  = g.vehiclefly_collisions or {}
+g.vehicle_fly           = g.vehicle_fly           or false
+g.vehicle_fly_speed     = g.vehicle_fly_speed     or 3
+g.vehiclefly_conns      = g.vehiclefly_conns      or {}
+g.vehiclefly_control    = g.vehiclefly_control    or {f=0,b=0,l=0,r=0,q=0,e=0}
+g.vehiclefly_noclip     = g.vehiclefly_noclip     or false
+g.vehiclefly_collisions = g.vehiclefly_collisions or {}
 local function resolve_anchor(car)
-    if not car then return nil end
+    if not car or not car:IsDescendantOf(game or workspace) then return nil end
     local primary = car.PrimaryPart
     if primary then return primary end
     local seat = car:FindFirstChild("DriveSeat")
     if seat then return seat end
     return car:FindFirstChildWhichIsA("BasePart")
+end
+
+local function resolve_active_car()
+    local sitting = (g.get_vehicle and g.get_vehicle()) or (g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle())
+    if sitting and sitting:IsDescendantOf(game) then return sitting end
+    local own = g.get_lp_vehicle and g.get_lp_vehicle()
+    if own and own:IsDescendantOf(game) then return own end
+    return nil
 end
 
 g.get_vehicle = g.get_vehicle or function() return g.get_lp_vehicle() or nil end
@@ -354,18 +862,80 @@ g.vf_cleanup = function()
     end
 end
 
+g.vehiclefly_passenger_collisions = g.vehiclefly_passenger_collisions or {}
+g.vehiclefly_seat_conns           = g.vehiclefly_seat_conns           or {}
+g.vehiclefly_seat_occupants       = g.vehiclefly_seat_occupants       or {}
+local function noclip_char(char)
+    if not char or not char:IsDescendantOf(game) then return end
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if g.vehiclefly_passenger_collisions[part] == nil then
+                g.vehiclefly_passenger_collisions[part] = part.CanCollide
+            end
+            part.CanCollide = false
+        end
+    end
+end
+
+local function restore_char(char)
+    if not char then return end
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") and g.vehiclefly_passenger_collisions[part] ~= nil then
+            pcall(function() part.CanCollide = g.vehiclefly_passenger_collisions[part] end)
+            g.vehiclefly_passenger_collisions[part] = nil
+        end
+    end
+end
+
+local function watch_seats(model)
+    for _, desc in ipairs(model:GetDescendants()) do
+        if (desc:IsA("Seat") or desc:IsA("VehicleSeat")) and desc.Name == "PS" then
+            local seat = desc
+            if seat.Occupant and seat.Occupant.Parent then
+                g.vehiclefly_seat_occupants[seat] = seat.Occupant.Parent
+                noclip_char(seat.Occupant.Parent)
+            end
+
+            g.vehiclefly_seat_conns[seat] = seat:GetPropertyChangedSignal("Occupant"):Connect(function()
+                local prev_char = g.vehiclefly_seat_occupants[seat]
+                local occ       = seat.Occupant
+                if occ and occ.Parent and occ.Parent:IsDescendantOf(game) then
+                    g.vehiclefly_seat_occupants[seat] = occ.Parent
+                    noclip_char(occ.Parent)
+                else
+                    g.vehiclefly_seat_occupants[seat] = nil
+                    if prev_char then restore_char(prev_char) end
+                end
+            end)
+        end
+    end
+end
+
 g.enable_vehicle_noclip = function()
     if g.vehiclefly_noclip then return end
-    g.vehiclefly_noclip = true
+    g.vehiclefly_noclip     = true
     g.vehiclefly_collisions = {}
-    local car = g.get_vehicle()
-    if not car or not car:IsA("Model") or not car:IsDescendantOf(game or workspace) then return end -- that's real checking.
+    local car = resolve_active_car()
+    if not car or not car:IsA("Model") or not car:IsDescendantOf(game or workspace) then return end
     if g.ToggleNoclip and typeof(g.ToggleNoclip) == "function" then pcall(g.ToggleNoclip, true) end
-    for _, v in ipairs(car:GetDescendants()) do
-        if v:IsA("BasePart") then
-            g.vehiclefly_collisions[v] = v.CanCollide
-            v.CanCollide = false
+    local own    = g.get_lp_vehicle and g.get_lp_vehicle()
+    local is_own = own and own == car
+    local targets = {car}
+    if is_own then
+        local trailer = g.get_lp_trailer and g.get_lp_trailer()
+        if trailer and trailer:IsA("Model") and trailer:IsDescendantOf(game or workspace) then
+            table.insert(targets, trailer)
         end
+    end
+
+    for _, model in ipairs(targets) do
+        for _, v in ipairs(model:GetDescendants()) do
+            if v:IsA("BasePart") then
+                g.vehiclefly_collisions[v] = v.CanCollide
+                v.CanCollide = false
+            end
+        end
+        watch_seats(model)
     end
 end
 
@@ -373,6 +943,15 @@ g.disable_vehicle_noclip = function()
     if not g.vehiclefly_noclip then return end
     g.vehiclefly_noclip = false
     if g.ToggleNoclip and typeof(g.ToggleNoclip) == "function" then pcall(g.ToggleNoclip, false) end
+    for _, conn in pairs(g.vehiclefly_seat_conns) do pcall(function() conn:Disconnect() end) end
+    g.vehiclefly_seat_conns = {}
+    for part, state in pairs(g.vehiclefly_passenger_collisions) do
+        if part and part.Parent then
+            pcall(function() part.CanCollide = state end)
+        end
+    end
+    g.vehiclefly_passenger_collisions = {}
+    g.vehiclefly_seat_occupants       = {}
     for part, state in pairs(g.vehiclefly_collisions) do
         if part and part.Parent then
             pcall(function() part.CanCollide = state end)
@@ -383,8 +962,8 @@ end
 
 g.start_vehicle_fly = function()
     if g.vehiclefly_bg or g.vehiclefly_bv then return end
-    local car = g.get_vehicle()
-    if not car or not car:IsA("Model") or not car:IsDescendantOf(game or workspace) then
+    local car = resolve_active_car()
+    if not car or not car:IsDescendantOf(game or workspace) then
         g.disable_vehicle_noclip()
         task.wait()
         g.vf_cleanup()
@@ -393,23 +972,23 @@ g.start_vehicle_fly = function()
     end
 
     local anchor = resolve_anchor(car)
-    if not anchor or not anchor:IsDescendantOf(game) then -- real checking right here.
+    if not anchor or not anchor:IsDescendantOf(game) then
         g.notify("Error", "Vehicle-Fly: could not resolve anchor Part.", 3)
         g.vf_cleanup()
         return
     end
 
     local bg = Instance.new("BodyGyro")
-    bg.P          = 3e4
-    bg.D          = 1e3
-    bg.MaxTorque  = Vector3.new(0, 9e9, 0)
-    bg.CFrame     = anchor.CFrame
-    bg.Parent     = anchor
+    bg.P         = 3e4
+    bg.D         = 1e3
+    bg.MaxTorque = Vector3.new(0, 9e9, 0)
+    bg.CFrame    = anchor.CFrame
+    bg.Parent    = anchor
 
     local bv = Instance.new("BodyVelocity")
-    bv.MaxForce   = Vector3.new(9e9, 9e9, 9e9)
-    bv.Velocity   = Vector3.zero
-    bv.Parent     = anchor
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bv.Velocity = Vector3.zero
+    bv.Parent   = anchor
 
     g.vehiclefly_bg = bg
     g.vehiclefly_bv = bv
@@ -420,6 +999,13 @@ g.start_vehicle_fly = function()
             return
         end
 
+        local car_now = resolve_active_car()
+        if not car_now or not car_now:IsDescendantOf(game) then
+            g.vehiclefly_control = {f=0,b=0,l=0,r=0,q=0,e=0}
+            g.stop_vehicle_fly()
+            return
+        end
+
         if not anchor.Parent then
             g.vehiclefly_control = {f=0,b=0,l=0,r=0,q=0,e=0}
             g.stop_vehicle_fly()
@@ -427,7 +1013,7 @@ g.start_vehicle_fly = function()
         end
 
         pcall(function() anchor.AssemblyAngularVelocity = Vector3.zero end)
-        local cam = Workspace.CurrentCamera or Workspace:FindFirstChildOfClass("Camera")
+        local cam   = Workspace.CurrentCamera or Workspace:FindFirstChildOfClass("Camera")
         local speed = 45 * (g.vehicle_fly_speed or 3)
         if UserInputService.TouchEnabled and control_module then
             local ok, mv = pcall(function() return control_module:GetMoveVector() end)
@@ -459,12 +1045,12 @@ g.start_vehicle_fly = function()
     if not UserInputService.TouchEnabled then
         g.vehiclefly_conns.down = UserInputService.InputBegan:Connect(function(i, gp)
             if gp then return end
-            if i.KeyCode == Enum.KeyCode.W then g.vehiclefly_control.f =  1  end
-            if i.KeyCode == Enum.KeyCode.S then g.vehiclefly_control.b = -1  end
-            if i.KeyCode == Enum.KeyCode.A then g.vehiclefly_control.l = -1  end
-            if i.KeyCode == Enum.KeyCode.D then g.vehiclefly_control.r =  1  end
-            if i.KeyCode == Enum.KeyCode.E then g.vehiclefly_control.q =  1  end
-            if i.KeyCode == Enum.KeyCode.Q then g.vehiclefly_control.e = -1  end
+            if i.KeyCode == Enum.KeyCode.W then g.vehiclefly_control.f =  1 end
+            if i.KeyCode == Enum.KeyCode.S then g.vehiclefly_control.b = -1 end
+            if i.KeyCode == Enum.KeyCode.A then g.vehiclefly_control.l = -1 end
+            if i.KeyCode == Enum.KeyCode.D then g.vehiclefly_control.r =  1 end
+            if i.KeyCode == Enum.KeyCode.E then g.vehiclefly_control.q =  1 end
+            if i.KeyCode == Enum.KeyCode.Q then g.vehiclefly_control.e = -1 end
         end)
         g.vehiclefly_conns.up = UserInputService.InputEnded:Connect(function(i)
             if i.KeyCode == Enum.KeyCode.W then g.vehiclefly_control.f = 0 end
@@ -497,30 +1083,86 @@ end
 local float_name = "VehFloat_Active"
 local inc = false
 local dec = false
-local function snapshot_floor_offset(car, anchor)
+local function snapshot_floor_offset(car, anchor, trailer)
     local lowest = math.huge
-    for _, part in ipairs(car:GetDescendants()) do
-        if part:IsA("BasePart") and part.CanCollide then
-            local bottom = part.Position.Y - (part.Size.Y * 0.5)
-            if bottom < lowest then lowest = bottom end
+    local models = {car}
+    if trailer and trailer:IsDescendantOf(game) then table.insert(models, trailer) end
+    for _, model in ipairs(models) do
+        for _, part in ipairs(model:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                local bottom = part.Position.Y - (part.Size.Y * 0.5)
+                if bottom < lowest then lowest = bottom end
+            end
         end
     end
     if lowest == math.huge then lowest = anchor.Position.Y - (anchor.Size.Y * 0.5) end
     return lowest - anchor.Position.Y
 end
 
-g.Vehicle_Float_Running  = g.Vehicle_Float_Running  or false
-g.vehicle_float_height   = g.vehicle_float_height   or 0
-g.vehicle_float_part     = g.vehicle_float_part     or nil
-g.vehicle_floor_offset   = g.vehicle_floor_offset   or 0
+local function get_combined_bounds(car, trailer)
+    local min_x, min_z =  math.huge,  math.huge
+    local max_x, max_z = -math.huge, -math.huge
+    local models = {car}
+    if trailer and trailer:IsDescendantOf(game) then table.insert(models, trailer) end
+    for _, model in ipairs(models) do
+        for _, part in ipairs(model:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                local pos  = part.Position
+                local half = part.Size * 0.5
+                if pos.X - half.X < min_x then min_x = pos.X - half.X end
+                if pos.Z - half.Z < min_z then min_z = pos.Z - half.Z end
+                if pos.X + half.X > max_x then max_x = pos.X + half.X end
+                if pos.Z + half.Z > max_z then max_z = pos.Z + half.Z end
+            end
+        end
+    end
+    if min_x == math.huge then return nil end
+    return (min_x + max_x) * 0.5, (min_z + max_z) * 0.5, (max_x - min_x) + 2, (max_z - min_z) + 2
+end
+
+local function silent_stop_float()
+    g.Vehicle_Float_Running = false
+    g.vehicle_float_height  = 0
+    g.vehicle_floor_offset  = 0
+    inc = false
+    dec = false
+    lib.disconnect("vfloat_input_began")
+    lib.disconnect("vfloat_input_ended")
+    lib.disconnect("vfloat_heartbeat")
+    lib.disconnect("vfloat_destroy_watch")
+    local fp_ref = g.vehicle_float_part
+    if fp_ref and fp_ref.Parent then fp_ref:Destroy() end
+    local leftover = Workspace:FindFirstChild(float_name)
+    if leftover then leftover:Destroy() end
+    g.vehicle_float_part = nil
+    if g.Vehicle_Float_Toggle_UI then
+        pcall(function() g.Vehicle_Float_Toggle_UI:Set(false, false) end)
+    end
+end
+
+g.Vehicle_Float_Running = g.Vehicle_Float_Running or false
+g.vehicle_float_height  = g.vehicle_float_height  or 0
+g.vehicle_float_part    = g.vehicle_float_part    or nil
+g.vehicle_floor_offset  = g.vehicle_floor_offset  or 0
 g.start_vehicle_float = function()
     if g.Vehicle_Float_Running then
         g.notify("Warning", "Vehicle float is already active.", 3)
         return
     end
 
-    local car = g.get_vehicle and g.get_vehicle()
-    if not car or not car:IsA("Model") or not car:IsDescendantOf(game) then
+    local sitting = (g.get_vehicle and g.get_vehicle()) or (g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle())
+    local own_car = g.get_lp_vehicle and g.get_lp_vehicle()
+    local car     = nil
+    local is_own  = false
+    if sitting and sitting:IsDescendantOf(game) then
+        car    = sitting
+        is_own = own_car ~= nil and own_car == sitting
+    elseif own_car and own_car:IsDescendantOf(game) then
+        car    = own_car
+        is_own = true
+    end
+
+    if not car or not car:IsDescendantOf(game) then
         g.notify("Error", "Vehicle float: no vehicle detected.", 3)
         return
     end
@@ -531,18 +1173,23 @@ g.start_vehicle_float = function()
         return
     end
 
+    local trailer = nil
+    if is_own then
+        trailer = g.get_lp_trailer and g.get_lp_trailer()
+        if trailer and not trailer:IsDescendantOf(game) then trailer = nil end
+    end
+
     local existing = Workspace:FindFirstChild(float_name)
     if existing then existing:Destroy() end
-
     g.Vehicle_Float_Running = true
     g.vehicle_float_height  = 0
-    g.vehicle_floor_offset  = snapshot_floor_offset(car, anchor)
+    g.vehicle_floor_offset  = snapshot_floor_offset(car, anchor, trailer)
     inc = false
     dec = false
-
-    local fp = Instance.new("Part")
+    local init_sx, init_sz = get_combined_bounds(car, trailer)
+    local fp        = Instance.new("Part")
     fp.Name         = float_name
-    fp.Size         = Vector3.new(24, 1, 24)
+    fp.Size         = Vector3.new(init_sx or 24, 1, init_sz or 24)
     fp.Transparency = 1
     fp.Anchored     = true
     fp.CanCollide   = true
@@ -550,36 +1197,54 @@ g.start_vehicle_float = function()
     fp.Parent       = Workspace
     g.vehicle_float_part = fp
 
+    lib.connect("vfloat_destroy_watch", car.AncestryChanged:Connect(function()
+        if not car:IsDescendantOf(game) then
+            silent_stop_float()
+        end
+    end))
+
     if not is_mobile then
-        lib.connect("vfloat_input_began",
-            UserInputService.InputBegan:Connect(function(i, gp)
-                if gp then return end
-                if i.KeyCode == Enum.KeyCode.Y then inc = true  end
-                if i.KeyCode == Enum.KeyCode.T then dec = true  end
-            end)
-        )
-        lib.connect("vfloat_input_ended",
-            UserInputService.InputEnded:Connect(function(i)
-                if i.KeyCode == Enum.KeyCode.Y then inc = false end
-                if i.KeyCode == Enum.KeyCode.T then dec = false end
-            end)
-        )
+        lib.connect("vfloat_input_began", UserInputService.InputBegan:Connect(function(i, gp)
+            if gp then return end
+            if i.KeyCode == Enum.KeyCode.Y then inc = true  end
+            if i.KeyCode == Enum.KeyCode.T then dec = true  end
+        end))
+        lib.connect("vfloat_input_ended", UserInputService.InputEnded:Connect(function(i)
+            if i.KeyCode == Enum.KeyCode.Y then inc = false end
+            if i.KeyCode == Enum.KeyCode.T then dec = false end
+        end))
     end
 
     lib.connect("vfloat_heartbeat", RunService.Heartbeat:Connect(function(dt)
         if not g.Vehicle_Float_Running then return end
         local fp_now = g.vehicle_float_part
         if not fp_now or not fp_now.Parent then return end
-        local car_now = g.get_vehicle and g.get_vehicle()
-        if not car_now or not car_now:IsDescendantOf(game) then
-            g.stop_vehicle_float()
+        local sitting_now = (g.get_vehicle and g.get_vehicle()) or (g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle())
+        local own_now     = g.get_lp_vehicle and g.get_lp_vehicle()
+        local car_now     = nil
+        local is_own_now  = false
+
+        if sitting_now and sitting_now:IsDescendantOf(game) then
+            car_now    = sitting_now
+            is_own_now = own_now ~= nil and own_now == sitting_now
+        elseif own_now and own_now:IsDescendantOf(game) then
+            car_now    = own_now
+            is_own_now = true
+        else
+            silent_stop_float()
             return
         end
 
         local anchor_now = resolve_anchor(car_now)
         if not anchor_now or not anchor_now:IsDescendantOf(game) then
-            g.stop_vehicle_float()
+            silent_stop_float()
             return
+        end
+
+        local trailer_now = nil
+        if is_own_now then
+            trailer_now = g.get_lp_trailer and g.get_lp_trailer()
+            if trailer_now and not trailer_now:IsDescendantOf(game) then trailer_now = nil end
         end
 
         local move_up   = false
@@ -602,14 +1267,16 @@ g.start_vehicle_float = function()
             g.vehicle_float_height = math.max(0, g.vehicle_float_height - speed * dt)
         end
 
-        local ref_y    = anchor_now.Position.Y + g.vehicle_floor_offset
+        local ref_y     = anchor_now.Position.Y + g.vehicle_floor_offset
         local part_half = fp_now.Size.Y * 0.5
         local target_y  = ref_y - part_half - 0.05 + g.vehicle_float_height
-        fp_now.CFrame = CFrame.new(
-            anchor_now.Position.X,
-            target_y,
-            anchor_now.Position.Z
-        )
+        local cx, cz, sx, sz = get_combined_bounds(car_now, trailer_now)
+        if cx and cz and sx and sz then
+            fp_now.Size   = Vector3.new(sx, 1, sz)
+            fp_now.CFrame = CFrame.new(cx, target_y, cz)
+        else
+            fp_now.CFrame = CFrame.new(anchor_now.Position.X, target_y, anchor_now.Position.Z)
+        end
     end))
 
     if is_mobile then
@@ -625,33 +1292,21 @@ g.stop_vehicle_float = function()
         return
     end
 
-    local car_now = g.get_vehicle and g.get_vehicle()
-    local anchor_now = car_now and resolve_anchor(car_now)
-    if anchor_now and anchor_now:IsDescendantOf(game) then
-        local fp_ref = g.vehicle_float_part
-        if fp_ref and fp_ref.Parent then
-            local snap_y = fp_ref.Position.Y + fp_ref.Size.Y * 0.5 - g.vehicle_floor_offset + 0.1
-            local current = anchor_now.CFrame
-            pcall(function()
-                anchor_now.CFrame = CFrame.new(current.X, snap_y - g.vehicle_floor_offset, current.Z)
-                    * (current - current.Position)
-            end)
+    local car_now = (g.get_vehicle and g.get_vehicle()) or (g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle()) or (g.get_lp_vehicle and g.get_lp_vehicle())
+    if car_now then
+        local anchor_now = resolve_anchor(car_now)
+        if anchor_now and anchor_now:IsDescendantOf(game) then
+            local fp_ref = g.vehicle_float_part
+            if fp_ref and fp_ref.Parent then
+                local snap_y  = fp_ref.Position.Y + fp_ref.Size.Y * 0.5 - g.vehicle_floor_offset + 0.1
+                local current = anchor_now.CFrame
+                pcall(function()
+                    anchor_now.CFrame = CFrame.new(current.X, snap_y - g.vehicle_floor_offset, current.Z) * (current - current.Position)
+                end)
+            end
         end
     end
-
-    g.Vehicle_Float_Running = false
-    g.vehicle_float_height  = 0
-    g.vehicle_floor_offset  = 0
-    inc = false
-    dec = false
-    g.FlamesLibrary.disconnect("vfloat_input_began")
-    g.FlamesLibrary.disconnect("vfloat_input_ended")
-    g.FlamesLibrary.disconnect("vfloat_heartbeat")
-    local fp_ref = g.vehicle_float_part
-    if fp_ref and fp_ref.Parent then fp_ref:Destroy() end
-    local leftover = Workspace:FindFirstChild(float_name)
-    if leftover then leftover:Destroy() end
-    g.vehicle_float_part = nil
+    silent_stop_float()
     g.notify("Success", "Vehicle float disabled.", 3)
 end
 
@@ -686,8 +1341,8 @@ g.teleport_vehicle = function(Target)
         return
     end
 
-    local car = g.get_vehicle()
-    if not car or not car:IsA("Model") or not car:IsDescendantOf(game or workspace) then
+    local car = g.get_vehicle() or g.Get_Current_Sitting_In_Vehicle()
+    if not car or not car:IsDescendantOf(game or workspace) then
         g.notify("Error", "Vehicle-Teleport: no vehicle found.", 3)
         return
     end
@@ -717,7 +1372,7 @@ end
 g.vehicle_tp_duration  = g.vehicle_tp_duration or 1
 g.vehicle_tp_style     = g.vehicle_tp_style or Enum.EasingStyle.Linear
 g.vehicle_tp_direction = g.vehicle_tp_direction or Enum.EasingDirection.Out
-g.teleport_vehicle = function(Target)
+g.teleport_vehicle_tween = function(Target)
     if not Target then return end
     local Target_CFrame
     if typeof(Target) == "CFrame" then
@@ -740,8 +1395,8 @@ g.teleport_vehicle = function(Target)
         return
     end
 
-    local car = g.get_vehicle()
-    if not car or not car:IsA("Model") or not car:IsDescendantOf(game or workspace) then
+    local car = g.get_vehicle() or g.Get_Current_Sitting_In_Vehicle()
+    if not car or not car:IsDescendantOf(game or workspace) then
         g.notify("Error", "Vehicle-Teleport: no vehicle found.", 3)
         return
     end
@@ -800,6 +1455,7 @@ g.fully_upgrade_current_vehicle = function()
         local ok, Tune = pcall(require, Tune_Script)
         if not ok or type(Tune) ~= "table" then
             g.notify("Error", "Vehicle-Speed: failed to require tune.", 3)
+            g.notify("Error", "Instead received response: "..tostring(Tune), 3)
             return
         end
 
@@ -978,7 +1634,7 @@ end
 
 g.set_vehicle_lights = function(Brightness)
     local car = g.get_vehicle()
-    if not car or not car:IsA("Model") or not car:IsDescendantOf(game) then
+    if not car or not car:IsDescendantOf(game) then
         g.notify("Error", "Vehicle-Lights: no vehicle found.", 3)
         return
     end
@@ -1029,15 +1685,9 @@ g.fullbright_toggle = function(state)
         Lighting.ClockTime = 14
 		Lighting.Brightness = 3
         Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-        lib.connect("day_time_cap", Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
-            if g.fullbright_enabled and Lighting.ClockTime ~= 14 then Lighting.ClockTime = 14 end
-        end))
-        lib.connect("full_bright_cap", Lighting:GetPropertyChangedSignal("Brightness"):Connect(function()
-            if g.fullbright_enabled and Lighting.Brightness ~= 3 then Lighting.Brightness = 3 end
-        end))
-        lib.connect("full_bright_ambient", Lighting:GetPropertyChangedSignal("Ambient"):Connect(function()
-            if g.fullbright_enabled and Lighting.Ambient ~= Color3.fromRGB(255, 255, 255) then Lighting.Ambient = Color3.fromRGB(255, 255, 255) end
-        end))
+        lib.connect("day_time_cap", Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function() if g.fullbright_enabled and Lighting.ClockTime ~= 14 then Lighting.ClockTime = 14 end end))
+        lib.connect("full_bright_cap", Lighting:GetPropertyChangedSignal("Brightness"):Connect(function() if g.fullbright_enabled and Lighting.Brightness ~= 3 then Lighting.Brightness = 3 end end))
+        lib.connect("full_bright_ambient", Lighting:GetPropertyChangedSignal("Ambient"):Connect(function() if g.fullbright_enabled and Lighting.Ambient ~= Color3.fromRGB(255, 255, 255) then Lighting.Ambient = Color3.fromRGB(255, 255, 255) end end))
 	else
         lib.disconnect("day_time_cap")
         lib.disconnect("full_bright_cap")
@@ -1217,7 +1867,7 @@ end
 
 local Atlas = loadstring(g.http_get("https://gitlab.com/flames2431233/Starter/-/raw/main/UIs/Atlas.lua?ref_type=heads", true))()
 local UI = Atlas.new({
-    Name = "Flames Hub | Carolina Leaners",
+    Name = "Flames Hub | Carolina Leaners | "..tostring(g.Script_Version),
     ConfigFolder = "FlamesHub_Carolina_Leaners_Menu_Configuration",
     Color = Color3.fromRGB(21, 103, 251),
     Credit = "Flames Hub",
@@ -1256,6 +1906,7 @@ local Home_Section = Home_Page:CreateSection("Main")
 local LocalPlayer_Section = Home_Page:CreateSection("LocalPlayer")
 local Lighting_Section = Home_Page:CreateSection("Lighting")
 local Vehicles_Section = Home_Page:CreateSection("Vehicles")
+local UI_Section = Home_Page:CreateSection("UI")
 
 g.create_ui_element("Toggle", Home_Section, {
 Name = "Minimap Toggle",
@@ -1364,8 +2015,8 @@ Callback = function(state)
     end
 end}, "Fly_Toggle_UI")
 
-g.Vehicle_Float_Toggle_UI = g.create_ui_element("Toggle", LocalPlayer_Section, {
-Name = "Vehicle Float",
+g.Vehicle_Float_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
+Name = "Vehicle Float (FE)",
 Default = g.Vehicle_Float_Running or false,
 Flag = "Vehicle_Float_Toggle_UI",
 Callback = function(state)
@@ -1381,7 +2032,7 @@ Callback = function(state)
             if g.Vehicle_Float_Toggle_UI then g.Vehicle_Float_Toggle_UI:Set(false, false) end
             return
         end
-        local veh = g.get_vehicle and g.get_vehicle()
+        local veh = g.get_vehicle() or g.Get_Current_Sitting_In_Vehicle()
         if not veh or not veh:IsA("Model") or not veh:IsDescendantOf(game) then
             g.notify("Error", "No vehicle detected.", 3)
             g.Vehicle_Float_Running = false
@@ -1394,14 +2045,19 @@ Callback = function(state)
     end
 end}, "Vehicle_Float_Toggle_UI")
 
--- [[ will work on later (just need to put it in PlayerGui) ]] --
---[[g.create_ui_element("Toggle", Vehicles_Section, {
+g.create_ui_element("Button", Vehicles_Section, {
+Name = "Toggle All Players Car Doors (FE)",
+Callback = function()
+    g.Fire_All_Doors()
+end,})
+
+g.create_ui_element("Toggle", Vehicles_Section, {
 Name = "Vehicle Engine State (On/Off)",
 Default = false,
 Flag = "Vehicle_State_Toggle_UI",
 Callback = function(state)
     g.toggle_vehicle_state(state)
-end}, "Vehicle_State_Toggle_UI")--]]
+end}, "Vehicle_State_Toggle_UI")
 
 g.create_ui_element("Toggle", Vehicles_Section, {
 Name = "Car Alarm (FE)",
@@ -1411,13 +2067,16 @@ Callback = function(state)
     g.toggle_car_alarm(state)
 end}, "Car_Alarm_Toggle_UI")
 
-g.create_ui_element("Toggle", Vehicles_Section, {
+g.Vehicle_Fly_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
 Name = "Vehicle Fly (FE)",
 Default = g.vehicle_fly or false,
 Flag = "Vehicle_Fly_Toggle_UI",
 Callback = function(state)
     g.toggle_vehicle_fly()
 end}, "Vehicle_Fly_Toggle_UI")
+wait(0.25)
+if g.vehicle_fly then pcall(function() g.stop_vehicle_fly() end) end
+if g.Vehicle_Fly_Toggle_UI then g.Vehicle_Fly_Toggle_UI:Set(false, false) end
 
 g.create_ui_element("Slider", Vehicles_Section, {
 Name = "Vehicle Fly Speed",
@@ -1428,6 +2087,26 @@ Flag = "Vehicle_Fly_Speed_Slider_UI",
 Callback = function(val)
     g.vehicle_fly_speed = val
 end}, "Vehicle_Fly_Speed_Slider_UI")
+
+local function get_color_names()
+    local names = {}
+    for name in pairs(g.all_available_colors) do table.insert(names, name) end
+    table.sort(names)
+    return names
+end
+
+g.create_ui_element("Dropdown", Vehicles_Section, {
+Name = "Paint Vehicle Color (FE)",
+Options = get_color_names(),
+DefaultItemSelected = "None",
+ItemSelecting = false,
+Flag = "Vehicle_Paint_Dropdown_UI",
+Callback = function(selected)
+    local hex = g.all_available_colors[selected]
+    if not hex then g.notify("Error", "Unknown color selected.", 2.5); return end
+    g.Apply_Paint_Customization(hex)
+    g.notify("Success", "Painting vehicle: " ..tostring(selected), 1)
+end}, "Vehicle_Paint_Dropdown_UI")
 
 local low_level = low_level_client()
 if low_level == false then
@@ -1447,6 +2126,16 @@ if low_level == false then
         g.reset_vehicle_speed()
     end,})
 end
+
+g.create_ui_element("Button", UI_Section, {
+Name = "Destroy GUI",
+Callback = function()
+    if g.stop_vehicle_fly and typeof(g.stop_vehicle_fly) == "function" then g.stop_vehicle_fly() end
+    if g.Vehicle_Fly_Toggle_UI then g.Vehicle_Fly_Toggle_UI:Set(false, false) end
+    if g.Vehicle_Float_Toggle_UI then g.Vehicle_Float_Toggle_UI:Set(false, false) end
+    if g.stop_vehicle_float and typeof(g.stop_vehicle_float) == "function" then g.stop_vehicle_float() end
+    pcall(function() UI:Destroy() end)
+end,})
 
 g.create_ui_element("Button", Vehicles_Section, {
 Name = "Fully Upgrade Vehicle",
@@ -1488,6 +2177,67 @@ Callback = function(input)
     end
     g.teleport_vehicle(Vector3.new(tonumber(x), tonumber(y), tonumber(z)))
 end}, "Vehicle_Teleport_Input_UI")
+
+g.create_ui_element("Input", Vehicles_Section, {
+Name = "Teleport Vehicle To Player (FE)",
+PlaceholderText = "Player name",
+Flag = "Vehicle_Teleport_Player_UI",
+Callback = function(input)
+    if not input or input == "" then
+        g.notify("Error", "Enter a player name.", 3)
+        return
+    end
+    local target_player = g.findplr(input)
+    if not target_player then
+        g.notify("Error", "Player not found.", 3)
+        return
+    end
+    local target_char = target_player.Character or g.get_char(target_player)
+    if not target_char or not target_char:IsDescendantOf(game or workspace) then
+        g.notify("Error", "Target character is not loaded.", 3)
+        return
+    end
+    local target_root = target_char and target_char:FindFirstChild("HumanoidRootPart") or g.get_root(target_player)
+    if not target_root or not target_root.Parent then
+        g.notify("Error", "Could not resolve target HumanoidRootPart.", 3)
+        return
+    end
+    g.teleport_vehicle(target_root.CFrame)
+end}, "Vehicle_Teleport_Player_UI")
+
+g.vehicle_return_delay = g.vehicle_return_delay or 3
+g.vehicle_saved_return_cf = g.vehicle_saved_return_cf or nil
+g.create_ui_element("Input", Vehicles_Section, {
+Name = "Teleport Vehicle & Return (FE)",
+PlaceholderText = "X, Y, Z",
+Flag = "Vehicle_Teleport_Return_UI",
+Callback = function(input)
+    local x, y, z = input:match("([%-%.%d]+),%s*([%-%.%d]+),%s*([%-%.%d]+)")
+    if not x or not y or not z then
+        g.notify("Error", "Invalid format. Use: X, Y, Z", 3)
+        return
+    end
+    local hrp = g.HumanoidRootPart or g.Character and g.Character:FindFirstChild("HumanoidRootPart") or g.get_root(speaker)
+    if not hrp or not hrp.Parent then
+        g.notify("Error", "Could not resolve HumanoidRootPart.", 3)
+        return
+    end
+    local saved_cf = hrp.CFrame
+    g.vehicle_saved_return_cf = saved_cf
+    g.teleport_vehicle(Vector3.new(tonumber(x), tonumber(y), tonumber(z)))
+    task.delay(g.vehicle_return_delay, function()
+        if not g.vehicle_saved_return_cf then return end
+        local car = g.get_vehicle() or g.Get_Current_Sitting_In_Vehicle()
+        if not car or not car:IsDescendantOf(game or workspace) then
+            g.vehicle_saved_return_cf = nil
+            return
+        end
+        g.teleport_vehicle(g.vehicle_saved_return_cf)
+        wait(0.15)
+        g.vehicle_saved_return_cf = nil
+    end)
+    g.notify("Info", "Returning in: " .. g.vehicle_return_delay .. " second(s).", g.vehicle_return_delay)
+end}, "Vehicle_Teleport_Return_UI")
 
 local location_map = {}
 local location_names = {}
