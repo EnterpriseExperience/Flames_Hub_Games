@@ -79,7 +79,7 @@ local PlayerGui = g.PlayerGui or speaker:FindFirstChildOfClass("PlayerGui") or s
 local lib = g.FlamesLibrary or getgenv().FlamesLibrary
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.7.3"
+local Raw_Version = "V1.7.4"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -214,6 +214,20 @@ end
 wait(0.1)
 if not g.Roads_Folder_Found_WS then pcall(function() Find_Roads_Folder_WS() end) end
 
+local function Find_Buildings_Folder_WS()
+    local cache = g.Buildings_Folder_Found_WS
+    if cache and cache:IsA("Folder") then return cache end
+    for _, v in ipairs(Workspace:GetChildren()) do
+        if typeof(v) == "Instance" and v:IsA("Folder") and v.Name:lower():find("buildings") then
+            g.Buildings_Folder_Found_WS = v
+            return v
+        end
+    end
+    return nil
+end
+wait(0.1)
+if not g.Buildings_Folder_Found_WS then pcall(function() Find_Buildings_Folder_WS() end) end
+
 local function find_remotes_folder()
     local cache = g.Remotes_Folder_Found_RS
     if cache and typeof(cache) == "Instance" and cache:IsA("Folder") then return cache end
@@ -249,21 +263,29 @@ if not g.Lamp_Post_Remote_Event_Found_RS then pcall(function() Hit_Lamp_Post_Rem
 local PROXIMITY_RADIUS = 100
 g.Hit_All_Lamp_Posts = function()
     local Roads = g.Roads_Folder_Found_WS or Find_Roads_Folder_WS()
-    if not Roads or not Roads:IsA("Folder") then
-        g.notify("Error", "Roads folder not found.", 3)
-        return
-    end
-
+    local Buildings = g.Buildings_Folder_Found_WS or Find_Buildings_Folder_WS()
     local remote = g.Lamp_Post_Remote_Event_Found_RS or Hit_Lamp_Post_Remote_Event()
     if not remote or not remote:IsA("RemoteEvent") then return end
     local root = g.HumanoidRootPart or g.get_root(speaker)
     if not root then return end
     local origin = root.Position
-    for _, v in ipairs(Roads:GetChildren()) do
-        local part = v:IsA("Model") and v:FindFirstChildOfClass("Part")
-        if part and (part.Color == Color3.fromRGB(86, 66, 54) or part.Color == Color3.fromRGB(163, 162, 165)) then
-            local part_pos = part.Position
-            if (part_pos - origin).Magnitude <= PROXIMITY_RADIUS then remote:FireServer(v, part_pos) end
+    if Roads and Roads:IsA("Folder") then
+        for _, v in ipairs(Roads:GetChildren()) do
+            local part = v:IsA("Model") and v:FindFirstChildOfClass("Part")
+            if part and part.Color == Color3.fromRGB(86, 66, 54) then
+                local part_pos = part.Position
+                if (part_pos - origin).Magnitude <= PROXIMITY_RADIUS then remote:FireServer(v, part_pos) end
+            end
+        end
+    end
+
+    if Buildings and Buildings:IsA("Folder") then
+        for _, v in ipairs(Buildings:GetChildren()) do
+            local part = v:IsA("Model") and v:FindFirstChildOfClass("Part")
+            if part and part.Color == Color3.fromRGB(163, 162, 165) then
+                local part_pos = part.Position
+                if (part_pos - origin).Magnitude <= PROXIMITY_RADIUS then remote:FireServer(v, part_pos) end
+            end
         end
     end
 end
