@@ -79,7 +79,7 @@ local PlayerGui = g.PlayerGui or speaker:FindFirstChildOfClass("PlayerGui") or s
 local lib = g.FlamesLibrary or getgenv().FlamesLibrary
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.7.9"
+local Raw_Version = "V1.8.0"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -229,24 +229,30 @@ wait(0.1)
 if not g.Buildings_Folder_Found_WS then pcall(function() Find_Buildings_Folder_WS() end) end
 
 g.Pole_Collision_Cache = g.Pole_Collision_Cache or {}
-local function process_collision_folder(folder, target_color)
+local function matches_color(model, target_color)
+    local primary = model:FindFirstChildOfClass("Part")
+    return primary and primary.Color == target_color
+end
+
+local function register_part(part)
+    if not part:IsA("BasePart") then return end
+    if g.Pole_Collision_Cache[part] then return end
+    g.Pole_Collision_Cache[part] = {
+        CanCollide = part.CanCollide,
+        CanQuery   = part.CanQuery,
+        CanTouch   = part.CanTouch,
+    }
+    part.CanCollide = false
+    part.CanQuery   = false
+    part.CanTouch   = false
+end
+
+local function scan_folder(folder, target_color)
     if not folder or not folder:IsA("Folder") then return end
     for _, v in ipairs(folder:GetChildren()) do
-        if v:IsA("Model") then
-            local primary = v:FindFirstChildOfClass("Part")
-            if primary and primary.Color == target_color then
-                for _, part in ipairs(v:GetDescendants()) do
-                    if part:IsA("BasePart") and not g.Pole_Collision_Cache[part] then
-                        g.Pole_Collision_Cache[part] = {
-                            CanCollide = part.CanCollide,
-                            CanQuery   = part.CanQuery,
-                            CanTouch   = part.CanTouch,
-                        }
-                        part.CanCollide = false
-                        part.CanQuery   = false
-                        part.CanTouch   = false
-                    end
-                end
+        if v:IsA("Model") and matches_color(v, target_color) then
+            for _, part in ipairs(v:GetDescendants()) do
+                register_part(part)
             end
         end
     end
@@ -256,14 +262,43 @@ g.Disable_Pole_Collision = function(state)
     g.Disable_Pole_Collision_State = state
     if state then
         g.Pole_Collision_Cache = {}
+        local Roads     = g.Roads_Folder_Found_WS     or Find_Roads_Folder_WS()
+        local Buildings = g.Buildings_Folder_Found_WS or Find_Buildings_Folder_WS()
+        scan_folder(Roads,     Color3.fromRGB(86,  66,  54))
+        scan_folder(Buildings, Color3.fromRGB(163, 162, 165))
+        if Roads and Roads:IsA("Folder") then
+            lib.connect("pole_roads_added", Roads.DescendantAdded:Connect(function(d)
+                local model = d:FindFirstAncestorOfClass("Model")
+                if model and matches_color(model, Color3.fromRGB(86, 66, 54)) then
+                    register_part(d)
+                end
+            end))
+        end
+
+        if Buildings and Buildings:IsA("Folder") then
+            lib.connect("pole_buildings_added", Buildings.DescendantAdded:Connect(function(d)
+                local model = d:FindFirstAncestorOfClass("Model")
+                if model and matches_color(model, Color3.fromRGB(163, 162, 165)) then
+                    register_part(d)
+                end
+            end))
+        end
+
         lib.connect("pole_collision_disable", RunService.Heartbeat:Connect(function()
-            local Roads     = g.Roads_Folder_Found_WS     or Find_Roads_Folder_WS()
-            local Buildings = g.Buildings_Folder_Found_WS or Find_Buildings_Folder_WS()
-            process_collision_folder(Roads,     Color3.fromRGB(86,  66,  54))
-            process_collision_folder(Buildings, Color3.fromRGB(163, 162, 165))
+            for part in pairs(g.Pole_Collision_Cache) do
+                if typeof(part) == "Instance" and part:IsA("BasePart") and part.Parent then
+                    if part.CanCollide or part.CanQuery or part.CanTouch then
+                        part.CanCollide = false
+                        part.CanQuery   = false
+                        part.CanTouch   = false
+                    end
+                end
+            end
         end))
     else
         lib.disconnect("pole_collision_disable")
+        lib.disconnect("pole_roads_added")
+        lib.disconnect("pole_buildings_added")
         for part, original in pairs(g.Pole_Collision_Cache) do
             if typeof(part) == "Instance" and part:IsA("BasePart") and part.Parent then
                 part.CanCollide = original.CanCollide
@@ -369,21 +404,6 @@ local function Find_Apply_Customization_Remote_Function()
 end
 wait(0.1)
 if not g.Apply_Customization_Remote_Function_Found_RS then pcall(function() Find_Apply_Customization_Remote_Function() end) end
-
-g.Apply_Paint_Customization = function(color)
-    local remote = g.Apply_Customization_Remote_Function_Found_RS or Find_Apply_Customization_Remote_Function()
-    if not remote or not remote:IsA("RemoteFunction") then return end
-    local veh = g.get_lp_vehicle()
-    if not veh or not veh:IsA("Model") or not veh:IsDescendantOf(game or workspace) then g.notify("Error", "You do not have a Vehicle spawned.", 3); return end
-    remote:InvokeServer(
-        veh.Name,
-        {
-            category = "Paint",
-            optionId = color,
-            subcategory = "Color1"
-        }
-    )
-end
 
 local function find_Warden_Remote_Event()
     local cache = g.Warden_Remote_Event_Found_RS
@@ -635,6 +655,24 @@ g.Get_Current_Sitting_In_Vehicle = function()
     local fallback = seat:FindFirstAncestorWhichIsA("Model")
     if fallback and fallback:IsDescendantOf(vehicles_folder) then return fallback end
     return nil
+end
+
+g.Apply_Paint_Customization = function(color)
+    local remote = g.Apply_Customization_Remote_Function_Found_RS or Find_Apply_Customization_Remote_Function()
+    if not remote or not remote:IsA("RemoteFunction") then return end
+    local veh = g.get_lp_vehicle() or g.Get_Current_Sitting_In_Vehicle()
+    if not veh or not veh:IsDescendantOf(game or workspace) then g.notify("Error", "You do not have a Vehicle spawned or you're not sitting in one.", 3); return end
+    remote:InvokeServer(
+        veh.Name,
+        {
+            category = "Paint",
+            optionId = color,
+            subcategory = "Color1"
+        }
+    )
+    if veh and veh:GetAttribute("owner") ~= speaker.UserId then
+        g.notify("Warning", "If it did not work, it is because you do not own this Vehicle.", 3)
+    end
 end
 
 g.Fire_All_Doors_Running = g.Fire_All_Doors_Running or false
