@@ -79,7 +79,7 @@ local PlayerGui = g.PlayerGui or speaker:FindFirstChildOfClass("PlayerGui") or s
 local lib = g.FlamesLibrary or getgenv().FlamesLibrary
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.7.5"
+local Raw_Version = "V1.7.6"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -227,6 +227,46 @@ local function Find_Buildings_Folder_WS()
 end
 wait(0.1)
 if not g.Buildings_Folder_Found_WS then pcall(function() Find_Buildings_Folder_WS() end) end
+
+g.Pole_Collision_Cache = g.Pole_Collision_Cache or {}
+local function process_collision_folder(folder, target_color)
+    if not folder or not folder:IsA("Folder") then return end
+    for _, v in ipairs(folder:GetChildren()) do
+        if v:IsA("Model") then
+            local primary = v:FindFirstChildOfClass("Part")
+            if primary and primary.Color == target_color then
+                for _, part in ipairs(v:GetDescendants()) do
+                    if part:IsA("BasePart") and not g.Pole_Collision_Cache[part] then
+                        g.Pole_Collision_Cache[part] = part.CanCollide
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end
+    end
+end
+
+g.Disable_Pole_Collision = function(state)
+    g.Disable_Pole_Collision_State = state
+    if state then
+        g.Pole_Collision_Cache = {}
+        lib.connect("pole_collision_disable", RunService.Heartbeat:Connect(function()
+            local Roads     = g.Roads_Folder_Found_WS     or Find_Roads_Folder_WS()
+            local Buildings = g.Buildings_Folder_Found_WS or Find_Buildings_Folder_WS()
+            process_collision_folder(Roads,     Color3.fromRGB(86,  66,  54))
+            process_collision_folder(Buildings, Color3.fromRGB(163, 162, 165))
+        end))
+    else
+        lib.disconnect("pole_collision_disable")
+        for part, original in pairs(g.Pole_Collision_Cache) do
+            if typeof(part) == "Instance" and part:IsA("BasePart") and part.Parent then
+                part.CanCollide = original
+            end
+        end
+
+        g.Pole_Collision_Cache = {}
+    end
+end
 
 local function find_remotes_folder()
     local cache = g.Remotes_Folder_Found_RS
@@ -2154,6 +2194,14 @@ Callback = function(state)
         g.stop_vehicle_float()
     end
 end}, "Vehicle_Float_Toggle_UI")
+
+g.Disable_Pole_Collision_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
+Name = "Disable Pole Collision (FE)",
+Default = g.Disable_Pole_Collision_State or false,
+Flag = "Disable_Pole_Collision_Toggle_UI_1",
+Callback = function(state)
+    g.Disable_Pole_Collision(state)
+end}, "Disable_Pole_Collision_Toggle_UI_1")
 
 g.create_ui_element("Button", Vehicles_Section, {
 Name = "Toggle All Players Car Doors (FE)",
