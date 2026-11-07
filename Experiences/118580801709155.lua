@@ -239,6 +239,7 @@ local function process_collision_folder(folder, target_color)
                     if part:IsA("BasePart") and not g.Pole_Collision_Cache[part] then
                         g.Pole_Collision_Cache[part] = part.CanCollide
                         part.CanCollide = false
+                        part.CanQuery = false
                         part.CanTouch = false
                     end
                 end
