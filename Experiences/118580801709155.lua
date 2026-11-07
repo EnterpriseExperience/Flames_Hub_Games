@@ -79,7 +79,7 @@ local PlayerGui = g.PlayerGui or speaker:FindFirstChildOfClass("PlayerGui") or s
 local lib = g.FlamesLibrary or getgenv().FlamesLibrary
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.7.6"
+local Raw_Version = "V1.7.8"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -237,10 +237,14 @@ local function process_collision_folder(folder, target_color)
             if primary and primary.Color == target_color then
                 for _, part in ipairs(v:GetDescendants()) do
                     if part:IsA("BasePart") and not g.Pole_Collision_Cache[part] then
-                        g.Pole_Collision_Cache[part] = part.CanCollide
+                        g.Pole_Collision_Cache[part] = {
+                            CanCollide = part.CanCollide,
+                            CanQuery   = part.CanQuery,
+                            CanTouch   = part.CanTouch,
+                        }
                         part.CanCollide = false
-                        part.CanQuery = false
-                        part.CanTouch = false
+                        part.CanQuery   = false
+                        part.CanTouch   = false
                     end
                 end
             end
@@ -262,7 +266,9 @@ g.Disable_Pole_Collision = function(state)
         lib.disconnect("pole_collision_disable")
         for part, original in pairs(g.Pole_Collision_Cache) do
             if typeof(part) == "Instance" and part:IsA("BasePart") and part.Parent then
-                part.CanCollide = original
+                part.CanCollide = original.CanCollide
+                part.CanQuery   = original.CanQuery
+                part.CanTouch   = original.CanTouch
             end
         end
 
