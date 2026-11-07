@@ -267,26 +267,22 @@ g.Disable_Pole_Collision = function(state)
         scan_folder(Roads,     Color3.fromRGB(86,  66,  54))
         scan_folder(Buildings, Color3.fromRGB(163, 162, 165))
         if Roads and Roads:IsA("Folder") then
-            lib.connect("pole_roads_added", Roads.DescendantAdded:Connect(function(d)
+            lib.connect("pole_roads_added", Roads.ChildAdded:Connect(function(d)
                 local model = d:FindFirstAncestorOfClass("Model")
-                if model and matches_color(model, Color3.fromRGB(86, 66, 54)) then
-                    register_part(d)
-                end
+                if model and matches_color(model, Color3.fromRGB(86, 66, 54)) then register_part(d) end
             end))
         end
 
         if Buildings and Buildings:IsA("Folder") then
-            lib.connect("pole_buildings_added", Buildings.DescendantAdded:Connect(function(d)
+            lib.connect("pole_buildings_added", Buildings.ChildAdded:Connect(function(d)
                 local model = d:FindFirstAncestorOfClass("Model")
-                if model and matches_color(model, Color3.fromRGB(163, 162, 165)) then
-                    register_part(d)
-                end
+                if model and matches_color(model, Color3.fromRGB(163, 162, 165)) then register_part(d) end
             end))
         end
 
         lib.connect("pole_collision_disable", RunService.Heartbeat:Connect(function()
             for part in pairs(g.Pole_Collision_Cache) do
-                if typeof(part) == "Instance" and part:IsA("BasePart") and part.Parent then
+                if part:IsA("BasePart") and part.Parent then
                     if part.CanCollide or part.CanQuery or part.CanTouch then
                         part.CanCollide = false
                         part.CanQuery   = false
@@ -300,13 +296,12 @@ g.Disable_Pole_Collision = function(state)
         lib.disconnect("pole_roads_added")
         lib.disconnect("pole_buildings_added")
         for part, original in pairs(g.Pole_Collision_Cache) do
-            if typeof(part) == "Instance" and part:IsA("BasePart") and part.Parent then
+            if part:IsA("BasePart") and part.Parent then
                 part.CanCollide = original.CanCollide
                 part.CanQuery   = original.CanQuery
                 part.CanTouch   = original.CanTouch
             end
         end
-
         g.Pole_Collision_Cache = {}
     end
 end
