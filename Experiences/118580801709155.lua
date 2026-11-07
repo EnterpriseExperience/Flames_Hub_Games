@@ -214,17 +214,6 @@ end
 wait(0.1)
 if not g.Roads_Folder_Found_WS then pcall(function() Find_Roads_Folder_WS() end) end
 
-local function Get_Lamp_Post_Model()
-    local Roads = g.Roads_Folder_Found_WS or Find_Roads_Folder_WS()
-    if not Roads or not Roads:IsA("Folder") then g.notify("Error", "Roads folder not found.", 3); return end
-    for _, v in ipairs(Roads:GetChildren()) do
-        if v:IsA("Model") and v:FindFirstChildOfClass("Part") and v:FindFirstChildOfClass("Part").Color == Color3.fromRGB(86, 66, 54) then
-            return v
-        end
-    end
-    return nil
-end
-
 local function find_remotes_folder()
     local cache = g.Remotes_Folder_Found_RS
     if cache and typeof(cache) == "Instance" and cache:IsA("Folder") then return cache end
@@ -272,7 +261,7 @@ g.Hit_All_Lamp_Posts = function()
     local origin = root.Position
     for _, v in ipairs(Roads:GetChildren()) do
         local part = v:IsA("Model") and v:FindFirstChildOfClass("Part")
-        if part and part.Color == Color3.fromRGB(86, 66, 54) then
+        if part and (part.Color == Color3.fromRGB(86, 66, 54) or part.Color == Color3.fromRGB(163, 162, 165)) then
             local part_pos = part.Position
             if (part_pos - origin).Magnitude <= PROXIMITY_RADIUS then remote:FireServer(v, part_pos) end
         end
