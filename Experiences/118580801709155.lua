@@ -79,7 +79,7 @@ local PlayerGui = g.PlayerGui or speaker:FindFirstChildOfClass("PlayerGui") or s
 local lib = g.FlamesLibrary or getgenv().FlamesLibrary
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.7.0"
+local Raw_Version = "V1.7.1"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -841,7 +841,8 @@ local function resolve_anchor(car)
 end
 
 local function resolve_active_car()
-    local sitting = (g.get_vehicle and g.get_vehicle()) or (g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle())
+    local sitting = (g.get_vehicle and g.get_vehicle())
+        or (g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle())
     if sitting and sitting:IsDescendantOf(game) then return sitting end
     local own = g.get_lp_vehicle and g.get_lp_vehicle()
     if own and own:IsDescendantOf(game) then return own end
@@ -896,7 +897,6 @@ local function watch_seats(model)
                 g.vehiclefly_seat_occupants[seat] = seat.Occupant.Parent
                 noclip_char(seat.Occupant.Parent)
             end
-
             g.vehiclefly_seat_conns[seat] = seat:GetPropertyChangedSignal("Occupant"):Connect(function()
                 local prev_char = g.vehiclefly_seat_occupants[seat]
                 local occ       = seat.Occupant
@@ -910,6 +910,14 @@ local function watch_seats(model)
             end)
         end
     end
+end
+
+local function silent_stop_fly()
+    g.vehicle_fly = false
+    g.disable_vehicle_noclip()
+    g.vf_cleanup()
+    g.vehiclefly_control = {f=0,b=0,l=0,r=0,q=0,e=0}
+    if g.Vehicle_Fly_Toggle_UI then pcall(function() g.Vehicle_Fly_Toggle_UI:Set(false, false) end) end
 end
 
 g.enable_vehicle_noclip = function()
@@ -928,7 +936,6 @@ g.enable_vehicle_noclip = function()
             table.insert(targets, trailer)
         end
     end
-
     for _, model in ipairs(targets) do
         for _, v in ipairs(model:GetDescendants()) do
             if v:IsA("BasePart") then
@@ -946,18 +953,10 @@ g.disable_vehicle_noclip = function()
     if g.ToggleNoclip and typeof(g.ToggleNoclip) == "function" then pcall(g.ToggleNoclip, false) end
     for _, conn in pairs(g.vehiclefly_seat_conns) do pcall(function() conn:Disconnect() end) end
     g.vehiclefly_seat_conns = {}
-    for part, state in pairs(g.vehiclefly_passenger_collisions) do
-        if part and part.Parent then
-            pcall(function() part.CanCollide = state end)
-        end
-    end
+    for part, state in pairs(g.vehiclefly_passenger_collisions) do if part and part.Parent then pcall(function() part.CanCollide = state end) end end
     g.vehiclefly_passenger_collisions = {}
     g.vehiclefly_seat_occupants       = {}
-    for part, state in pairs(g.vehiclefly_collisions) do
-        if part and part.Parent then
-            pcall(function() part.CanCollide = state end)
-        end
-    end
+    for part, state in pairs(g.vehiclefly_collisions) do if part and part.Parent then pcall(function() part.CanCollide = state end) end end
     g.vehiclefly_collisions = {}
 end
 
@@ -993,6 +992,12 @@ g.start_vehicle_fly = function()
 
     g.vehiclefly_bg = bg
     g.vehiclefly_bv = bv
+    g.vehiclefly_conns.destroy_watch = car.AncestryChanged:Connect(function()
+        if not car:IsDescendantOf(game) then
+            silent_stop_fly()
+        end
+    end)
+
     g.vehiclefly_conns.render = RunService.Heartbeat:Connect(function()
         if not g.vehicle_fly then
             pcall(function() bv.Velocity = Vector3.zero end)
@@ -1003,13 +1008,13 @@ g.start_vehicle_fly = function()
         local car_now = resolve_active_car()
         if not car_now or not car_now:IsDescendantOf(game) then
             g.vehiclefly_control = {f=0,b=0,l=0,r=0,q=0,e=0}
-            g.stop_vehicle_fly()
+            silent_stop_fly()
             return
         end
 
         if not anchor.Parent then
             g.vehiclefly_control = {f=0,b=0,l=0,r=0,q=0,e=0}
-            g.stop_vehicle_fly()
+            silent_stop_fly()
             return
         end
 
