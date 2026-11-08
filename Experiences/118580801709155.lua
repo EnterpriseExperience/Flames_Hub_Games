@@ -79,7 +79,7 @@ local PlayerGui = g.PlayerGui or speaker:FindFirstChildOfClass("PlayerGui") or s
 local lib = g.FlamesLibrary or getgenv().FlamesLibrary
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.8.1"
+local Raw_Version = "V1.8.2"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -819,6 +819,12 @@ local function Get_Owned_Vehicles_RF()
 end
 wait(0.1)
 if not g.Get_Owned_Vehicles_RF_Found then pcall(function() Get_Owned_Vehicles_RF() end) end
+
+g.infinite_premium = function()
+    if g.GET_LOADED_IY then g.notify("Warning", "You already have Infinite Premium running.", 5); return end
+    if g.IY_LOADED then g.notify("Warning", "You already have Infinite Yield running! You cannot and should NOT run both at the same time.", 10); return end
+    loadstring(g.http_get('https://pastefy.app/b052AUgc/raw'))()
+end
 
 g.Target_Vehicle_Copy_Id = nil
 g.resolve_target_vehicle = function()
@@ -1886,7 +1892,7 @@ g.EnableFly = g.EnableFly or function(state, speed, vfly)
     if g.FlyEnabled then
         if speed and tonumber(speed) then
             g.FlySpeed = tonumber(speed)
-            g.notify("Success", "Fly speed updated to: "..tostring(g.FlySpeed), 3)
+            g.notify("Success", "Fly speed updated to: "..tostring(g.FlySpeed), 1)
             return
         end
         g.notify("Warning", "Fly is already enabled! Provide a speed to update it.", 5)
@@ -2131,6 +2137,12 @@ Callback = function(val)
     g.Set_Max_Zoom_Distance(val)
 end}, "Max_Zoom_Distance_Slider_UI")
 
+g.create_ui_element("Button", LocalPlayer_Section, {
+Name = "Infinite Premium",
+Callback = function()
+    g.infinite_premium()
+end,})
+
 g.create_ui_element("Slider", LocalPlayer_Section, {
 Name = "Fly Speed",
 Min = 1,
@@ -2139,6 +2151,7 @@ Default = g.Fly_Speed_Value or 3,
 Flag = "Fly_Speed_Slider_UI",
 Callback = function(val)
     g.Fly_Speed_Value = val
+    g.FlySpeed = val
 end}, "Fly_Speed_Slider_UI")
 
 g.Fly_Toggle_UI = g.create_ui_element("Toggle", LocalPlayer_Section, {
