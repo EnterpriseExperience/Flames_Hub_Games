@@ -329,7 +329,7 @@ g.Hit_All_Lamp_Posts = function()
     if Roads and Roads:IsA("Folder") then
         for _, v in ipairs(Roads:GetChildren()) do
             local part = v:IsA("Model") and v:FindFirstChildOfClass("Part")
-            if part and part.Color == Color3.fromRGB(86, 66, 54) then
+            if part and (part.Color == Color3.fromRGB(86, 66, 54) or part.Color == Color3.fromRGB(86,  66,  54)) then
                 local part_pos = part.Position
                 if (part_pos - origin).Magnitude <= PROXIMITY_RADIUS_ROADS then remote:FireServer(v, part_pos) end
             end
