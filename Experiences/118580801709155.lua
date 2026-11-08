@@ -316,8 +316,8 @@ end
 wait(0.1)
 if not g.Lamp_Post_Remote_Event_Found_RS then pcall(function() Hit_Lamp_Post_Remote_Event() end) end
 
-local PROXIMITY_RADIUS_ROADS = 500
-local PROXIMITY_RADIUS_BUILDINGS = 350
+local PROXIMITY_RADIUS_ROADS = 100
+local PROXIMITY_RADIUS_BUILDINGS = 100
 g.Hit_All_Lamp_Posts = function()
     local Roads = g.Roads_Folder_Found_WS or Find_Roads_Folder_WS()
     local Buildings = g.Buildings_Folder_Found_WS or Find_Buildings_Folder_WS()
