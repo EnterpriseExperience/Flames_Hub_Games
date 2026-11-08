@@ -64,6 +64,8 @@ if not In_Studio then
     end
 end
 wait(0.15)
+local Announcement_Message = "Fixed Disable Pole Collision not dynamically disabling CanTouch / CanQuery on poles in the clients view-range + added announcement system."
+g.displayTimeMax = 45
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
 local ReplicatedStorage = g.ReplicatedStorage or cloneref and cloneref(game:GetService("ReplicatedStorage")) or game:GetService("ReplicatedStorage")
@@ -74,12 +76,13 @@ local TweenService = g.TweenService or cloneref and cloneref(game:GetService("Tw
 local Lighting = g.Lighting or cloneref and cloneref(game:GetService("Lighting")) or game:GetService("Lighting")
 local StarterGui = g.StarterGui or cloneref and cloneref(game:GetService("StarterGui")) or game:GetService("StarterGui")
 local GuiService = g.GuiService or cloneref and cloneref(game:GetService("GuiService")) or game:GetService("GuiService")
+local CoreGui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
 local speaker = g.LocalPlayer or Players.LocalPlayer or Players:GetAttributeChangedSignal("LocalPlayer"):Wait()
 local PlayerGui = g.PlayerGui or speaker:FindFirstChildOfClass("PlayerGui") or speaker:FindFirstChildWhichIsA("PlayerGui")
 local lib = g.FlamesLibrary or getgenv().FlamesLibrary
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.8.3"
+local Raw_Version = "V1.8.5"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -264,6 +267,12 @@ g.Disable_Pole_Collision = function(state)
     g.Disable_Pole_Collision_State = state
     if state then
         g.Pole_Collision_Cache = {}
+        local Roads     = g.Roads_Folder_Found_WS     or Find_Roads_Folder_WS()
+        local Buildings = g.Buildings_Folder_Found_WS or Find_Buildings_Folder_WS()
+        disable_folder_poles(Roads,     Color3.fromRGB(86,  66,  54))
+        disable_folder_poles(Buildings, Color3.fromRGB(163, 162, 165))
+        disable_folder_poles(Roads,     Color3.fromRGB(27, 42, 53))
+        task.wait(0.15)
         lib.connect("pole_collision_disable", RunService.Heartbeat:Connect(function()
             local Roads     = g.Roads_Folder_Found_WS     or Find_Roads_Folder_WS()
             local Buildings = g.Buildings_Folder_Found_WS or Find_Buildings_Folder_WS()
@@ -2466,3 +2475,108 @@ Flag = "Vehicle_TP_Duration_Slider_UI",
 Callback = function(val)
     g.vehicle_tp_duration = val
 end}, "Vehicle_TP_Duration_Slider_UI")
+task.wait(0.15)
+local ScreenGui
+wait(0.15)
+if CoreGui:FindFirstChild("TemporaryBanner_GUI") then
+    pcall(function()
+        if g.camConn then
+            g.camConn:Disconnect()
+            g.camConn = nil
+        end
+        if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end
+        g.UpdatePosition = nil
+        g.Clamp = nil
+    end)
+end
+wait(0.5)
+ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "TemporaryBanner_GUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = CoreGui
+
+local frame = Instance.new("Frame")
+frame.Name = "BannerFrame"
+frame.AnchorPoint = Vector2.new(0.5, 0)
+frame.Position = UDim2.new(0.5, 0, 0, 20)
+frame.Size = UDim2.new(0.6, 0, 0, 48)
+frame.BackgroundTransparency = 0
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.BorderSizePixel = 0
+frame.Parent = ScreenGui
+
+if g.make_round and typeof(g.make_round) == "function" then g.make_round(frame, 12) end
+if g.flowrgb and typeof(g.flowrgb) == "function" then g.flowrgb("banner_announcement_frame_flowing_rgb_smooth_conn", 3.5, frame, true) end
+if g.make_stroke and typeof(g.make_stroke) == "function" then g.make_stroke(frame, 1.5, 0.25) end
+
+local label = Instance.new("TextLabel")
+label.Name = "BannerText"
+label.AnchorPoint = Vector2.new(0.5, 0.5)
+label.Position = UDim2.new(0.5, 0, 0.5, 0)
+label.Size = UDim2.new(0.95, 0, 0.9, 0)
+label.BackgroundTransparency = 1
+label.Text = tostring(Announcement_Message)
+label.Font = Enum.Font.GothamBold
+label.TextScaled = true
+label.RichText = false
+label.TextWrapped = true
+label.TextColor3 = Color3.fromRGB(255, 255, 255)
+label.Parent = frame
+
+local shadow = Instance.new("ImageLabel")
+shadow.Name = "Shadow"
+shadow.AnchorPoint = Vector2.new(0.5, 0)
+shadow.Position = UDim2.new(0.5, 0, 0, 24)
+shadow.Size = UDim2.new(0.62, 0, 0, 56)
+shadow.Image = "rbxassetid://5059716102"
+shadow.BackgroundTransparency = 1
+shadow.ImageTransparency = 0.8
+shadow.ZIndex = frame.ZIndex - 1
+shadow.Parent = ScreenGui
+shadow.Visible = false
+
+g.Clamp = g.Clamp or function(n, lo, hi)
+    if n < lo then return lo end
+    if n > hi then return hi end
+    return n
+end
+
+g.UpdatePosition = g.UpdatePosition or function()
+    local _, vh = Workspace.CurrentCamera.ViewportSize.X, Workspace.CurrentCamera.ViewportSize.Y
+    local WidthScale = g.Clamp(0.6, 0.4, 0.8)
+    local HeightPX = g.Clamp(math.floor(vh * 0.07), 36, 72)
+    frame.Size = UDim2.new(WidthScale, 0, 0, HeightPX)
+    local TopOffset = math.max(12, math.floor(vh * 0.03))
+    frame.Position = UDim2.new(0.5, 0, 0, TopOffset)
+    shadow.Position = UDim2.new(0.5, 0, 0, TopOffset + math.floor(HeightPX/2))
+    shadow.Size = UDim2.new(WidthScale + 0.02, 0, 0, HeightPX + 12)
+end
+
+g.UpdatePosition()
+g.CamConn = nil
+if Workspace.CurrentCamera then g.CamConn = Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(g.UpdatePosition) end
+frame.BackgroundTransparency = 1
+label.TextTransparency = 1
+shadow.ImageTransparency = 1
+appearInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+TweenService:Create(frame, appearInfo, {BackgroundTransparency = 0}):Play()
+TweenService:Create(label, appearInfo, {TextTransparency = 0}):Play()
+shadow.Visible = false
+TweenService:Create(shadow, appearInfo, {ImageTransparency = 0.8}):Play()
+DisplayTime = g.displayTimeMax
+task.delay(DisplayTime, function()
+    local FadeInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+    local t1 = TweenService:Create(frame, FadeInfo, {BackgroundTransparency = 1})
+    local t2 = TweenService:Create(label, FadeInfo, {TextTransparency = 1})
+    local t3 = TweenService:Create(shadow, FadeInfo, {ImageTransparency = 1})
+    t1:Play(); t2:Play(); t3:Play()
+    t1.Completed:Wait()
+    pcall(function()
+        if g.CamConn then
+            g.CamConn:Disconnect()
+            g.CamConn = nil
+        end
+        ScreenGui:Destroy()
+    end)
+end)
