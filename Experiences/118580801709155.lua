@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.1.4"
+local Raw_Version = "V2.1.5"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -2949,7 +2949,9 @@ g.Set_Max_Zoom_Distance = function(distance)
 end
 
 local BUDGET_VEHICLE_NAME = "2002 Raymo 2500 5.9 Cobbins"
-local FARM_COORDS = Vector3.new(1042.97, 2.5, 963)
+local FARM_COORDS = Vector3.new(1045, 7, 958)
+local DROP1_COORDS = Vector3.new(-737, 7, 374)
+local DROP2_COORDS = Vector3.new(-1750, 7, 2439)
 local DROP_ZONE_CF = CFrame.new(
     -734.186767578125, 3.587284564971924, 378.3937683105469,
     -0.6228994727134705, 0, 0.7823023796081543,
@@ -2959,7 +2961,7 @@ local DROP_ZONE_CF = CFrame.new(
 
 local PHASE_POLL_RATE = 0.5
 local LOAD_TIMEOUT    = 20
-local DELIVER_TIMEOUT = 60
+local DELIVER_TIMEOUT = 25
 g.hay_farm_running = g.hay_farm_running or false
 g.hay_farm_state   = g.hay_farm_state   or "idle"
 g.hay_farm_cruise_height = g.hay_farm_cruise_height or 500
@@ -3102,6 +3104,15 @@ local function get_hud_phase()
     return "unknown"
 end
 
+g.get_drop_target = function() -- not used
+    local text = get_hud_objective()
+    if not text then return DROP1_COORDS end
+    if text:lower():find("milling") or text:lower():find("ol") then
+        return DROP1_COORDS
+    end
+    return DROP2_COORDS
+end
+
 local function ensure_seated()
     local human = g.Humanoid or g.get_human(speaker)
     if not human or not human.Parent or not human:IsDescendantOf(game) then return false end
@@ -3119,20 +3130,6 @@ local function ensure_seated()
     return human.Sit and human.SeatPart ~= nil
 end
 
-g.get_model_footprint_length = function(model)
-    local min_z, max_z = math.huge, -math.huge
-    for _, v in ipairs(model:GetDescendants()) do
-        if v:IsA("BasePart") then
-            local half    = v.Size.Z * 0.5
-            local world_z = v.Position.Z
-            if world_z - half < min_z then min_z = world_z - half end
-            if world_z + half > max_z then max_z = world_z + half end
-        end
-    end
-    if min_z == math.huge then return 10 end
-    return max_z - min_z
-end
-
 local function get_model_length_along_forward(model, forward)
     local min_proj, max_proj = math.huge, -math.huge
     for _, v in ipairs(model:GetDescendants()) do
@@ -3147,19 +3144,18 @@ local function get_model_length_along_forward(model, forward)
     return max_proj - min_proj
 end
 
-local ZONE_LAND_Y_OFFSET = 12
 local function get_zone_land_cf(car_model)
     local forward        = DROP_ZONE_CF.LookVector
     local trailer        = g.get_lp_trailer and g.get_lp_trailer()
-    local trailer_length = (trailer and trailer:IsDescendantOf(game or workspace)) and get_model_length_along_forward(trailer, forward) or 0
+    local trailer_length = (trailer and trailer:IsDescendantOf(game or workspace))
+        and get_model_length_along_forward(trailer, forward) or 0
     local car_length     = get_model_length_along_forward(car_model, forward)
-    local base_pos       = DROP_ZONE_CF.Position + forward * (trailer_length + car_length * 0.5 + 4)
-    local car_land_pos   = Vector3.new(base_pos.X, base_pos.Y + ZONE_LAND_Y_OFFSET, base_pos.Z)
+    local car_land_pos   = DROP_ZONE_CF.Position + forward * (trailer_length + car_length * 0.5 + 4)
     return CFrame.new(car_land_pos, car_land_pos + forward)
 end
 
 local function tween_vehicle_to(target_cf)
-    local car = g.get_vehicle and g.get_vehicle()
+    local car = g.get_vehicle() or g.Get_Current_Sitting_In_Vehicle()
     if not car or not car:IsDescendantOf(game or workspace) then
         if g.notify then g.notify("Error", "Hay Farm: no vehicle found.", 3) end
         return false
@@ -3179,48 +3175,57 @@ local function tween_vehicle_to(target_cf)
         pcall(function() g._vehicle_tp_tween:Cancel() end)
         g._vehicle_tp_tween = nil
     end
-
-    local trailer              = g.get_lp_trailer and g.get_lp_trailer()
-    local trailer_weight       = trailer and trailer:FindFirstChild("Trailer_Weight", true)
-    local hitch_part           = trailer and trailer:FindFirstChild("Hitch")
-    local hitch_ball           = hitch_part and hitch_part:FindFirstChild("HitchBallSocket")
-    local car_collision_groups     = {}
-    local trailer_collision_groups = {}
-    if hitch_ball then pcall(function() hitch_ball.Enabled = false end) end
+    local trailer               = g.get_lp_trailer and g.get_lp_trailer()
+    local trailer_snap_offset   = nil
+    local car_collision_groups  = {}
+    if trailer and trailer:IsDescendantOf(game or workspace) then
+        local t_anchor = trailer.PrimaryPart or trailer:FindFirstChildWhichIsA("BasePart", true)
+        if t_anchor then
+            trailer_snap_offset = t_anchor.Position - anchor.Position
+        end
+    end
     for _, v in ipairs(car:GetDescendants()) do
         if v:IsA("BasePart") then
             car_collision_groups[v] = v.CollisionGroup
             pcall(function() v.CollisionGroup = "TrailersGhost" end)
         end
     end
-    if trailer and trailer:IsDescendantOf(game or workspace) then
-        for _, v in ipairs(trailer:GetDescendants()) do
+    local function restore()
+        for _, v in ipairs(car:GetDescendants()) do
             if v:IsA("BasePart") then
-                trailer_collision_groups[v] = v.CollisionGroup
-                pcall(function() v.CollisionGroup = "TrailersGhost" end)
+                pcall(function() v.AssemblyLinearVelocity  = Vector3.zero end)
+                pcall(function() v.AssemblyAngularVelocity = Vector3.zero end)
             end
         end
+        if trailer and trailer:IsDescendantOf(game or workspace) then
+            for _, v in ipairs(trailer:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    pcall(function() v.AssemblyLinearVelocity  = Vector3.zero end)
+                    pcall(function() v.AssemblyAngularVelocity = Vector3.zero end)
+                end
+            end
+        end
+        task.wait(0.15)
+        for v, group in pairs(car_collision_groups) do
+            pcall(function() v.CollisionGroup = group end)
+        end
     end
-
-    local trailer_to_anchor_offset = nil
-    if trailer_weight and trailer_weight:IsDescendantOf(game or workspace) then trailer_to_anchor_offset = anchor.CFrame:ToObjectSpace(trailer_weight.CFrame) end
-    local CRUISE_HEIGHT = g.hay_farm_cruise_height or 500
+    local CRUISE_HEIGHT = g.hay_farm_cruise_height or 550
     local ASCENT_FRAC   = 0.15
     local DESCENT_FRAC  = 0.35
-    local start_pos     = anchor.CFrame.Position
+    local start_cf      = anchor.CFrame
+    local start_pos     = start_cf.Position
     local end_pos       = target_cf.Position
     local cruise_start  = Vector3.new(start_pos.X, CRUISE_HEIGHT, start_pos.Z)
     local cruise_end    = Vector3.new(end_pos.X,   CRUISE_HEIGHT, end_pos.Z)
     local distance      = (end_pos - start_pos).Magnitude
-    local duration      = math.max(3, distance / 90)
+    local base_speed    = g.vehicle_tp_duration or 1
+    local duration      = math.max(base_speed, distance / 125)
     local steps         = math.max(10, math.floor(duration * 60))
     local interval      = duration / steps
-
     for i = 1, steps do
         if not g.hay_farm_running then
-            for v, group in pairs(car_collision_groups) do pcall(function() v.CollisionGroup = group end) end
-            for v, group in pairs(trailer_collision_groups) do pcall(function() v.CollisionGroup = group end) end
-            if hitch_ball then pcall(function() hitch_ball.Enabled = true end) end
+            restore()
             return false
         end
         local alpha = i / steps
@@ -3239,55 +3244,25 @@ local function tween_vehicle_to(target_cf)
             pos = cruise_start:Lerp(cruise_end, te)
         end
         local next_cf = CFrame.new(pos)
-        pcall(function() if car.PrimaryPart then car:PivotTo(next_cf) else anchor.CFrame = next_cf end end)
+        pcall(function()
+            if car.PrimaryPart then car:PivotTo(next_cf) else anchor.CFrame = next_cf end
+        end)
         pcall(function() anchor.AssemblyLinearVelocity  = Vector3.zero end)
         pcall(function() anchor.AssemblyAngularVelocity = Vector3.zero end)
-        if trailer_weight and trailer_to_anchor_offset and trailer_weight:IsDescendantOf(game or workspace) then
-            local trailer_cf = next_cf:ToWorldSpace(trailer_to_anchor_offset)
-            pcall(function() trailer_weight.CFrame = trailer_cf end)
-            pcall(function() trailer_weight.AssemblyLinearVelocity  = Vector3.zero end)
-            pcall(function() trailer_weight.AssemblyAngularVelocity = Vector3.zero end)
-        end
         task.wait(interval)
     end
-
-    local final_car_cf = CFrame.new(
-        Vector3.new(target_cf.Position.X, target_cf.Position.Y + ZONE_LAND_Y_OFFSET, target_cf.Position.Z),
-        Vector3.new(target_cf.Position.X, target_cf.Position.Y + ZONE_LAND_Y_OFFSET, target_cf.Position.Z) + target_cf.LookVector
-    )
-    pcall(function() if car.PrimaryPart then car:PivotTo(final_car_cf) else anchor.CFrame = final_car_cf end end)
-    task.wait(0.05)
-    for _, v in ipairs(car:GetDescendants()) do
-        if v:IsA("BasePart") then
-            pcall(function() v.AssemblyLinearVelocity  = Vector3.zero end)
-            pcall(function() v.AssemblyAngularVelocity = Vector3.zero end)
-        end
-    end
-    task.wait(0.05)
-    pcall(function() if car.PrimaryPart then car:PivotTo(final_car_cf) else anchor.CFrame = final_car_cf end end)
-    if trailer_weight and trailer_to_anchor_offset and trailer_weight:IsDescendantOf(game or workspace) then
-        local trailer_land_cf = final_car_cf:ToWorldSpace(trailer_to_anchor_offset)
-        pcall(function() trailer_weight.CFrame = trailer_land_cf end)
-    end
-    for _, v in ipairs(car:GetDescendants()) do
-        if v:IsA("BasePart") then
-            pcall(function() v.AssemblyLinearVelocity  = Vector3.zero end)
-            pcall(function() v.AssemblyAngularVelocity = Vector3.zero end)
-        end
-    end
-    if trailer and trailer:IsDescendantOf(game or workspace) then
-        for _, v in ipairs(trailer:GetDescendants()) do
-            if v:IsA("BasePart") then
-                pcall(function() v.AssemblyLinearVelocity  = Vector3.zero end)
-                pcall(function() v.AssemblyAngularVelocity = Vector3.zero end)
+    pcall(function()
+        if car.PrimaryPart then car:PivotTo(target_cf) else anchor.CFrame = target_cf end
+    end)
+    if trailer and trailer_snap_offset and trailer:IsDescendantOf(game or workspace) then
+        task.wait(0.1)
+        pcall(function()
+            if trailer.PrimaryPart then
+                trailer:PivotTo(CFrame.new(target_cf.Position + trailer_snap_offset))
             end
-        end
+        end)
     end
-    task.wait(0.15)
-    for v, group in pairs(car_collision_groups) do pcall(function() v.CollisionGroup = group end) end
-    for v, group in pairs(trailer_collision_groups) do pcall(function() v.CollisionGroup = group end) end
-    task.wait(0.1)
-    if hitch_ball then pcall(function() hitch_ball.Enabled = true end) end
+    restore()
     return true
 end
 
@@ -3455,12 +3430,7 @@ local function hay_farm_loop()
             if not next_phase then
                 if g.notify then g.notify("Warning", "Hay Farm: delivery timeout, nudging.", 3) end
                 if not wait_until_seated(5) then task.wait(1); continue end
-                local nudge_cf = get_zone_land_cf(g.get_lp_vehicle())
-                tween_vehicle_to(nudge_cf)
-                local retry_phase = wait_for_phase_any({"drive_to_farm", "loading", "cooldown"}, DELIVER_TIMEOUT)
-                if not retry_phase then
-                    if g.notify then g.notify("Error", "Hay Farm: delivery fully timed out, restarting cycle.", 4) end
-                end
+                tween_vehicle_to(get_zone_land_cf(g.get_lp_vehicle()))
                 task.wait(2)
                 continue
             end
