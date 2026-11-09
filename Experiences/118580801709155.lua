@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.1.2"
+local Raw_Version = "V2.1.3"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -2959,7 +2959,7 @@ local DROP_ZONE_CF = CFrame.new(
 
 local PHASE_POLL_RATE = 0.5
 local LOAD_TIMEOUT    = 20
-local DELIVER_TIMEOUT = 25
+local DELIVER_TIMEOUT = 60
 g.hay_farm_running = g.hay_farm_running or false
 g.hay_farm_state   = g.hay_farm_state   or "idle"
 g.hay_farm_cruise_height = g.hay_farm_cruise_height or 500
@@ -3147,7 +3147,7 @@ local function get_model_length_along_forward(model, forward)
     return max_proj - min_proj
 end
 
-local ZONE_LAND_Y_OFFSET = 5
+local ZONE_LAND_Y_OFFSET = 12
 local function get_zone_land_cf(car_model)
     local forward        = DROP_ZONE_CF.LookVector
     local trailer        = g.get_lp_trailer and g.get_lp_trailer()
@@ -3208,7 +3208,7 @@ local function tween_vehicle_to(target_cf)
     local ASCENT_FRAC   = 0.15
     local DESCENT_FRAC  = 0.35
     local start_pos     = anchor.CFrame.Position
-    local end_pos       = target_cf.Position
+    local end_pos       = Vector3.new(target_cf.Position.X, target_cf.Position.Y + ZONE_LAND_Y_OFFSET, target_cf.Position.Z)
     local cruise_start  = Vector3.new(start_pos.X, CRUISE_HEIGHT, start_pos.Z)
     local cruise_end    = Vector3.new(end_pos.X,   CRUISE_HEIGHT, end_pos.Z)
     local distance      = (end_pos - start_pos).Magnitude
@@ -3443,7 +3443,12 @@ local function hay_farm_loop()
             if not next_phase then
                 if g.notify then g.notify("Warning", "Hay Farm: delivery timeout, nudging.", 3) end
                 if not wait_until_seated(5) then task.wait(1); continue end
-                tween_vehicle_to(get_zone_land_cf(g.get_lp_vehicle()))
+                local nudge_cf = get_zone_land_cf(g.get_lp_vehicle())
+                tween_vehicle_to(nudge_cf)
+                local retry_phase = wait_for_phase_any({"drive_to_farm", "loading", "cooldown"}, DELIVER_TIMEOUT)
+                if not retry_phase then
+                    if g.notify then g.notify("Error", "Hay Farm: delivery fully timed out, restarting cycle.", 4) end
+                end
                 task.wait(2)
                 continue
             end
