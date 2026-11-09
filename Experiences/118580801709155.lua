@@ -70,7 +70,7 @@ if not In_Studio then
     end
 end
 wait(0.15)
-local Announcement_Message = "ADDED AUTO FARM! (only supports Hay Hauling FOR NOW!) + it even lifts you over the hills, mountains and stuff, plus it buys a Vehicle for you if you don't own one."
+local Announcement_Message = "ADDED AUTO FARM! (only supports Hay Hauling FOR NOW!) + it even lifts you over the hills, mountains and stuff, plus it buys a Vehicle for you if you don't own any."
 g.displayTimeMax = 45
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.0.6"
+local Raw_Version = "V2.1.0"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -353,18 +353,21 @@ local staff_roles = {
 
 g.Staffwatch_Teleport_Check = true
 local function get_staff_role(player)
-	local player_role = player:GetRoleInGroup(target_group)
-	local result = {Role = player_role, Staff = false}
-	if player:IsInGroup(1200769) then
-		result.Role = "Roblox Employee"
-		result.Staff = true
-	end
-	for _, role in pairs(staff_roles) do
-		if string.find(string.lower(player_role), role) then
-			result.Staff = true
-		end
-	end
-	return result
+    if not player or not player:IsDescendantOf(game) then return { Role = "Unknown", Staff = false } end
+    local ok, player_role = pcall(function() return player:GetRoleInGroup(target_group) end)
+    if not ok or not player_role then return { Role = "Unknown", Staff = false } end
+    local result = { Role = player_role, Staff = false }
+    local ok2, in_roblox = pcall(function() return player:IsInGroup(1200769) end)
+    if ok2 and in_roblox then
+        result.Role = "Roblox Employee"
+        result.Staff = true
+    end
+    for _, role in pairs(staff_roles) do
+        if string.find(string.lower(player_role), role) then
+            result.Staff = true
+        end
+    end
+    return result
 end
 
 local function is_identity_mod(player)
@@ -450,17 +453,18 @@ end
 
 local found = {}
 for _, player in ipairs(Players:GetPlayers()) do
-	local result = get_staff_role(player)
-	if result.Staff then
-		table.insert(found, Format_UserName(player) .. " — " .. result.Role)
-	else
-		local flagged, hit_attr = is_identity_mod(player)
-		if flagged then
-			table.insert(found, Format_UserName(player) .. " — moderator (" .. hit_attr .. ")")
-		else
-			bind_attr_watch(player)
-		end
-	end
+    if not player:IsDescendantOf(game) then continue end
+    local result = get_staff_role(player)
+    if result.Staff then
+        table.insert(found, Format_UserName(player) .. " — " .. result.Role)
+    else
+        local flagged, hit_attr = is_identity_mod(player)
+        if flagged then
+            table.insert(found, Format_UserName(player) .. " — moderator (" .. hit_attr .. ")")
+        else
+            bind_attr_watch(player)
+        end
+    end
 end
 
 if #found > 0 then
@@ -2227,6 +2231,555 @@ g.fullbright_toggle = function(state)
 	end
 end
 
+g.graphics_enhancer_active = g.graphics_enhancer_active or false
+g.graphics_enhancer_original = g.graphics_enhancer_original or nil
+g.graphics_enhancer_instances = g.graphics_enhancer_instances or nil
+g.night_enhancer_active = g.night_enhancer_active or false
+g.night_enhancer_original = g.night_enhancer_original or nil
+g.night_enhancer_instances = g.night_enhancer_instances or nil
+local preset = {
+    ClockTime               = 14,
+    Brightness              = 4,
+    Ambient                 = Color3.fromRGB(0, 0, 0),
+    OutdoorAmbient          = Color3.fromRGB(112, 117, 128),
+    ExposureCompensation    = 0.15,
+    ColorShift_Top          = Color3.fromRGB(20, 20, 30),
+    ColorShift_Bottom       = Color3.fromRGB(0, 0, 0),
+    GlobalShadows           = true,
+    ShadowSoftness          = 0.12,
+    FogEnd                  = 100000,
+    FogColor                = Color3.fromRGB(132, 132, 132),
+    cc_brightness           = 0.1,
+    cc_contrast             = 0.15,
+    cc_saturation           = 0.25,
+    cc_tint                 = Color3.fromRGB(255, 222, 211),
+    bloom_intensity         = 0.1,
+    bloom_size              = 32,
+    bloom_threshold         = 1,
+    sunrays_intensity       = 0.35,
+    sunrays_spread          = 1,
+    blur_size               = 2.75,
+    atmosphere_density      = 0.06,
+    atmosphere_color        = Color3.fromRGB(180, 210, 255),
+    atmosphere_decay        = Color3.fromRGB(255, 220, 180),
+    atmosphere_glare        = 0.1,
+    atmosphere_haze         = 0.2,
+    sky_sun_angular_size    = 21,
+    sky_moon_angular_size   = 11,
+    sky_star_count          = 0,
+    sky_celestial_bodies    = true,
+    terrain_water_color         = Color3.fromRGB(10, 10, 24),
+    terrain_water_wave_size     = 0.15,
+    terrain_water_wave_speed    = 22,
+    terrain_water_transparency  = 1,
+    terrain_water_reflectance   = 0.05,
+}
+
+local night_preset = {
+    ClockTime               = 0,
+    Brightness              = 3,
+    Ambient                 = Color3.fromRGB(55, 55, 80),
+    OutdoorAmbient          = Color3.fromRGB(70, 75, 110),
+    ExposureCompensation    = 0.3,
+    ColorShift_Top          = Color3.fromRGB(30, 30, 60),
+    ColorShift_Bottom       = Color3.fromRGB(10, 10, 20),
+    GlobalShadows           = true,
+    ShadowSoftness          = 0.2,
+    FogEnd                  = 80000,
+    FogColor                = Color3.fromRGB(20, 20, 40),
+    cc_brightness           = 0.05,
+    cc_contrast             = 0.15,
+    cc_saturation           = -0.05,
+    cc_tint                 = Color3.fromRGB(180, 190, 255),
+    bloom_intensity         = 0.3,
+    bloom_size              = 32,
+    bloom_threshold         = 0.9,
+    sunrays_intensity       = 0.0,
+    sunrays_spread          = 0.0,
+    blur_size               = 1,
+    atmosphere_density      = 0.2,
+    atmosphere_color        = Color3.fromRGB(17, 17, 46),
+    atmosphere_decay        = Color3.fromRGB(28, 28, 39),
+    atmosphere_glare        = 0.0,
+    atmosphere_haze         = 0.4,
+    sky_sun_angular_size    = 0,
+    sky_moon_angular_size   = 18,
+    sky_star_count          = 3000,
+    sky_celestial_bodies    = true,
+    terrain_water_color         = Color3.fromRGB(5, 5, 20),
+    terrain_water_wave_size     = 0.1,
+    terrain_water_wave_speed    = 15,
+    terrain_water_transparency  = 0.8,
+    terrain_water_reflectance   = 0.2,
+}
+
+local function Capture_Original()
+    local snap = {
+        ClockTime            = Lighting.ClockTime,
+        Brightness           = Lighting.Brightness,
+        Ambient              = Lighting.Ambient,
+        OutdoorAmbient       = Lighting.OutdoorAmbient,
+        ExposureCompensation = Lighting.ExposureCompensation,
+        ColorShift_Top       = Lighting.ColorShift_Top,
+        ColorShift_Bottom    = Lighting.ColorShift_Bottom,
+        GlobalShadows        = Lighting.GlobalShadows,
+        ShadowSoftness       = Lighting.ShadowSoftness,
+        FogEnd               = Lighting.FogEnd,
+        FogColor             = Lighting.FogColor,
+    }
+    local atmo = Lighting:FindFirstChildOfClass("Atmosphere")
+    if atmo then
+        snap.atmo_density = atmo.Density
+        snap.atmo_color   = atmo.Color
+        snap.atmo_decay   = atmo.Decay
+        snap.atmo_glare   = atmo.Glare
+        snap.atmo_haze    = atmo.Haze
+    end
+    local sky = Lighting:FindFirstChildOfClass("Sky")
+    if sky then
+        snap.sky_sun_angular_size  = sky.SunAngularSize
+        snap.sky_moon_angular_size = sky.MoonAngularSize
+        snap.sky_star_count        = sky.StarCount
+        snap.sky_celestial_bodies  = sky.CelestialBodiesShown
+        snap.sky_existed           = true
+    else
+        snap.sky_existed = false
+    end
+    local ter = workspace.Terrain
+    snap.terrain_water_color        = ter.WaterColor
+    snap.terrain_water_wave_size    = ter.WaterWaveSize
+    snap.terrain_water_wave_speed   = ter.WaterWaveSpeed
+    snap.terrain_water_transparency = ter.WaterTransparency
+    snap.terrain_water_reflectance  = ter.WaterReflectance
+    return snap
+end
+
+local function Kill_Existing_Effects()
+    for _, child in ipairs(Lighting:GetChildren()) do
+        local n = child.Name
+        if n == "GFX_ColorCorrection"
+        or n == "GFX_Bloom"
+        or n == "GFX_SunRays"
+        or n == "GFX_Blur"
+        or n == "GFX_Atmosphere"
+        or n == "GFX_Sky" then
+            child:Destroy()
+        end
+    end
+end
+
+local function Build_Effects()
+    Kill_Existing_Effects()
+
+    local cc = Instance.new("ColorCorrectionEffect")
+    cc.Name       = "GFX_ColorCorrection"
+    cc.Brightness = preset.cc_brightness
+    cc.Contrast   = preset.cc_contrast
+    cc.Saturation = preset.cc_saturation
+    cc.TintColor  = preset.cc_tint
+    cc.Parent     = Lighting
+
+    local bloom = Instance.new("BloomEffect")
+    bloom.Name      = "GFX_Bloom"
+    bloom.Intensity = preset.bloom_intensity
+    bloom.Size      = preset.bloom_size
+    bloom.Threshold = preset.bloom_threshold
+    bloom.Parent    = Lighting
+
+    local sun = Instance.new("SunRaysEffect")
+    sun.Name      = "GFX_SunRays"
+    sun.Intensity = preset.sunrays_intensity
+    sun.Spread    = preset.sunrays_spread
+    sun.Parent    = Lighting
+
+    local blur = Instance.new("BlurEffect")
+    blur.Name   = "GFX_Blur"
+    blur.Size   = preset.blur_size
+    blur.Parent = Lighting
+
+    local existing_atmo = Lighting:FindFirstChildOfClass("Atmosphere")
+    local atmo = existing_atmo or Instance.new("Atmosphere")
+    atmo.Name    = "GFX_Atmosphere"
+    atmo.Density = preset.atmosphere_density
+    atmo.Color   = preset.atmosphere_color
+    atmo.Decay   = preset.atmosphere_decay
+    atmo.Glare   = preset.atmosphere_glare
+    atmo.Haze    = preset.atmosphere_haze
+    if not existing_atmo then atmo.Parent = Lighting end
+
+    local existing_sky = Lighting:FindFirstChildOfClass("Sky")
+    local sky = existing_sky or Instance.new("Sky")
+    sky.Name                = "GFX_Sky"
+    sky.SunAngularSize      = preset.sky_sun_angular_size
+    sky.MoonAngularSize     = preset.sky_moon_angular_size
+    sky.StarCount           = preset.sky_star_count
+    sky.CelestialBodiesShown = preset.sky_celestial_bodies
+    if not existing_sky then sky.Parent = Lighting end
+
+    local ter = Workspace.Terrain
+    ter.WaterColor        = preset.terrain_water_color
+    ter.WaterWaveSize     = preset.terrain_water_wave_size
+    ter.WaterWaveSpeed    = preset.terrain_water_wave_speed
+    ter.WaterTransparency = preset.terrain_water_transparency
+    ter.WaterReflectance  = preset.terrain_water_reflectance
+    return { cc = cc, bloom = bloom, sun = sun, blur = blur, atmo = atmo, sky = sky }
+end
+
+local function Lock_Properties()
+    lib.connect("gfx_clock", Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
+        if g.graphics_enhancer_active and Lighting.ClockTime ~= preset.ClockTime then
+            Lighting.ClockTime = preset.ClockTime
+        end
+    end))
+    lib.connect("gfx_bright", Lighting:GetPropertyChangedSignal("Brightness"):Connect(function()
+        if g.graphics_enhancer_active and Lighting.Brightness ~= preset.Brightness then
+            Lighting.Brightness = preset.Brightness
+        end
+    end))
+    lib.connect("gfx_ambient", Lighting:GetPropertyChangedSignal("Ambient"):Connect(function()
+        if g.graphics_enhancer_active and Lighting.Ambient ~= preset.Ambient then
+            Lighting.Ambient = preset.Ambient
+        end
+    end))
+    lib.connect("gfx_outdooramb", Lighting:GetPropertyChangedSignal("OutdoorAmbient"):Connect(function()
+        if g.graphics_enhancer_active and Lighting.OutdoorAmbient ~= preset.OutdoorAmbient then
+            Lighting.OutdoorAmbient = preset.OutdoorAmbient
+        end
+    end))
+    lib.connect("gfx_fogend", Lighting:GetPropertyChangedSignal("FogEnd"):Connect(function()
+        if g.graphics_enhancer_active and Lighting.FogEnd ~= preset.FogEnd then
+            Lighting.FogEnd = preset.FogEnd
+        end
+    end))
+end
+
+local function Unlock_Properties()
+    lib.disconnect("gfx_clock")
+    lib.disconnect("gfx_bright")
+    lib.disconnect("gfx_ambient")
+    lib.disconnect("gfx_outdooramb")
+    lib.disconnect("gfx_fogend")
+end
+
+local function Restore_Original()
+    local orig = g.graphics_enhancer_original
+    if not orig then return end
+    Lighting.ClockTime            = orig.ClockTime
+    Lighting.Brightness           = orig.Brightness
+    Lighting.Ambient              = orig.Ambient
+    Lighting.OutdoorAmbient       = orig.OutdoorAmbient
+    Lighting.ExposureCompensation = orig.ExposureCompensation
+    Lighting.ColorShift_Top       = orig.ColorShift_Top
+    Lighting.ColorShift_Bottom    = orig.ColorShift_Bottom
+    Lighting.GlobalShadows        = orig.GlobalShadows
+    Lighting.ShadowSoftness       = orig.ShadowSoftness
+    Lighting.FogEnd               = orig.FogEnd
+    Lighting.FogColor             = orig.FogColor
+    local atmo = Lighting:FindFirstChild("GFX_Atmosphere") or Lighting:FindFirstChildOfClass("Atmosphere")
+    if atmo and orig.atmo_density ~= nil then
+        atmo.Density = orig.atmo_density
+        atmo.Color   = orig.atmo_color
+        atmo.Decay   = orig.atmo_decay
+        atmo.Glare   = orig.atmo_glare
+        atmo.Haze    = orig.atmo_haze
+    end
+    local sky = Lighting:FindFirstChild("GFX_Sky") or Lighting:FindFirstChildOfClass("Sky")
+    if sky then
+        if orig.sky_existed then
+            sky.SunAngularSize       = orig.sky_sun_angular_size
+            sky.MoonAngularSize      = orig.sky_moon_angular_size
+            sky.StarCount            = orig.sky_star_count
+            sky.CelestialBodiesShown = orig.sky_celestial_bodies
+            sky.Name                 = "Sky"
+        else
+            sky:Destroy()
+        end
+    end
+    local ter = Workspace.Terrain
+    ter.WaterColor        = orig.terrain_water_color
+    ter.WaterWaveSize     = orig.terrain_water_wave_size
+    ter.WaterWaveSpeed    = orig.terrain_water_wave_speed
+    ter.WaterTransparency = orig.terrain_water_transparency
+    ter.WaterReflectance  = orig.terrain_water_reflectance
+end
+
+g.Toggle_Graphics_Enhancer = function(state)
+    if g.fullbright_enabled then
+        g.fullbright_toggle(false)
+        if g.FullBright_Main_Toggle_UI then g.FullBright_Main_Toggle_UI:Set(false, false) end
+    end
+    if g.night_enhancer_active then
+        g.Toggle_Night_Enhancer(false)
+        if g.Night_Enhancer_Main_Toggle_UI then g.Night_Enhancer_Main_Toggle_UI:Set(false, false) end
+    end
+    if state == g.graphics_enhancer_active then return false, "already_in_requested_state" end
+    if state then
+        g.graphics_enhancer_original  = Capture_Original()
+        Lighting.ClockTime            = preset.ClockTime
+        Lighting.Brightness           = preset.Brightness
+        Lighting.Ambient              = preset.Ambient
+        Lighting.OutdoorAmbient       = preset.OutdoorAmbient
+        Lighting.ExposureCompensation = preset.ExposureCompensation
+        Lighting.ColorShift_Top       = preset.ColorShift_Top
+        Lighting.ColorShift_Bottom    = preset.ColorShift_Bottom
+        Lighting.GlobalShadows        = preset.GlobalShadows
+        Lighting.ShadowSoftness       = preset.ShadowSoftness
+        Lighting.FogEnd               = preset.FogEnd
+        Lighting.FogColor             = preset.FogColor
+        g.graphics_enhancer_instances = Build_Effects()
+        Lock_Properties()
+        g.graphics_enhancer_active = true
+        if g.notify and typeof(g.notify) == "function" then g.notify("Success", "Graphics Enhancer enabled.", 3) end
+    else
+        Unlock_Properties()
+        Kill_Existing_Effects()
+        Restore_Original()
+        g.graphics_enhancer_instances = nil
+        g.graphics_enhancer_original  = nil
+        g.graphics_enhancer_active    = false
+        if g.notify and typeof(g.notify) == "function" then g.notify("Info", "Graphics Enhancer disabled.", 3) end
+    end
+    return true
+end
+
+g.Set_Graphics_Enhancer_Value = function(key, value)
+    if preset[key] == nil then return false, "unknown_key" end
+    preset[key] = value
+    if g.graphics_enhancer_active then
+        g.Toggle_Graphics_Enhancer(false)
+        g.Toggle_Graphics_Enhancer(true)
+    end
+    return true
+end
+
+local function Night_Capture_Original()
+    local snap = {
+        ClockTime            = Lighting.ClockTime,
+        Brightness           = Lighting.Brightness,
+        Ambient              = Lighting.Ambient,
+        OutdoorAmbient       = Lighting.OutdoorAmbient,
+        ExposureCompensation = Lighting.ExposureCompensation,
+        ColorShift_Top       = Lighting.ColorShift_Top,
+        ColorShift_Bottom    = Lighting.ColorShift_Bottom,
+        GlobalShadows        = Lighting.GlobalShadows,
+        ShadowSoftness       = Lighting.ShadowSoftness,
+        FogEnd               = Lighting.FogEnd,
+        FogColor             = Lighting.FogColor,
+    }
+    local atmo = Lighting:FindFirstChildOfClass("Atmosphere")
+    if atmo then
+        snap.atmo_density = atmo.Density
+        snap.atmo_color   = atmo.Color
+        snap.atmo_decay   = atmo.Decay
+        snap.atmo_glare   = atmo.Glare
+        snap.atmo_haze    = atmo.Haze
+    end
+    local sky = Lighting:FindFirstChildOfClass("Sky")
+    if sky then
+        snap.sky_sun_angular_size  = sky.SunAngularSize
+        snap.sky_moon_angular_size = sky.MoonAngularSize
+        snap.sky_star_count        = sky.StarCount
+        snap.sky_celestial_bodies  = sky.CelestialBodiesShown
+        snap.sky_existed           = true
+    else
+        snap.sky_existed = false
+    end
+    local ter = Workspace.Terrain
+    snap.terrain_water_color        = ter.WaterColor
+    snap.terrain_water_wave_size    = ter.WaterWaveSize
+    snap.terrain_water_wave_speed   = ter.WaterWaveSpeed
+    snap.terrain_water_transparency = ter.WaterTransparency
+    snap.terrain_water_reflectance  = ter.WaterReflectance
+    return snap
+end
+
+local function Night_Kill_Effects()
+    for _, child in ipairs(Lighting:GetChildren()) do
+        local n = child.Name
+        if n == "NIGHT_ColorCorrection"
+        or n == "NIGHT_Bloom"
+        or n == "NIGHT_SunRays"
+        or n == "NIGHT_Blur"
+        or n == "NIGHT_Atmosphere"
+        or n == "NIGHT_Sky" then
+            child:Destroy()
+        end
+    end
+end
+
+local function Night_Build_Effects()
+    Night_Kill_Effects()
+    local cc = Instance.new("ColorCorrectionEffect")
+    cc.Name       = "NIGHT_ColorCorrection"
+    cc.Brightness = night_preset.cc_brightness
+    cc.Contrast   = night_preset.cc_contrast
+    cc.Saturation = night_preset.cc_saturation
+    cc.TintColor  = night_preset.cc_tint
+    cc.Parent     = Lighting
+
+    local bloom = Instance.new("BloomEffect")
+    bloom.Name      = "NIGHT_Bloom"
+    bloom.Intensity = night_preset.bloom_intensity
+    bloom.Size      = night_preset.bloom_size
+    bloom.Threshold = night_preset.bloom_threshold
+    bloom.Parent    = Lighting
+
+    local sun = Instance.new("SunRaysEffect")
+    sun.Name      = "NIGHT_SunRays"
+    sun.Intensity = night_preset.sunrays_intensity
+    sun.Spread    = night_preset.sunrays_spread
+    sun.Parent    = Lighting
+
+    local blur = Instance.new("BlurEffect")
+    blur.Name   = "NIGHT_Blur"
+    blur.Size   = night_preset.blur_size
+    blur.Parent = Lighting
+
+    local existing_atmo = Lighting:FindFirstChildOfClass("Atmosphere")
+    local atmo = existing_atmo or Instance.new("Atmosphere")
+    atmo.Name    = "NIGHT_Atmosphere"
+    atmo.Density = night_preset.atmosphere_density
+    atmo.Color   = night_preset.atmosphere_color
+    atmo.Decay   = night_preset.atmosphere_decay
+    atmo.Glare   = night_preset.atmosphere_glare
+    atmo.Haze    = night_preset.atmosphere_haze
+    if not existing_atmo then atmo.Parent = Lighting end
+
+    local existing_sky = Lighting:FindFirstChildOfClass("Sky")
+    local sky = existing_sky or Instance.new("Sky")
+    sky.Name                 = "NIGHT_Sky"
+    sky.SunAngularSize       = night_preset.sky_sun_angular_size
+    sky.MoonAngularSize      = night_preset.sky_moon_angular_size
+    sky.StarCount            = night_preset.sky_star_count
+    sky.CelestialBodiesShown = night_preset.sky_celestial_bodies
+    if not existing_sky then sky.Parent = Lighting end
+
+    local ter = Workspace.Terrain
+    ter.WaterColor        = night_preset.terrain_water_color
+    ter.WaterWaveSize     = night_preset.terrain_water_wave_size
+    ter.WaterWaveSpeed    = night_preset.terrain_water_wave_speed
+    ter.WaterTransparency = night_preset.terrain_water_transparency
+    ter.WaterReflectance  = night_preset.terrain_water_reflectance
+    return { cc = cc, bloom = bloom, sun = sun, blur = blur, atmo = atmo, sky = sky }
+end
+
+local function Night_Lock_Properties()
+    lib.connect("night_clock", Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
+        if g.night_enhancer_active and Lighting.ClockTime ~= night_preset.ClockTime then
+            Lighting.ClockTime = night_preset.ClockTime
+        end
+    end))
+    lib.connect("night_bright", Lighting:GetPropertyChangedSignal("Brightness"):Connect(function()
+        if g.night_enhancer_active and Lighting.Brightness ~= night_preset.Brightness then
+            Lighting.Brightness = night_preset.Brightness
+        end
+    end))
+    lib.connect("night_ambient", Lighting:GetPropertyChangedSignal("Ambient"):Connect(function()
+        if g.night_enhancer_active and Lighting.Ambient ~= night_preset.Ambient then
+            Lighting.Ambient = night_preset.Ambient
+        end
+    end))
+    lib.connect("night_outdooramb", Lighting:GetPropertyChangedSignal("OutdoorAmbient"):Connect(function()
+        if g.night_enhancer_active and Lighting.OutdoorAmbient ~= night_preset.OutdoorAmbient then
+            Lighting.OutdoorAmbient = night_preset.OutdoorAmbient
+        end
+    end))
+    lib.connect("night_fogend", Lighting:GetPropertyChangedSignal("FogEnd"):Connect(function()
+        if g.night_enhancer_active and Lighting.FogEnd ~= night_preset.FogEnd then
+            Lighting.FogEnd = night_preset.FogEnd
+        end
+    end))
+end
+
+local function Night_Unlock_Properties()
+    lib.disconnect("night_clock")
+    lib.disconnect("night_bright")
+    lib.disconnect("night_ambient")
+    lib.disconnect("night_outdooramb")
+    lib.disconnect("night_fogend")
+end
+
+local function Night_Restore_Original()
+    local orig = g.night_enhancer_original
+    if not orig then return end
+    Lighting.ClockTime            = orig.ClockTime
+    Lighting.Brightness           = orig.Brightness
+    Lighting.Ambient              = orig.Ambient
+    Lighting.OutdoorAmbient       = orig.OutdoorAmbient
+    Lighting.ExposureCompensation = orig.ExposureCompensation
+    Lighting.ColorShift_Top       = orig.ColorShift_Top
+    Lighting.ColorShift_Bottom    = orig.ColorShift_Bottom
+    Lighting.GlobalShadows        = orig.GlobalShadows
+    Lighting.ShadowSoftness       = orig.ShadowSoftness
+    Lighting.FogEnd               = orig.FogEnd
+    Lighting.FogColor             = orig.FogColor
+    local atmo = Lighting:FindFirstChild("NIGHT_Atmosphere") or Lighting:FindFirstChildOfClass("Atmosphere")
+    if atmo and orig.atmo_density ~= nil then
+        atmo.Density = orig.atmo_density
+        atmo.Color   = orig.atmo_color
+        atmo.Decay   = orig.atmo_decay
+        atmo.Glare   = orig.atmo_glare
+        atmo.Haze    = orig.atmo_haze
+    end
+    local sky = Lighting:FindFirstChild("NIGHT_Sky") or Lighting:FindFirstChildOfClass("Sky")
+    if sky then
+        if orig.sky_existed then
+            sky.SunAngularSize       = orig.sky_sun_angular_size
+            sky.MoonAngularSize      = orig.sky_moon_angular_size
+            sky.StarCount            = orig.sky_star_count
+            sky.CelestialBodiesShown = orig.sky_celestial_bodies
+            sky.Name                 = "Sky"
+        else
+            sky:Destroy()
+        end
+    end
+    local ter = Workspace.Terrain
+    ter.WaterColor        = orig.terrain_water_color
+    ter.WaterWaveSize     = orig.terrain_water_wave_size
+    ter.WaterWaveSpeed    = orig.terrain_water_wave_speed
+    ter.WaterTransparency = orig.terrain_water_transparency
+    ter.WaterReflectance  = orig.terrain_water_reflectance
+end
+
+g.Toggle_Night_Enhancer = function(state)
+    if g.fullbright_enabled then
+        g.fullbright_toggle(false)
+        if g.FullBright_Main_Toggle_UI then g.FullBright_Main_Toggle_UI:Set(false, false) end
+    end
+    if g.graphics_enhancer_active then
+        g.Toggle_Graphics_Enhancer(false)
+        if g.Graphics_Enhancer_Main_Toggle_UI then g.Graphics_Enhancer_Main_Toggle_UI:Set(false, false) end
+    end
+    if state == g.night_enhancer_active then return false, "already_in_requested_state" end
+    if state then
+        g.night_enhancer_original     = Night_Capture_Original()
+        Lighting.ClockTime            = night_preset.ClockTime
+        Lighting.Brightness           = night_preset.Brightness
+        Lighting.Ambient              = night_preset.Ambient
+        Lighting.OutdoorAmbient       = night_preset.OutdoorAmbient
+        Lighting.ExposureCompensation = night_preset.ExposureCompensation
+        Lighting.ColorShift_Top       = night_preset.ColorShift_Top
+        Lighting.ColorShift_Bottom    = night_preset.ColorShift_Bottom
+        Lighting.GlobalShadows        = night_preset.GlobalShadows
+        Lighting.ShadowSoftness       = night_preset.ShadowSoftness
+        Lighting.FogEnd               = night_preset.FogEnd
+        Lighting.FogColor             = night_preset.FogColor
+        g.night_enhancer_instances    = Night_Build_Effects()
+        Night_Lock_Properties()
+        g.night_enhancer_active = true
+        if g.notify and typeof(g.notify) == "function" then g.notify("Success", "Night Enhancer enabled.", 3) end
+    else
+        Night_Unlock_Properties()
+        Night_Kill_Effects()
+        Night_Restore_Original()
+        g.night_enhancer_instances = nil
+        g.night_enhancer_original  = nil
+        g.night_enhancer_active    = false
+        if g.notify and typeof(g.notify) == "function" then g.notify("Info", "Night Enhancer disabled.", 3) end
+    end
+    return true
+end
+
 g.set_walkspeed_char = function(speed)
     if not Validate_Number(speed) then speed = 16 end
     local char = g.Character or speaker.Character or g.get_char(speaker)
@@ -2396,6 +2949,20 @@ g.Set_Max_Zoom_Distance = function(distance)
 end
 
 local BUDGET_VEHICLE_NAME = "2002 Raymo 2500 5.9 Cobbins"
+local FARM_COORDS = Vector3.new(1042.97, 2.5, 963)
+local DROP_ZONE_CF = CFrame.new(
+    -734.186767578125, 3.587284564971924, 378.3937683105469,
+    -0.6228994727134705, 0, 0.7823023796081543,
+    0, 1, 0,
+    -0.7823023796081543, 0, -0.6228994727134705
+)
+
+local PHASE_POLL_RATE = 0.5
+local LOAD_TIMEOUT    = 20
+local DELIVER_TIMEOUT = 25
+g.hay_farm_running = g.hay_farm_running or false
+g.hay_farm_state   = g.hay_farm_state   or "idle"
+g.hay_farm_cruise_height = g.hay_farm_cruise_height or 500
 local function find_Purchase_Vehicle_RF()
     local cache = g.Purchase_Vehicle_RF_Found
     if cache and cache:IsA("RemoteFunction") then return cache end
@@ -2407,6 +2974,7 @@ local function find_Purchase_Vehicle_RF()
     end
     return nil
 end
+
 wait(0.1)
 if not g.Purchase_Vehicle_RF_Found then pcall(function() find_Purchase_Vehicle_RF() end) end
 
@@ -2418,13 +2986,11 @@ local function ensure_vehicle_available()
         if g.notify then g.notify("Error", "Hay Farm: could not reach owned vehicles remote.", 3) end
         return false
     end
-
     local payload = owned_rf:InvokeServer()
     if not payload or type(payload.copies) ~= "table" then
         if g.notify then g.notify("Error", "Hay Farm: owned vehicles payload invalid.", 3) end
         return false
     end
-
     local copy = payload.copies[1]
     if not copy then
         if g.notify then g.notify("Warning", "Hay Farm: no vehicles owned, purchasing budget vehicle...", 4) end
@@ -2433,9 +2999,7 @@ local function ensure_vehicle_available()
             if g.notify then g.notify("Error", "Hay Farm: purchase remote not found.", 3) end
             return false
         end
-        local ok = pcall(function()
-            purchase_rf:InvokeServer(BUDGET_VEHICLE_NAME, nil, nil)
-        end)
+        local ok = pcall(function() purchase_rf:InvokeServer(BUDGET_VEHICLE_NAME, nil, nil) end)
         if not ok then
             if g.notify then g.notify("Error", "Hay Farm: vehicle purchase failed.", 3) end
             return false
@@ -2447,20 +3011,17 @@ local function ensure_vehicle_available()
         if not copy then return false end
         if g.notify then g.notify("Success", "Hay Farm: budget vehicle purchased.", 3) end
     end
-
     if copy.spawned then
         task.wait(1)
         local refreshed = g.get_lp_vehicle()
         if refreshed and refreshed:IsDescendantOf(game or workspace) then return true end
     end
-
     if g.notify then g.notify("Info", "Hay Farm: spawning vehicle...", 3) end
     local spawn_rf = g.Spawn_Vehicle_Remote_Function_Found or find_Spawn_Vehicle_Remote_Function()
     if not spawn_rf or not spawn_rf:IsA("RemoteFunction") then
         if g.notify then g.notify("Error", "Hay Farm: spawn remote not found.", 3) end
         return false
     end
-
     pcall(function() spawn_rf:InvokeServer(copy.id) end)
     local deadline = os.clock() + 8
     while os.clock() < deadline do
@@ -2471,25 +3032,16 @@ local function ensure_vehicle_available()
             return true
         end
     end
-
     if g.notify then g.notify("Error", "Hay Farm: vehicle did not spawn in time.", 4) end
     return false
 end
 
-g.hay_farm_running = g.hay_farm_running or false
-g.hay_farm_state   = g.hay_farm_state   or "idle"
-local FARM_COORDS     = Vector3.new(1045, 7, 958)
-local DROP1_COORDS    = Vector3.new(-737, 7, 374)
-local DROP2_COORDS    = Vector3.new(-1750, 7, 2439)
-local PHASE_POLL_RATE = 0.5
-local LOAD_TIMEOUT    = 20
-local DELIVER_TIMEOUT = 25
 local function is_clocked_in() return speaker:GetAttribute("ActiveJob") ~= nil end
 local function try_clock_in()
     if is_clocked_in() then return true end
-    local car = g.get_lp_vehicle()
-    if not car or not car:IsDescendantOf(game or workspace) then
-        if g.notify then g.notify("Error", "Hay Farm: no vehicle spawned, cannot clock in.", 4) end
+    local vehicle_ready = ensure_vehicle_available()
+    if not vehicle_ready then
+        if g.notify then g.notify("Error", "Hay Farm: no vehicle available, cannot clock in.", 4) end
         return false
     end
     local human = g.Humanoid or g.get_human(speaker)
@@ -2497,7 +3049,7 @@ local function try_clock_in()
         if g.notify then g.notify("Error", "Hay Farm: humanoid not found.", 3) end
         return false
     end
-    if human and human.Sit then
+    if human.Sit then
         pcall(function() human:ChangeState(3) end)
         human.Sit = false
         task.wait(0.2)
@@ -2542,19 +3094,12 @@ local function get_hud_phase()
     local text = get_hud_objective()
     if not text then return "unknown" end
     local lower = text:lower()
-    if lower:find("next load in") then return "cooldown" end
+    if lower:find("next load in")                     then return "cooldown" end
     if lower:find("drive to") and lower:find("load") then return "drive_to_farm" end
     if lower:find("loading")                          then return "loading" end
     if lower:find("deliver")                          then return "deliver" end
     if lower:find("drive to")                         then return "drive_to_farm" end
     return "unknown"
-end
-
-local function get_drop_target()
-    local text = get_hud_objective()
-    if not text then return DROP1_COORDS end
-    if text:lower():find("milling") or text:lower():find("ol") then return DROP1_COORDS end
-    return DROP2_COORDS
 end
 
 local function ensure_seated()
@@ -2563,8 +3108,7 @@ local function ensure_seated()
     if human.Sit and human.SeatPart then return true end
     local car = g.get_lp_vehicle()
     if not car or not car:IsDescendantOf(game or workspace) then return false end
-    local drive_seat = car:FindFirstChildOfClass("VehicleSeat")
-        or car:FindFirstChildWhichIsA("VehicleSeat", true)
+    local drive_seat = car:FindFirstChildOfClass("VehicleSeat") or car:FindFirstChildWhichIsA("VehicleSeat", true)
     if not drive_seat or not drive_seat:IsDescendantOf(game) then return false end
     drive_seat:Sit(human)
     local deadline = os.clock() + 3
@@ -2575,9 +3119,45 @@ local function ensure_seated()
     return human.Sit and human.SeatPart ~= nil
 end
 
-g.hay_farm_cruise_height = g.hay_farm_cruise_height or 1500
+g.get_model_footprint_length = function(model)
+    local min_z, max_z = math.huge, -math.huge
+    for _, v in ipairs(model:GetDescendants()) do
+        if v:IsA("BasePart") then
+            local half    = v.Size.Z * 0.5
+            local world_z = v.Position.Z
+            if world_z - half < min_z then min_z = world_z - half end
+            if world_z + half > max_z then max_z = world_z + half end
+        end
+    end
+    if min_z == math.huge then return 10 end
+    return max_z - min_z
+end
+
+local function get_model_length_along_forward(model, forward)
+    local min_proj, max_proj = math.huge, -math.huge
+    for _, v in ipairs(model:GetDescendants()) do
+        if v:IsA("BasePart") then
+            local proj = v.Position:Dot(forward)
+            local half = (v.Size * Vector3.new(math.abs(forward.X), math.abs(forward.Y), math.abs(forward.Z))).Magnitude * 0.5
+            if proj - half < min_proj then min_proj = proj - half end
+            if proj + half > max_proj then max_proj = proj + half end
+        end
+    end
+    if min_proj == math.huge then return 10 end
+    return max_proj - min_proj
+end
+
+local function get_zone_land_cf(car_model)
+    local forward        = DROP_ZONE_CF.LookVector
+    local trailer        = g.get_lp_trailer and g.get_lp_trailer()
+    local trailer_length = (trailer and trailer:IsDescendantOf(game or workspace)) and get_model_length_along_forward(trailer, forward) or 0
+    local car_length     = get_model_length_along_forward(car_model, forward)
+    local car_land_pos   = DROP_ZONE_CF.Position + forward * (trailer_length + car_length * 0.5 + 4)
+    return CFrame.new(car_land_pos, car_land_pos + forward)
+end
+
 local function tween_vehicle_to(target_cf)
-    local car = g.get_vehicle() or g.Get_Current_Sitting_In_Vehicle()
+    local car = g.get_vehicle and g.get_vehicle()
     if not car or not car:IsDescendantOf(game or workspace) then
         if g.notify then g.notify("Error", "Hay Farm: no vehicle found.", 3) end
         return false
@@ -2597,47 +3177,103 @@ local function tween_vehicle_to(target_cf)
         pcall(function() g._vehicle_tp_tween:Cancel() end)
         g._vehicle_tp_tween = nil
     end
-    local CRUISE_HEIGHT = g.hay_farm_cruise_height or 550
-    local ASCENT_FRAC    = 0.15
-    local DESCENT_FRAC   = 0.35
-    local start_cf       = anchor.CFrame
-    local start_pos      = start_cf.Position
-    local end_pos        = target_cf.Position
-    local cruise_start   = Vector3.new(start_pos.X, CRUISE_HEIGHT, start_pos.Z)
-    local cruise_end     = Vector3.new(end_pos.X,   CRUISE_HEIGHT, end_pos.Z)
-    local distance       = (end_pos - start_pos).Magnitude
-    local base_speed     = g.vehicle_tp_duration or 1
-    local duration       = math.max(base_speed, distance / 125)
-    local steps          = math.max(10, math.floor(duration * 60))
-    local interval       = duration / steps
+
+    local trailer              = g.get_lp_trailer and g.get_lp_trailer()
+    local trailer_weight       = trailer and trailer:FindFirstChild("Trailer_Weight", true)
+    local hitch_part           = trailer and trailer:FindFirstChild("Hitch")
+    local hitch_ball           = hitch_part and hitch_part:FindFirstChild("HitchBallSocket")
+    local car_collision_groups     = {}
+    local trailer_collision_groups = {}
+    if hitch_ball then pcall(function() hitch_ball.Enabled = false end) end
+    for _, v in ipairs(car:GetDescendants()) do
+        if v:IsA("BasePart") then
+            car_collision_groups[v] = v.CollisionGroup
+            pcall(function() v.CollisionGroup = "TrailersGhost" end)
+        end
+    end
+    if trailer and trailer:IsDescendantOf(game or workspace) then
+        for _, v in ipairs(trailer:GetDescendants()) do
+            if v:IsA("BasePart") then
+                trailer_collision_groups[v] = v.CollisionGroup
+                pcall(function() v.CollisionGroup = "TrailersGhost" end)
+            end
+        end
+    end
+
+    local trailer_to_anchor_offset = nil
+    if trailer_weight and trailer_weight:IsDescendantOf(game or workspace) then trailer_to_anchor_offset = anchor.CFrame:ToObjectSpace(trailer_weight.CFrame) end
+    local CRUISE_HEIGHT = g.hay_farm_cruise_height or 500
+    local ASCENT_FRAC   = 0.15
+    local DESCENT_FRAC  = 0.35
+    local start_pos     = anchor.CFrame.Position
+    local end_pos       = target_cf.Position
+    local cruise_start  = Vector3.new(start_pos.X, CRUISE_HEIGHT, start_pos.Z)
+    local cruise_end    = Vector3.new(end_pos.X,   CRUISE_HEIGHT, end_pos.Z)
+    local distance      = (end_pos - start_pos).Magnitude
+    local duration      = math.max(3, distance / 90)
+    local steps         = math.max(10, math.floor(duration * 60))
+    local interval      = duration / steps
+
     for i = 1, steps do
-        if not g.hay_farm_running then return false end
+        if not g.hay_farm_running then
+            for v, group in pairs(car_collision_groups) do pcall(function() v.CollisionGroup = group end) end
+            for v, group in pairs(trailer_collision_groups) do pcall(function() v.CollisionGroup = group end) end
+            if hitch_ball then pcall(function() hitch_ball.Enabled = true end) end
+            return false
+        end
         local alpha = i / steps
         local pos
         if alpha < ASCENT_FRAC then
-            local t = alpha / ASCENT_FRAC
+            local t  = alpha / ASCENT_FRAC
             local te = t * t * (3 - 2 * t)
             pos = start_pos:Lerp(cruise_start, te)
         elseif alpha > (1 - DESCENT_FRAC) then
-            local t = (alpha - (1 - DESCENT_FRAC)) / DESCENT_FRAC
+            local t  = (alpha - (1 - DESCENT_FRAC)) / DESCENT_FRAC
             local te = t * t * (3 - 2 * t)
             pos = cruise_end:Lerp(end_pos, te)
         else
-            local t = (alpha - ASCENT_FRAC) / (1 - ASCENT_FRAC - DESCENT_FRAC)
+            local t  = (alpha - ASCENT_FRAC) / (1 - ASCENT_FRAC - DESCENT_FRAC)
             local te = t * t * (3 - 2 * t)
             pos = cruise_start:Lerp(cruise_end, te)
         end
-        local next_cf = CFrame.new(pos) * (start_cf - start_cf.Position)
-        pcall(function()
-            if car.PrimaryPart then car:PivotTo(next_cf) else anchor.CFrame = next_cf end
-        end)
+        local next_cf = CFrame.new(pos)
+        pcall(function() if car.PrimaryPart then car:PivotTo(next_cf) else anchor.CFrame = next_cf end end)
         pcall(function() anchor.AssemblyLinearVelocity  = Vector3.zero end)
         pcall(function() anchor.AssemblyAngularVelocity = Vector3.zero end)
+        if trailer_weight and trailer_to_anchor_offset and trailer_weight:IsDescendantOf(game or workspace) then
+            local trailer_cf = next_cf:ToWorldSpace(trailer_to_anchor_offset)
+            pcall(function() trailer_weight.CFrame = trailer_cf end)
+            pcall(function() trailer_weight.AssemblyLinearVelocity  = Vector3.zero end)
+            pcall(function() trailer_weight.AssemblyAngularVelocity = Vector3.zero end)
+        end
         task.wait(interval)
     end
-    pcall(function()
-        if car.PrimaryPart then car:PivotTo(target_cf) else anchor.CFrame = target_cf end
-    end)
+
+    local final_car_cf = target_cf
+    pcall(function() if car.PrimaryPart then car:PivotTo(final_car_cf) else anchor.CFrame = final_car_cf end end)
+    if trailer_weight and trailer_to_anchor_offset and trailer_weight:IsDescendantOf(game or workspace) then
+        local trailer_land_cf = final_car_cf:ToWorldSpace(trailer_to_anchor_offset)
+        pcall(function() trailer_weight.CFrame = trailer_land_cf end)
+    end
+    for _, v in ipairs(car:GetDescendants()) do
+        if v:IsA("BasePart") then
+            pcall(function() v.AssemblyLinearVelocity  = Vector3.zero end)
+            pcall(function() v.AssemblyAngularVelocity = Vector3.zero end)
+        end
+    end
+    if trailer and trailer:IsDescendantOf(game or workspace) then
+        for _, v in ipairs(trailer:GetDescendants()) do
+            if v:IsA("BasePart") then
+                pcall(function() v.AssemblyLinearVelocity  = Vector3.zero end)
+                pcall(function() v.AssemblyAngularVelocity = Vector3.zero end)
+            end
+        end
+    end
+    task.wait(0.15)
+    for v, group in pairs(car_collision_groups) do pcall(function() v.CollisionGroup = group end) end
+    for v, group in pairs(trailer_collision_groups) do pcall(function() v.CollisionGroup = group end) end
+    task.wait(0.1)
+    if hitch_ball then pcall(function() hitch_ball.Enabled = true end) end
     return true
 end
 
@@ -2665,13 +3301,15 @@ end
 local function wait_until_seated(timeout)
     local human = g.Humanoid or g.get_human(speaker)
     if not human or not human.Parent or not human:IsDescendantOf(game) then return false end
+    local car = g.get_lp_vehicle()
+    local drive_seat = car and (car:FindFirstChildOfClass("VehicleSeat") or car:FindFirstChildWhichIsA("VehicleSeat", true))
     local deadline = os.clock() + (timeout or 5)
     while os.clock() < deadline do
-        if human.Sit and human.SeatPart then return true end
+        if human.Sit and human.SeatPart and drive_seat and human.SeatPart == drive_seat then return true end
         ensure_seated()
         task.wait(0.2)
     end
-    return human.Sit and human.SeatPart ~= nil
+    return human.Sit and drive_seat ~= nil and human.SeatPart == drive_seat
 end
 
 local function bind_vehicle_destroy_watch(car)
@@ -2701,25 +3339,20 @@ local function hay_farm_loop()
             task.wait(1)
             continue
         end
-
         local car = g.get_lp_vehicle()
         if not car or not car:IsDescendantOf(game or workspace) then
             if g.notify then g.notify("Error", "Hay Farm: vehicle not found, stopping.", 4) end
             g.stop_hay_farm()
             break
         end
-
         bind_vehicle_destroy_watch(car)
-
         local human = g.Humanoid or g.get_human(speaker)
         if not human or not human.Parent or not human:IsDescendantOf(game) then
             if g.notify then g.notify("Error", "Hay Farm: humanoid not found, waiting...", 3) end
             task.wait(2)
             continue
         end
-
         local phase = get_hud_phase()
-
         if phase == "cooldown" then
             if g.notify then g.notify("Info", "Hay Farm: cooldown, waiting for next load...", 2) end
             local cooldown_done = wait_for_phase_any({"drive_to_farm", "loading"}, 60)
@@ -2728,7 +3361,6 @@ local function hay_farm_loop()
             end
             continue
         end
-
         if not human.Sit or not human.SeatPart then
             if g.notify then g.notify("Info", "Hay Farm: not seated, attempting to sit...", 2) end
             local seated = ensure_seated()
@@ -2739,7 +3371,6 @@ local function hay_farm_loop()
             end
             task.wait(0.3)
         end
-
         if phase == "drive_to_farm" or phase == "unknown" then
             g.hay_farm_state = "going_to_farm"
             if g.notify then g.notify("Info", "Hay Farm: heading to farm.", 2) end
@@ -2762,7 +3393,6 @@ local function hay_farm_loop()
             end
             phase = arrived_phase
         end
-
         if phase == "cooldown" then
             if g.notify then g.notify("Info", "Hay Farm: cooldown after arrival, waiting...", 2) end
             local cooldown_done = wait_for_phase_any({"drive_to_farm", "loading"}, 60)
@@ -2771,7 +3401,6 @@ local function hay_farm_loop()
             end
             continue
         end
-
         if phase == "loading" then
             g.hay_farm_state = "loading"
             if g.notify then g.notify("Info", "Hay Farm: loading bale...", 2) end
@@ -2779,38 +3408,28 @@ local function hay_farm_loop()
             local load_start = os.clock()
             while not loaded and g.hay_farm_running do
                 local current_phase = get_hud_phase()
-                if current_phase == "deliver" then
-                    loaded = true
-                    break
-                end
-                if current_phase == "cooldown" then
-                    break
-                end
+                if current_phase == "deliver" then loaded = true; break end
+                if current_phase == "cooldown" then break end
                 if (os.clock() - load_start) >= LOAD_TIMEOUT then
-                    if g.notify then g.notify("Warning", "Hay Farm: load timeout, repositioning back to farm.", 3) end
+                    if g.notify then g.notify("Warning", "Hay Farm: load timeout, repositioning.", 3) end
                     if not wait_until_seated(5) then task.wait(1); break end
                     tween_vehicle_to(CFrame.new(FARM_COORDS))
                     load_start = os.clock()
                 end
                 task.wait(PHASE_POLL_RATE)
             end
-            if not loaded then
-                task.wait(2)
-                continue
-            end
+            if not loaded then task.wait(2); continue end
             phase = "deliver"
         end
-
         if phase == "deliver" then
             g.hay_farm_state = "delivering"
-            local drop_pos = get_drop_target()
             if g.notify then g.notify("Info", "Hay Farm: delivering bale.", 2) end
             if not wait_until_seated(5) then
                 if g.notify then g.notify("Warning", "Hay Farm: not seated for delivery, retrying...", 3) end
                 task.wait(1)
                 continue
             end
-            local ok = tween_vehicle_to(CFrame.new(drop_pos))
+            local ok = tween_vehicle_to(get_zone_land_cf(g.get_lp_vehicle()))
             if not ok then
                 if g.notify then g.notify("Error", "Hay Farm: delivery tween failed.", 3) end
                 task.wait(2)
@@ -2822,7 +3441,7 @@ local function hay_farm_loop()
             if not next_phase then
                 if g.notify then g.notify("Warning", "Hay Farm: delivery timeout, nudging.", 3) end
                 if not wait_until_seated(5) then task.wait(1); continue end
-                tween_vehicle_to(CFrame.new(drop_pos + Vector3.new(2, 0, 2)))
+                tween_vehicle_to(get_zone_land_cf(g.get_lp_vehicle()))
                 task.wait(2)
                 continue
             end
@@ -2830,7 +3449,6 @@ local function hay_farm_loop()
         end
         task.wait(0.5)
     end
-
     lib.disconnect("hay_farm_vehicle_destroy_watch")
     g.hay_farm_state = "idle"
     if g.notify then g.notify("Success", "Hay Farm: loop stopped.", 3) end
@@ -2942,13 +3560,29 @@ Callback = function(state)
     g.toggle_minimap(state)
 end}, "Minimap_Toggle_UI")
 
-g.create_ui_element("Toggle", Lighting_Section, {
+g.FullBright_Main_Toggle_UI = g.create_ui_element("Toggle", Lighting_Section, {
 Name = "Fullbright",
 Default = g.fullbright_enabled or false,
 Flag = "Fullbright_Toggle_UI",
 Callback = function(state)
     g.fullbright_toggle(state)
 end}, "Fullbright_Toggle_UI")
+
+g.Graphics_Enhancer_Main_Toggle_UI = g.create_ui_element("Toggle", Lighting_Section, {
+Name = "Graphics Enhancer (Day)",
+Default = g.graphics_enhancer_active or false,
+Flag = "Graphics_Enhancer_Toggle_UI",
+Callback = function(state)
+    g.Toggle_Graphics_Enhancer(state)
+end}, "Graphics_Enhancer_Toggle_UI")
+
+g.Night_Enhancer_Main_Toggle_UI = g.create_ui_element("Toggle", Lighting_Section, {
+Name = "Graphics Enhancer (Night)",
+Default = g.night_enhancer_active or false,
+Flag = "Night_Enhancer_Toggle_UI",
+Callback = function(state)
+    g.Toggle_Night_Enhancer(state)
+end}, "Night_Enhancer_Toggle_UI")
 
 g.create_ui_element("Toggle", Vehicles_Section, {
 Name = "Walk With Vehicles Menu Opened",
