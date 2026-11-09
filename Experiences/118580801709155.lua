@@ -3147,12 +3147,14 @@ local function get_model_length_along_forward(model, forward)
     return max_proj - min_proj
 end
 
+local ZONE_LAND_Y_OFFSET = 5
 local function get_zone_land_cf(car_model)
     local forward        = DROP_ZONE_CF.LookVector
     local trailer        = g.get_lp_trailer and g.get_lp_trailer()
     local trailer_length = (trailer and trailer:IsDescendantOf(game or workspace)) and get_model_length_along_forward(trailer, forward) or 0
     local car_length     = get_model_length_along_forward(car_model, forward)
-    local car_land_pos   = DROP_ZONE_CF.Position + forward * (trailer_length + car_length * 0.5 + 4)
+    local base_pos       = DROP_ZONE_CF.Position + forward * (trailer_length + car_length * 0.5 + 4)
+    local car_land_pos   = Vector3.new(base_pos.X, base_pos.Y + ZONE_LAND_Y_OFFSET, base_pos.Z)
     return CFrame.new(car_land_pos, car_land_pos + forward)
 end
 
