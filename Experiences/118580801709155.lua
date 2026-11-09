@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.1.5"
+local Raw_Version = "V2.1.6"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -3096,23 +3096,29 @@ local function get_hud_phase()
     local text = get_hud_objective()
     if not text then return "unknown" end
     local lower = text:lower()
-    if lower:find("next load in")                     then return "cooldown" end
-    if lower:find("drive to") and lower:find("load") then return "drive_to_farm" end
-    if lower:find("loading")                          then return "loading" end
-    if lower:find("deliver")                          then return "deliver" end
-    if lower:find("drive to")                         then return "drive_to_farm" end
+    if lower:find("next load in")                      then return "cooldown" end
+    if lower:find("drive to") and lower:find("load")  then return "drive_to_farm" end
+    if lower:find("deliver")                           then return "deliver" end  -- moved above "loading"
+    if lower:find("loading")                           then return "loading" end
+    if lower:find("drive to")                          then return "drive_to_farm" end
     return "unknown"
 end
 
-g.get_drop_target = function() -- not used
+-- reads the objective text and returns the correct delivery CFrame for wherever the job is sending us
+local function get_active_drop_cf()
     local text = get_hud_objective()
-    if not text then return DROP1_COORDS end
-    if text:lower():find("milling") or text:lower():find("ol") then
-        return DROP1_COORDS
+    if not text then return DROP_ZONE_CF end
+    local lower = text:lower()
+    if lower:find("hay fields") then
+        return CFrame.new(DROP2_COORDS)
     end
-    return DROP2_COORDS
+    if lower:find("milling") or lower:find("ol") then
+        return CFrame.new(DROP1_COORDS)
+    end
+    return DROP_ZONE_CF
 end
 
+g.get_drop_target = get_active_drop_cf
 local function ensure_seated()
     local human = g.Humanoid or g.get_human(speaker)
     if not human or not human.Parent or not human:IsDescendantOf(game) then return false end
@@ -3142,16 +3148,6 @@ local function get_model_length_along_forward(model, forward)
     end
     if min_proj == math.huge then return 10 end
     return max_proj - min_proj
-end
-
-local function get_zone_land_cf(car_model)
-    local forward        = DROP_ZONE_CF.LookVector
-    local trailer        = g.get_lp_trailer and g.get_lp_trailer()
-    local trailer_length = (trailer and trailer:IsDescendantOf(game or workspace))
-        and get_model_length_along_forward(trailer, forward) or 0
-    local car_length     = get_model_length_along_forward(car_model, forward)
-    local car_land_pos   = DROP_ZONE_CF.Position + forward * (trailer_length + car_length * 0.5 + 4)
-    return CFrame.new(car_land_pos, car_land_pos + forward)
 end
 
 local function tween_vehicle_to(target_cf)
@@ -3190,6 +3186,19 @@ local function tween_vehicle_to(target_cf)
             pcall(function() v.CollisionGroup = "TrailersGhost" end)
         end
     end
+
+    -- measure how far the lowest collidable floor sits below the anchor so we can offset the landing Y
+    local floor_drop = 0
+    for _, part in ipairs(car:GetDescendants()) do
+        if part:IsA("BasePart") and part.CanCollide then
+            local dist = anchor.Position.Y - (part.Position.Y - part.Size.Y * 0.5)
+            if dist > floor_drop then floor_drop = dist end
+        end
+    end
+
+    -- shift target up by floor_drop so wheels land on the surface instead of clipping into it
+    target_cf = CFrame.new(target_cf.Position + Vector3.new(0, floor_drop, 0)) * (target_cf - target_cf.Position)
+
     local function restore()
         for _, v in ipairs(car:GetDescendants()) do
             if v:IsA("BasePart") then
@@ -3210,6 +3219,7 @@ local function tween_vehicle_to(target_cf)
             pcall(function() v.CollisionGroup = group end)
         end
     end
+
     local CRUISE_HEIGHT = g.hay_farm_cruise_height or 550
     local ASCENT_FRAC   = 0.15
     local DESCENT_FRAC  = 0.35
@@ -3418,7 +3428,9 @@ local function hay_farm_loop()
                 task.wait(1)
                 continue
             end
-            local ok = tween_vehicle_to(get_zone_land_cf(g.get_lp_vehicle()))
+            -- read the HUD objective to route to the correct drop zone instead of hardcoding
+            local drop_cf = get_active_drop_cf()
+            local ok = tween_vehicle_to(drop_cf)
             if not ok then
                 if g.notify then g.notify("Error", "Hay Farm: delivery tween failed.", 3) end
                 task.wait(2)
@@ -3430,7 +3442,7 @@ local function hay_farm_loop()
             if not next_phase then
                 if g.notify then g.notify("Warning", "Hay Farm: delivery timeout, nudging.", 3) end
                 if not wait_until_seated(5) then task.wait(1); continue end
-                tween_vehicle_to(get_zone_land_cf(g.get_lp_vehicle()))
+                tween_vehicle_to(get_active_drop_cf())
                 task.wait(2)
                 continue
             end
