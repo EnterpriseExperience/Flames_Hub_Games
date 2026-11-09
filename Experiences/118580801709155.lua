@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.1.3"
+local Raw_Version = "V2.1.4"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -3208,7 +3208,7 @@ local function tween_vehicle_to(target_cf)
     local ASCENT_FRAC   = 0.15
     local DESCENT_FRAC  = 0.35
     local start_pos     = anchor.CFrame.Position
-    local end_pos       = Vector3.new(target_cf.Position.X, target_cf.Position.Y + ZONE_LAND_Y_OFFSET, target_cf.Position.Z)
+    local end_pos       = target_cf.Position
     local cruise_start  = Vector3.new(start_pos.X, CRUISE_HEIGHT, start_pos.Z)
     local cruise_end    = Vector3.new(end_pos.X,   CRUISE_HEIGHT, end_pos.Z)
     local distance      = (end_pos - start_pos).Magnitude
@@ -3251,7 +3251,19 @@ local function tween_vehicle_to(target_cf)
         task.wait(interval)
     end
 
-    local final_car_cf = target_cf
+    local final_car_cf = CFrame.new(
+        Vector3.new(target_cf.Position.X, target_cf.Position.Y + ZONE_LAND_Y_OFFSET, target_cf.Position.Z),
+        Vector3.new(target_cf.Position.X, target_cf.Position.Y + ZONE_LAND_Y_OFFSET, target_cf.Position.Z) + target_cf.LookVector
+    )
+    pcall(function() if car.PrimaryPart then car:PivotTo(final_car_cf) else anchor.CFrame = final_car_cf end end)
+    task.wait(0.05)
+    for _, v in ipairs(car:GetDescendants()) do
+        if v:IsA("BasePart") then
+            pcall(function() v.AssemblyLinearVelocity  = Vector3.zero end)
+            pcall(function() v.AssemblyAngularVelocity = Vector3.zero end)
+        end
+    end
+    task.wait(0.05)
     pcall(function() if car.PrimaryPart then car:PivotTo(final_car_cf) else anchor.CFrame = final_car_cf end end)
     if trailer_weight and trailer_to_anchor_offset and trailer_weight:IsDescendantOf(game or workspace) then
         local trailer_land_cf = final_car_cf:ToWorldSpace(trailer_to_anchor_offset)
