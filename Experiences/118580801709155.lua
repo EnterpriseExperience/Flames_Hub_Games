@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.1.0"
+local Raw_Version = "V2.1.1"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -4090,6 +4090,12 @@ Callback = function(val)
     g.vehicle_tp_duration = val
 end}, "Vehicle_TP_Duration_Slider_UI")
 task.wait(0.15)
+g.make_round = g.make_round or function(obj, radius)
+    local uic = Instance.new("UICorner")
+    uic.CornerRadius = UDim.new(0, radius)
+    uic.Parent = obj
+end
+
 local ScreenGui
 wait(0.15)
 if CoreGui:FindFirstChild("TemporaryBanner_GUI") then
