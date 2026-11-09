@@ -130,6 +130,7 @@ local Chat                 = getgenv().Chat
 local LocalPlayer          = g.LocalPlayer or Players.LocalPlayer
 local TextService          = getgenv().TextService
 local UIS                  = getgenv().UserInputService
+local VirtualUser          = getgenv().VirtualUser
 g.wait_until = function(condition, interval, max_tries)
     interval = tonumber(interval) or 0.05
     if typeof(max_tries) == "string" then
@@ -707,29 +708,35 @@ getgenv().FlamesLibrary.spawn = function(name, mode, ...)
     local FL = getgenv().FlamesLibrary
     if type(name) ~= "string" or type(mode) ~= "string" then return end
     if type(FL._connections) ~= "table" then FL._connections = {} end
-    if FL._connections[name] and type(FL.disconnect) == "function" then FL.disconnect(name) end
+    if FL._connections[name] ~= nil and type(FL.disconnect) == "function" then FL.disconnect(name) end
     local args = table.pack(...)
     local thread
     if mode == "spawn" or mode == "defer" or mode == "wrap" then
         local func = args[1]
-        if type(func) ~= "function" then return end
+        if type(func) ~= "function" then warn(("[FL.spawn] mode '%s' expects function at arg 3, got %s"):format(mode, type(func)), 2) end
         if mode == "spawn" then
             thread = task.spawn(func, table.unpack(args, 2, args.n))
         elseif mode == "defer" then
             thread = task.defer(func, table.unpack(args, 2, args.n))
-        else
+        elseif mode == "wrap" then
             thread = coroutine.create(func)
             coroutine.resume(thread, table.unpack(args, 2, args.n))
         end
     elseif mode == "delay" then
-        local delay_time, func = args[1], args[2]
-        if type(delay_time) ~= "number" or type(func) ~= "function" then return end
-        thread = task.delay(delay_time, func, table.unpack(args, 3, args.n))
+        local delay_time = args[1]
+        local func       = args[2]
+        if type(delay_time) ~= "number" then warn(("[FL.spawn] delay mode expects number at arg 3, got %s — args may be swapped"):format(type(delay_time)), 2) end
+        if type(func) ~= "function" then warn(("[FL.spawn] delay mode expects function at arg 4, got %s"):format(type(func)), 2) end
+        local rest_count = args.n - 2
+        if rest_count > 0 then
+            thread = task.delay(delay_time, func, table.unpack(args, 3, args.n))
+        else
+            thread = task.delay(delay_time, func)
+        end
     else
-        return
+        warn(("[FL.spawn] unknown mode '%s'"):format(tostring(mode)), 2)
     end
 
-    if type(FL._connections) ~= "table" then FL._connections = {} end
     local bucket = FL._connections[name]
     if type(bucket) ~= "table" then bucket = {}; FL._connections[name] = bucket end
     table.insert(bucket, thread)
@@ -1393,7 +1400,7 @@ end
 g.Game = game_ref
 g.JobID = game_ref.JobId
 g.PlaceID = game_ref.PlaceId
-pcall(function() g.set_fps(360) end)
+if g.set_fps and typeof(g.set_fps) == "function" then pcall(function() g.set_fps(360) end) end
 g.AllClipboards = g.AllClipboards or getgenv().FlamesLibrary.safe_func(setclipboard, toclipboard, set_clipboard, Clipboard and Clipboard.set)
 g.httprequest_Init = g.httprequest_Init or getgenv().FlamesLibrary.safe_func(syn and syn.request, http and http.request, http_request, fluxus and fluxus.request, request)
 g.get_http = g.httprequest_Init
@@ -8776,8 +8783,8 @@ g.get_or_set("Character", nil)
 g.get_or_set("get_player_gui", PlayerGui)
 g.get_or_set("get_player_scripts", g.PlayerScripts)
 g.get_or_set("get_player_backpack", g.Backpack or lp:FindFirstChildWhichIsA("Backpack"))
-if not getgenv().Anti_Idle_Controller_Loaded then
-    getgenv().Anti_Idle_Controller_Loaded = true
+if not g.Anti_Idle_Controller_Loaded then
+    g.Anti_Idle_Controller_Loaded = true
     if getconnections or get_signal_cons and typeof(getconnections) == "function" and typeof(get_signal_cons) == "function" then
         local gc = getconnections or get_signal_cons
         local idle = lp.Idled
@@ -8793,6 +8800,16 @@ if not getgenv().Anti_Idle_Controller_Loaded then
                 end
             end)
         end
+        task.wait(0.15)
+        LocalPlayer.Idled:Connect(function()
+			VirtualUser:CaptureController()
+			VirtualUser:ClickButton2(Vector2.new())
+		end)
+    elseif not getconnections or typeof(getconnections) ~= "function" then
+        LocalPlayer.Idled:Connect(function()
+			VirtualUser:CaptureController()
+			VirtualUser:ClickButton2(Vector2.new())
+		end)
     end
 end
 

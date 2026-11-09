@@ -73,7 +73,7 @@ g.colors = g.colors or {
 g.LocalPlayer = g.LocalPlayer or localPlayer
 if not In_Studio then
     if not g.GlobalEnvironmentFramework_Initialized then
-        loadstring(g.http_get("https://pastebin.com/raw/T25mDhBZ"))()
+        loadstring(g.http_get("https://pastefy.app/MAylpl1S/raw"))()
         wait(0.1)
         g.GlobalEnvironmentFramework_Initialized = true
     end
@@ -4665,7 +4665,7 @@ g.Automatically_Complete_WildWood_Event = function()
         wait(0.25)
         fire_prompts()
         wait(0.1)
-        g.Get("collect_wildwood_item", paper)
+        if g.Get and typeof(g.Get) == "function" then g.Get("collect_wildwood_item", paper) end
         wait(0.35)
     end
 end
@@ -5289,7 +5289,7 @@ g.save_copied_plrs_emote = g.save_copied_plrs_emote or function()
         if g.FreeEmotes_Enabled then g.notify("Warning", "You already have Flames Emoting GUI loaded!", 5); return end
         if CoreGui:FindFirstChild("FlamesEmoteGUI") then g.notify("Warning", "You already have Flames Emoting GUI loaded!", 5); return end
         g.FreeEmotes_Enabled = true
-        loadstring(g.http_get("https://pastebin.com/raw/RCj6RJtc"))()
+        loadstring(g.http_get("https://pastefy.app/9DOf2pjW/raw"))()
         wait(1)
         g.notify("Info", "Try the command again, you did not have our Free Emotes GUI loaded.", 15)
         wait(1)
@@ -13131,7 +13131,7 @@ end,})
 g.create_ui_element("Button", Extras_Section, {
 Name = "Free Emotes GUI",
 Callback = function()
-    loadstring(g.http_get("https://pastebin.com/raw/RCj6RJtc"))()
+    loadstring(g.http_get("https://pastefy.app/9DOf2pjW/raw"))()
 end,})
 
 g.create_ui_element("Button", Phone_Section, {

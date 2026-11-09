@@ -14,9 +14,27 @@ function missing(t, f, fallback)
    return fallback
 end
 
-local g = getgenv()
-local http_game = (g["game"] or game)["HttpGet"]
-g.http_get = function(url) return http_game(game, url) end
+local function valid_t(t) if t and typeof(t) == "table" then return t end; return false end
+local In_Studio = false
+local g
+-- [[ Really secure checking below. ]] --
+if game:GetService("RunService"):IsStudio() then
+    g = valid_t(_G) or {}
+    In_Studio = true
+else
+    g = valid_t(getgenv and getgenv()) or valid_t(_G) or {}
+end
+wait(0.1)
+local blank_F = g.blank_function or g.blankfunction or function(...) return ... end
+local cloneref = typeof(cloneref) == "function" and cloneref or function(instance) return instance end
+-- [[ Should no longer break in Roblox Studio. 😈🚬 ]] --
+local http_game
+if In_Studio then
+    http_game = blank_F
+else
+    http_game = (g["game"] or game)["HttpGet"]
+    g.http_get = function(url) return http_game(game, url) end
+end
 cloneref = missing("function", cloneref, function(...) return ... end)
 sethidden =  missing("function", sethiddenproperty or set_hidden_property or set_hidden_prop)
 gethidden =  missing("function", gethiddenproperty or get_hidden_property or get_hidden_prop)
@@ -112,6 +130,7 @@ CaptureService = Services.CaptureService
 VoiceChatService = Services.VoiceChatService
 SocialService = Services.SocialService
 speaker = Players.LocalPlayer
+LocalPlayer = speaker
 IYMouse = cloneref and cloneref(Players.LocalPlayer:GetMouse()) or Players.LocalPlayer:GetMouse()
 PlayerGui = cloneref and cloneref(Players.LocalPlayer:FindFirstChildWhichIsA("PlayerGui")) or Players.LocalPlayer:FindFirstChildWhichIsA("PlayerGui")
 PlaceId, JobId = game.PlaceId, game.JobId
@@ -167,8 +186,7 @@ end
 
 local function ensure_global_loop()
 	if g._rgb_global_conn then return end
-	local rs = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
-	local conn = rs.RenderStepped:Connect(function(dt)
+	local conn = RunService.RenderStepped:Connect(function(dt)
 		local conns = g._rgb_conns
 		local any = false
 		for _, data in pairs(conns) do
@@ -2576,10 +2594,62 @@ function vtype(o, t)
 	return type(o) == t
 end
 
+getgenv().return_char = function(player, timeout)
+    if not player or not player:IsA("Player") then return nil end
+    timeout = tonumber(timeout) or Players.RespawnTime + 1
+    local start = os.clock()
+    while os.clock() - start < timeout do
+        local char = player.Character
+        if char and char:IsDescendantOf(workspace) and char:IsDescendantOf(game) then
+            local ok, hum = pcall(function() return char:FindFirstChildOfClass("Humanoid") end)
+            if ok and hum and hum.Health > 0 then return char end
+        end
+        hb()
+    end
+    return nil
+end
+
 function get_char(player, time_out)
-	time_out = tonumber(time_out) or 5
-	if not player or not player:IsA("Player") then return nil end
-	return wait_character(player, time_out)
+    time_out = tonumber(time_out) or Players.RespawnTime + 1
+    if not player or not player:IsA("Player") then return nil end
+    local char = player.Character
+    if char and char:IsDescendantOf(workspace) and char:IsDescendantOf(game) then return char end
+    local start = os.clock()
+    while os.clock() - start < time_out do
+        char = player.Character
+        if char and wait_for_datamodel(char) then return char end
+        hb()
+    end
+    return nil
+end
+
+function get_human(player, time_out)
+    time_out = tonumber(time_out) or Players.RespawnTime + 1
+    local char = g.get_char(player, time_out)
+    if not char then return nil end
+    local existing = char:FindFirstChildOfClass("Humanoid")
+    if existing then return existing end
+    return wait_for_child_safe(char, "Humanoid", time_out)
+end
+
+function get_root(player, time_out)
+    time_out = tonumber(time_out) or Players.RespawnTime + 1
+    local char = g.get_char(player, time_out)
+    if not char then return nil end
+    local existing = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+    if existing then return existing end
+    return wait_for_child_safe(char, "HumanoidRootPart", time_out)
+        or wait_for_child_safe(char, "UpperTorso", time_out)
+        or wait_for_child_safe(char, "Torso", time_out)
+end
+
+function get_head(player, time_out)
+    time_out = tonumber(time_out) or Players.RespawnTime + 1
+    local char = g.get_char(player, time_out)
+    if not char then return nil end
+    local existing = char:FindFirstChild("Head")
+    if existing then return existing end
+    return wait_for_child_safe(char, "Head", time_out)
 end
 
 function getRoot(char)
@@ -2598,7 +2668,6 @@ function getRoot(char)
 
 	local root
 	local attempts = 0
-
 	repeat
 		root = char:FindFirstChild('HumanoidRootPart')
 			or char:FindFirstChild('Torso')
@@ -2626,7 +2695,7 @@ function r15(plr)
 end
 
 function toClipboard(txt)
-	if everyClipboard then
+	if everyClipboard and typeof(everyClipboard) == "function" then
 		everyClipboard(tostring(txt))
 		if g.Notify_InfP then g.Notify_InfP("Clipboard", "Copied to clipboard") end
 	else
@@ -3043,11 +3112,9 @@ eventEditor = (function()
 					task.spawn(function()
 						pcall(function()
 							local cmd_str = tostring(cmd[1])
-							for count, arg in pairs(args) do
-								cmd_str = cmd_str:gsub("%$" .. count, tostring(arg))
-							end
+							for count, arg in pairs(args) do cmd_str = cmd_str:gsub("%$" .. count, tostring(arg)) end
 							task.wait(cmd[3] or 0)
-							if g.execCmd then g.execCmd(cmd_str) end
+							if g.execCmd and typeof(g.execCmd) == "function" then g.execCmd(cmd_str) end
 						end)
 					end)
 				end
@@ -4035,7 +4102,6 @@ function Notify_InfP(text,text2,length)
 end
 wait(0.1)
 g.Notify_InfP = Notify_InfP
-
 local lastMessage = nil
 local lastLabel = nil
 local dupeCount = 1
@@ -4219,13 +4285,10 @@ ColorsButton.MouseButton1Click:Connect(function()
 		picker = game:GetObjects("rbxassetid://4908465318")[1]
 		picker.Name = randomString()
 		picker.Parent = ScaledHolder
-
 		local ColorPicker do
 			ColorPicker = {}
-
 			ColorPicker.new = function()
 				local newMt = setmetatable({},{})
-
 				local pickerGui = picker.ColorPicker
 				local pickerTopBar = pickerGui.TopBar
 				local pickerExit = pickerTopBar.Exit
@@ -4243,33 +4306,24 @@ ColorsButton.MouseButton1Click:Connect(function()
 				local text1Button = pickerFrame.Text1
 				local text2Button = pickerFrame.Text2
 				local scrollButton = pickerFrame.Scroll
-
 				local colorScope = colorSpace.Scope
 				local colorArrow = pickerFrame.ArrowFrame.Arrow
-
 				local hueInput = pickerFrame.Hue.Input
 				local satInput = pickerFrame.Sat.Input
 				local valInput = pickerFrame.Val.Input
-
 				local redInput = pickerFrame.Red.Input
 				local greenInput = pickerFrame.Green.Input
 				local blueInput = pickerFrame.Blue.Input
-
 				local mouse = IYMouse
-
 				local hue,sat,val = 0,0,1
 				local red,green,blue = 1,1,1
 				local chosenColor = Color3.new(0,0,0)
-
 				local basicColors = {Color3.new(0,0,0),Color3.new(0.66666668653488,0,0),Color3.new(0,0.33333334326744,0),Color3.new(0.66666668653488,0.33333334326744,0),Color3.new(0,0.66666668653488,0),Color3.new(0.66666668653488,0.66666668653488,0),Color3.new(0,1,0),Color3.new(0.66666668653488,1,0),Color3.new(0,0,0.49803924560547),Color3.new(0.66666668653488,0,0.49803924560547),Color3.new(0,0.33333334326744,0.49803924560547),Color3.new(0.66666668653488,0.33333334326744,0.49803924560547),Color3.new(0,0.66666668653488,0.49803924560547),Color3.new(0.66666668653488,0.66666668653488,0.49803924560547),Color3.new(0,1,0.49803924560547),Color3.new(0.66666668653488,1,0.49803924560547),Color3.new(0,0,1),Color3.new(0.66666668653488,0,1),Color3.new(0,0.33333334326744,1),Color3.new(0.66666668653488,0.33333334326744,1),Color3.new(0,0.66666668653488,1),Color3.new(0.66666668653488,0.66666668653488,1),Color3.new(0,1,1),Color3.new(0.66666668653488,1,1),Color3.new(0.33333334326744,0,0),Color3.new(1,0,0),Color3.new(0.33333334326744,0.33333334326744,0),Color3.new(1,0.33333334326744,0),Color3.new(0.33333334326744,0.66666668653488,0),Color3.new(1,0.66666668653488,0),Color3.new(0.33333334326744,1,0),Color3.new(1,1,0),Color3.new(0.33333334326744,0,0.49803924560547),Color3.new(1,0,0.49803924560547),Color3.new(0.33333334326744,0.33333334326744,0.49803924560547),Color3.new(1,0.33333334326744,0.49803924560547),Color3.new(0.33333334326744,0.66666668653488,0.49803924560547),Color3.new(1,0.66666668653488,0.49803924560547),Color3.new(0.33333334326744,1,0.49803924560547),Color3.new(1,1,0.49803924560547),Color3.new(0.33333334326744,0,1),Color3.new(1,0,1),Color3.new(0.33333334326744,0.33333334326744,1),Color3.new(1,0.33333334326744,1),Color3.new(0.33333334326744,0.66666668653488,1),Color3.new(1,0.66666668653488,1),Color3.new(0.33333334326744,1,1),Color3.new(1,1,1)}
 				local customColors = {}
-
 				dragGUI(picker)
-
 				local function updateColor(noupdate)
 					local relativeX,relativeY,relativeStripY = 219 - hue*219, 199 - sat*199, 199 - val*199
 					local hsvColor = Color3.fromHSV(hue,sat,val)
-
 					if noupdate == 2 or not noupdate then
 						hueInput.Text = tostring(math.ceil(359*hue))
 						satInput.Text = tostring(math.ceil(255*sat))
@@ -4282,12 +4336,10 @@ ColorsButton.MouseButton1Click:Connect(function()
 					end
 
 					chosenColor = Color3.new(red,green,blue)
-
 					colorScope.Position = UDim2.new(0,relativeX-9,0,relativeY-9)
 					colorStrip.ImageColor3 = Color3.fromHSV(hue,sat,1)
 					colorArrow.Position = UDim2.new(0,-2,0,relativeStripY-4)
 					previewFrame.BackgroundColor3 = chosenColor
-
 					newMt.Color = chosenColor
 					if newMt.Changed then newMt:Changed(chosenColor) end
 				end
@@ -4295,29 +4347,21 @@ ColorsButton.MouseButton1Click:Connect(function()
 				local function colorSpaceInput()
 					local relativeX = mouse.X - colorSpace.AbsolutePosition.X
 					local relativeY = mouse.Y - colorSpace.AbsolutePosition.Y
-
 					if relativeX < 0 then relativeX = 0 elseif relativeX > 219 then relativeX = 219 end
 					if relativeY < 0 then relativeY = 0 elseif relativeY > 199 then relativeY = 199 end
-
 					hue = (219 - relativeX)/219
 					sat = (199 - relativeY)/199
-
 					local hsvColor = Color3.fromHSV(hue,sat,val)
 					red,green,blue = hsvColor.r,hsvColor.g,hsvColor.b
-
 					updateColor()
 				end
 
 				local function colorStripInput()
 					local relativeY = mouse.Y - colorStrip.AbsolutePosition.Y
-
 					if relativeY < 0 then relativeY = 0 elseif relativeY > 199 then relativeY = 199 end	
-
 					val = (199 - relativeY)/199
-
 					local hsvColor = Color3.fromHSV(hue,sat,val)
 					red,green,blue = hsvColor.r,hsvColor.g,hsvColor.b
-
 					updateColor()
 				end
 
@@ -4327,13 +4371,10 @@ ColorsButton.MouseButton1Click:Connect(function()
 							frame.ArrowFrame.Up.BackgroundTransparency = 0.5
 						elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 							local releaseEvent,runEvent
-
 							local startTime = tick()
 							local pressing = true
 							local startNum = tonumber(frame.Text)
-
 							if not startNum then return end
-
 							releaseEvent = UserInputService.InputEnded:Connect(function(input)
 								if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
 								releaseEvent:Disconnect()
@@ -4363,13 +4404,10 @@ ColorsButton.MouseButton1Click:Connect(function()
 							frame.ArrowFrame.Down.BackgroundTransparency = 0.5
 						elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 							local releaseEvent,runEvent
-
 							local startTime = tick()
 							local pressing = true
 							local startNum = tonumber(frame.Text)
-
 							if not startNum then return end
-
 							releaseEvent = UserInputService.InputEnded:Connect(function(input)
 								if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
 								releaseEvent:Disconnect()
@@ -4398,7 +4436,6 @@ ColorsButton.MouseButton1Click:Connect(function()
 				colorSpace.InputBegan:Connect(function(input)
 					if input.UserInputType == Enum.UserInputType.MouseButton1 then
 						local releaseEvent,mouseEvent
-
 						releaseEvent = UserInputService.InputEnded:Connect(function(input)
 							if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
 							releaseEvent:Disconnect()
@@ -4406,9 +4443,7 @@ ColorsButton.MouseButton1Click:Connect(function()
 						end)
 
 						mouseEvent = UserInputService.InputChanged:Connect(function(input)
-							if input.UserInputType == Enum.UserInputType.MouseMovement then
-								colorSpaceInput()
-							end
+							if input.UserInputType == Enum.UserInputType.MouseMovement then colorSpaceInput() end
 						end)
 
 						colorSpaceInput()
@@ -4418,7 +4453,6 @@ ColorsButton.MouseButton1Click:Connect(function()
 				colorStrip.InputBegan:Connect(function(input)
 					if input.UserInputType == Enum.UserInputType.MouseButton1 then
 						local releaseEvent,mouseEvent
-
 						releaseEvent = UserInputService.InputEnded:Connect(function(input)
 							if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
 							releaseEvent:Disconnect()
@@ -4426,9 +4460,7 @@ ColorsButton.MouseButton1Click:Connect(function()
 						end)
 
 						mouseEvent = UserInputService.InputChanged:Connect(function(input)
-							if input.UserInputType == Enum.UserInputType.MouseMovement then
-								colorStripInput()
-							end
+							if input.UserInputType == Enum.UserInputType.MouseMovement then colorStripInput() end
 						end)
 
 						colorStripInput()
@@ -4445,8 +4477,7 @@ ColorsButton.MouseButton1Click:Connect(function()
 						updateColor(1)
 					end
 				end
-				hueInput.FocusLost:Connect(function() updateHue(hueInput.Text) end) hookButtons(hueInput,updateHue)
-
+				hueInput.FocusLost:Connect(function() updateHue(hueInput.Text) end); hookButtons(hueInput,updateHue)
 				local function updateSat(str)
 					local num = tonumber(str)
 					if num then
@@ -4457,7 +4488,7 @@ ColorsButton.MouseButton1Click:Connect(function()
 						updateColor(1)
 					end
 				end
-				satInput.FocusLost:Connect(function() updateSat(satInput.Text) end) hookButtons(satInput,updateSat)
+				satInput.FocusLost:Connect(function() updateSat(satInput.Text) end); hookButtons(satInput,updateSat)
 
 				local function updateVal(str)
 					local num = tonumber(str)
@@ -4469,7 +4500,7 @@ ColorsButton.MouseButton1Click:Connect(function()
 						updateColor(1)
 					end
 				end
-				valInput.FocusLost:Connect(function() updateVal(valInput.Text) end) hookButtons(valInput,updateVal)
+				valInput.FocusLost:Connect(function() updateVal(valInput.Text) end); hookButtons(valInput,updateVal)
 
 				local function updateRed(str)
 					local num = tonumber(str)
@@ -4481,7 +4512,7 @@ ColorsButton.MouseButton1Click:Connect(function()
 						updateColor(2)
 					end
 				end
-				redInput.FocusLost:Connect(function() updateRed(redInput.Text) end) hookButtons(redInput,updateRed)
+				redInput.FocusLost:Connect(function() updateRed(redInput.Text) end); hookButtons(redInput,updateRed)
 
 				local function updateGreen(str)
 					local num = tonumber(str)
@@ -4493,7 +4524,7 @@ ColorsButton.MouseButton1Click:Connect(function()
 						updateColor(2)
 					end
 				end
-				greenInput.FocusLost:Connect(function() updateGreen(greenInput.Text) end) hookButtons(greenInput,updateGreen)
+				greenInput.FocusLost:Connect(function() updateGreen(greenInput.Text) end); hookButtons(greenInput,updateGreen)
 
 				local function updateBlue(str)
 					local num = tonumber(str)
@@ -4505,7 +4536,7 @@ ColorsButton.MouseButton1Click:Connect(function()
 						updateColor(2)
 					end
 				end
-				blueInput.FocusLost:Connect(function() updateBlue(blueInput.Text) end) hookButtons(blueInput,updateBlue)
+				blueInput.FocusLost:Connect(function() updateBlue(blueInput.Text) end); hookButtons(blueInput,updateBlue)
 
 				local colorChoice = Instance.new("TextButton")
 				colorChoice.Name = "Choice"
@@ -4521,17 +4552,15 @@ ColorsButton.MouseButton1Click:Connect(function()
 					local newColor = colorChoice:Clone()
 					newColor.BackgroundColor3 = v
 					newColor.Position = UDim2.new(0,1 + 30*column,0,21 + 23*row)
-
 					newColor.MouseButton1Click:Connect(function()
 						red,green,blue = v.r,v.g,v.b
 						local newColor = Color3.new(red,green,blue)
 						hue,sat,val = Color3.toHSV(newColor)
 						updateColor()
 					end)	
-
 					newColor.Parent = basicColorsFrame
 					column = column + 1
-					if column == 6 then row = row + 1 column = 0 end
+					if column == 6 then row = row + 1; column = 0 end
 				end
 
 				row = 0
@@ -5225,6 +5254,7 @@ CMDs[#CMDs + 1] = {NAME = 'console', DESC = 'Loads Roblox console'}
 CMDs[#CMDs + 1] = {NAME = 'oldconsole', DESC = 'Loads old Roblox console'}
 CMDs[#CMDs + 1] = {NAME = 'explorer / dex', DESC = 'Opens DEX by Moon'}
 CMDs[#CMDs + 1] = {NAME = 'olddex / odex', DESC = 'Opens Old DEX by Moon'}
+CMDs[#CMDs + 1] = {NAME = 'vexdex / vdex', DESC = 'Opens Vex Explorer by Vezise'}
 CMDs[#CMDs + 1] = {NAME = 'remotespy / rspy', DESC = 'Opens Cobalt to intercept incoming and outgoing network traffic'}
 CMDs[#CMDs + 1] = {NAME = 'simplespy / sspy', DESC = 'Opens Simple Spy V3 to intercept remote calls from the client to the server'}
 CMDs[#CMDs + 1] = {NAME = 'audiologger / alogger', DESC = 'Opens Edges audio logger'}
@@ -5725,10 +5755,9 @@ function permadeath(plr)
 end
 
 function respawn(plr)
-    if invisRunning then TurnVisible() end
-
+    if invisRunning then g.TurnVisible() end
     local rcdEnabled, wasHidden = false, false
-    if gethidden then
+    if gethidden and typeof(gethidden) == "function" then
         rcdEnabled, wasHidden = gethidden(workspace, "RejectCharacterDeletions") ~= Enum.RejectCharacterDeletions.Disabled
     end
 
@@ -5785,7 +5814,7 @@ end
 Clip = true
 spDelay = 0.1
 Players.LocalPlayer.CharacterAdded:Connect(function()
-	NOFLY()
+	if NOFLY and typeof(NOFLY) == "function" then NOFLY() end
 	Floating = false
 	if not Clip then g.execCmd('clip') end
 	repeat wait() until getRoot(Players.LocalPlayer.Character)
@@ -7677,9 +7706,7 @@ addcmd("rejoin", {"rj"}, function(args, speaker)
 end)
 
 addcmd("autorejoin", {"autorj"}, function(args, speaker)
-	GuiService.ErrorMessageChanged:Connect(function()
-		execCmd("rejoin")
-	end)
+	GuiService.ErrorMessageChanged:Connect(function() g.execCmd("rejoin") end)
 	Notify_InfP("Auto Rejoin", "Auto rejoin enabled")
 end)
 
@@ -7873,13 +7900,11 @@ end
 local mobilefly = function(speaker, vfly)
 	unmobilefly(speaker)
 	FLYING = true
-
 	local root = getRoot(speaker.Character)
 	local camera = workspace.CurrentCamera
 	local v3none = Vector3.new()
 	local v3zero = Vector3.new(0, 0, 0)
 	local v3inf = Vector3.new(9e9, 9e9, 9e9)
-
 	local controlModule = require(speaker.PlayerScripts:WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
 	local bv = Instance.new("BodyVelocity")
 	bv.Name = velocityHandlerName
@@ -10824,7 +10849,7 @@ addcmd("emotesgui", {"allemotes", "emotegui"}, function(args, speaker)
 	else
 		Notify_InfP("Emotes", "Toggle with the 'F' button on the left side of your screen.")
 	end
-	loadstring(game:HttpGet("https://pastebin.com/raw/RCj6RJtc"))()
+	loadstring(game:HttpGet("https://pastefy.app/9DOf2pjW/raw"))()
 end)
 
 addcmd('noanim',{},function(args, speaker)
@@ -11016,20 +11041,17 @@ addcmd('tptool', {'teleporttool'}, function(args, speaker)
 end)
 
 addcmd('clickdelete',{},function(args, speaker)
-	if speaker == Players.LocalPlayer then
-		Notify_InfP('Click Delete','Go to Settings > Keybinds > Add to set up click delete')
-	end
+	if speaker == Players.LocalPlayer then Notify_InfP('Click Delete','Go to Settings > Keybinds > Add to set up click delete') end
 end)
 
 addcmd('getposition',{'getpos','notifypos','notifyposition'},function(args, speaker)
 	local players = getPlayer(args[1], speaker)
 	for i,v in pairs(players)do
 		local char = Players[v].Character
-		local pos = char and (getRoot(char) or char:FindFirstChildWhichIsA("BasePart"))
+		if not char or not char:IsDescendantOf(game) then Notify_InfP('GetPosition Error','Missing character'); return end
+		local pos = char and (getRoot(char) or char:FindFirstChildWhichIsA("BasePart") or get_root(Players[v]))
 		pos = pos and pos.Position
-		if not pos then
-			return Notify_InfP('Getposition Error','Missing character')
-		end
+		if not pos then Notify_InfP('GetPosition Error','Missing character'); return end
 		local roundedPos = math.round(pos.X) .. ", " .. math.round(pos.Y) .. ", " .. math.round(pos.Z)
 		Notify_InfP('Current Position',roundedPos)
 	end
@@ -11039,42 +11061,46 @@ addcmd('copyposition',{'copypos'},function(args, speaker)
 	local players = getPlayer(args[1], speaker)
 	for i,v in pairs(players)do
 		local char = Players[v].Character
-		local pos = char and (getRoot(char) or char:FindFirstChildWhichIsA("BasePart"))
+		if not char or not char:IsDescendantOf(game) then Notify_InfP('CopyPosition Error','Missing character'); return end
+		local pos = char and (getRoot(char) or char:FindFirstChildWhichIsA("BasePart") or get_root(Players[v]))
 		pos = pos and pos.Position
-		if not pos then
-			return Notify_InfP('Getposition Error','Missing character')
-		end
+		if not pos then Notify_InfP('CopyPosition Error','Missing character'); return end
 		local roundedPos = math.round(pos.X) .. ", " .. math.round(pos.Y) .. ", " .. math.round(pos.Z)
 		toClipboard(roundedPos)
+		Notify_InfP('CopyPosition', tostring(roundedPos))
 	end
 end)
 
 addcmd('walktopos',{'walktoposition'},function(args, speaker)
-	if speaker.Character:FindFirstChildOfClass('Humanoid') and speaker.Character:FindFirstChildOfClass('Humanoid').SeatPart then
-		speaker.Character:FindFirstChildOfClass('Humanoid').Sit = false
+	local Char = speaker.Character or get_char(LocalPlayer)
+	if not Char or not Char:IsDescendantOf(game or workspace) then return end
+	local Human = Char and Char:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer)
+	if not Human or not Human.Parent or not Human:IsDescendantOf(game) then return end
+	if Human and Human.Parent and Human:IsDescendantOf(game) and Human.SeatPart then
+		Human.Sit = false
 		wait(.1)
 	end
-	speaker.Character:FindFirstChildOfClass('Humanoid').WalkToPoint = Vector3.new(args[1],args[2],args[3])
+	if Human and Human.Parent then Human.WalkToPoint = Vector3.new(args[1],args[2],args[3]) end
 end)
 
 addcmd('speed',{'ws','walkspeed'},function(args, speaker)
+	local Char = speaker.Character or get_char(LocalPlayer)
+	if not Char or not Char:IsDescendantOf(game or workspace) then return end
+	local Human = Char and Char:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer)
+	if not Human or not Human.Parent or not Human:IsDescendantOf(game) then return end
 	if args[2] then
 		local speed = args[2] or 16
-		if isNumber(speed) then
-			speaker.Character:FindFirstChildOfClass('Humanoid').WalkSpeed = speed
-		end
+		if isNumber(speed) then Human.WalkSpeed = speed end
 	else
 		local speed = args[1] or 16
-		if isNumber(speed) then
-			speaker.Character:FindFirstChildOfClass('Humanoid').WalkSpeed = speed
-		end
+		if isNumber(speed) then Human.WalkSpeed = speed end
 	end
 end)
 
 addcmd('spoofspeed',{'spoofws','spoofwalkspeed'},function(args, speaker)
 	if args[1] and isNumber(args[1]) then
-		if hookmetamethod then
-			local char = speaker.Character
+		if hookmetamethod and typeof(hookmetamethod) == "function" then
+			local char = speaker.Character or get_char(LocalPlayer)
 			local setspeed;
 			local index; index = hookmetamethod(game, "__index", function(self, key)
 				if not checkcaller() and typeof(self) == "Instance" and self:IsA("Humanoid") and (key == "WalkSpeed" or key == "walkSpeed") and self:IsDescendantOf(char) then
@@ -11096,12 +11122,12 @@ end)
 
 addcmd('loopspeed',{'loopws'},function(args, speaker)
 	local speed = args[1] or 16
-	if args[2] then
-		speed = args[2] or 16
-	end
+	if args[2] then speed = args[2] or 16 end
 	if isNumber(speed) then
-		local Char = speaker.Character or workspace:FindFirstChild(speaker.Name)
-		local Human = Char and Char:FindFirstChildWhichIsA("Humanoid")
+		local Char = speaker.Character or get_char(LocalPlayer)
+		if not Char or not Char:IsDescendantOf(game or workspace) then return end
+		local Human = Char and Char:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer)
+		if not Human or not Human.Parent or not Human:IsDescendantOf(game) then return end
 		local function WalkSpeedChange()
 			if Char and Human then
 				Human.WalkSpeed = speed
@@ -11124,19 +11150,15 @@ end)
 
 addcmd('spoofjumppower',{'spoofjp'},function(args, speaker)
 	if args[1] and isNumber(args[1]) then
-		if hookmetamethod then
-			local char = speaker.Character
+		if hookmetamethod and typeof(hookmetamethod) == "function" then
+			local char = speaker.Character or get_char(LocalPlayer)
 			local setpower;
 			local index; index = hookmetamethod(game, "__index", function(self, key)
-				if not checkcaller() and typeof(self) == "Instance" and self:IsA("Humanoid") and (key == "JumpPower" or key == "jumpPower") and self:IsDescendantOf(char) then
-					return setpower or args[1]
-				end
+				if not checkcaller() and typeof(self) == "Instance" and self:IsA("Humanoid") and (key == "JumpPower" or key == "jumpPower") and self:IsDescendantOf(char) then return setpower or args[1] end
 				return index(self, key)
 			end)
 			local newindex; newindex = hookmetamethod(game, "__newindex", function(self, key, value)
-				if not checkcaller() and typeof(self) == "Instance" and self:IsA("Humanoid") and (key == "JumpPower" or key == "jumpPower") and self:IsDescendantOf(char) then
-					setpower = tonumber(value)
-				end
+				if not checkcaller() and typeof(self) == "Instance" and self:IsA("Humanoid") and (key == "JumpPower" or key == "jumpPower") and self:IsDescendantOf(char) then setpower = tonumber(value) end
 				return newindex(self, key, value)
 			end)
 		else
@@ -11148,14 +11170,16 @@ end)
 addcmd('loopjumppower',{'loopjp','loopjpower'},function(args, speaker)
 	local jpower = args[1] or 50
 	if isNumber(jpower) then
-		local Char = speaker.Character or workspace:FindFirstChild(speaker.Name)
-		local Human = Char and Char:FindFirstChildWhichIsA("Humanoid")
+		local Char = speaker.Character or get_char(LocalPlayer)
+		if not Char or not Char:IsDescendantOf(game or workspace) then return end
+		local Human = Char and Char:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer)
+		if not Human or not Human.Parent or not Human:IsDescendantOf(game) then return end
 		local function JumpPowerChange()
 			if Char and Human then
-				if speaker.Character:FindFirstChildOfClass('Humanoid').UseJumpPower then
-					speaker.Character:FindFirstChildOfClass('Humanoid').JumpPower = jpower
+				if Human.UseJumpPower then
+					Human.JumpPower = jpower
 				else
-					speaker.Character:FindFirstChildOfClass('Humanoid').JumpHeight  = jpower
+					Human.JumpHeight  = jpower
 				end
 			end
 		end
@@ -11170,15 +11194,17 @@ addcmd('loopjumppower',{'loopjp','loopjpower'},function(args, speaker)
 end)
 
 addcmd('unloopjumppower',{'unloopjp','unloopjpower'},function(args, speaker)
-	local Char = speaker.Character or workspace:FindFirstChild(speaker.Name)
-	local Human = Char and Char:FindFirstChildWhichIsA("Humanoid")
+	local Char = speaker.Character or get_char(LocalPlayer)
+	if not Char or not Char:IsDescendantOf(game or workspace) then return end
+	local Human = Char and Char:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer)
+	if not Human or not Human.Parent or not Human:IsDescendantOf(game) then return end
 	HumanModCons.jpLoop = (HumanModCons.jpLoop and HumanModCons.jpLoop:Disconnect() and false) or nil
 	HumanModCons.jpCA = (HumanModCons.jpCA and HumanModCons.jpCA:Disconnect() and false) or nil
-	if Char and Human then
-		if speaker.Character:FindFirstChildOfClass('Humanoid').UseJumpPower then
-			speaker.Character:FindFirstChildOfClass('Humanoid').JumpPower = 50
+	if Char and Human and Human.Parent and Human:IsDescendantOf(game) then
+		if Human.UseJumpPower then
+			Human.JumpPower = 50
 		else
-			speaker.Character:FindFirstChildOfClass('Humanoid').JumpHeight  = 50
+			Human.JumpHeight  = 50
 		end
 	end
 end)
@@ -11202,7 +11228,7 @@ addcmd('tools',{'gears'},function(args, speaker)
 		end
 	end
 	copy(ReplicatedStorage)
-	Notify_InfP('Tools','Copied tools from ReplicatedStorage and Lighting')
+	Notify_InfP('Tools','Copied tools from ReplicatedStorage and Lighting.')
 end)
 
 addcmd('notools',{'rtools','clrtools','removetools','deletetools','dtools'},function(args, speaker)
@@ -11219,7 +11245,8 @@ addcmd('notools',{'rtools','clrtools','removetools','deletetools','dtools'},func
 end)
 
 addcmd('deleteselectedtool',{'dst'},function(args, speaker)
-	for i,v in pairs(speaker.Character:GetDescendants()) do
+	local char = speaker.Character or get_char(LocalPlayer)
+	for i,v in pairs(char:GetDescendants()) do
 		if v:IsA('Tool') or v:IsA('HopperBin') then
 			v:Destroy()
 		end
@@ -11231,22 +11258,15 @@ addcmd("console", {}, function(args, speaker)
 end)
 
 addcmd('oldconsole',{},function(args, speaker)
-	-- Thanks wally!!
 	Notify_InfP("Loading",'Hold on a sec')
-	local _, str = pcall(function()
-		return game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/console.lua", true)
-	end)
-
-	local s, e = loadstring(str)
-	if typeof(s) ~= "function" then
-		return
-	end
-
+	local _, str = pcall(function() return game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/console.lua", true) end)
+	local s = loadstring(str)
+	if typeof(s) ~= "function" then return end
 	local success, message = pcall(s)
 	if (not success) then
-		if printconsole then
+		if printconsole and typeof(printconsole) == "function" then
 			printconsole(message)
-		elseif printoutput then
+		elseif printoutput and typeof(printoutput) == "function" then
 			printoutput(message)
 		end
 	end
@@ -11255,55 +11275,51 @@ addcmd('oldconsole',{},function(args, speaker)
 end)
 
 addcmd("explorer", {"dex"}, function(args, speaker)
-   Notify_InfP("Loading", "Hold on a sec")
-   loadstring(game:HttpGet("https://pastefy.app/XmD5kvrf/raw"))()
+	if getgenv().true_dex_plus_plus_loaded then return end
+	Notify_InfP("Loading", "Hold on a sec")
+	loadstring(game:HttpGet("https://pastefy.app/XmD5kvrf/raw"))()
+end)
+
+addcmd("vexdex", {"vdex"}, function(args, speaker)
+	if getgenv().VexExecutedAlready then return end
+	Notify_InfP("Loading", "Hold on a sec")
+	loadstring(game:HttpGet("https://pastefy.app/c2frjmph/raw"))()
 end)
 
 addcmd('olddex', {'odex'}, function(args, speaker)
 	Notify_InfP('Loading old explorer', 'Hold on a sec')
-
 	local getobjects = function(a)
 		local Objects = {}
 		if a then
 			local b = InsertService:LoadLocalAsset(a)
-			if b then 
-				table.insert(Objects, b) 
-			end
+			if b then  table.insert(Objects, b) end
 		end
 		return Objects
 	end
 
 	local Dex = getobjects("rbxassetid://10055842438")[1]
 	Dex.Parent = PARENT
-
 	local function Load(Obj, Url)
 		local function GiveOwnGlobals(Func, Script)
 			local Fenv, RealFenv, FenvMt = {}, {
 				script = Script,
-				getupvalue = function(a, b)
-					return nil -- force it to use globals
-				end,
-				getreg = function() -- It loops registry for some idiotic reason so stop it from doing that and just use a global
-					return {} -- force it to use globals
-				end,
+				getupvalue = function(a, b) return nil end, -- force it to use globals
+				-- It loops registry for some idiotic reason so stop it from doing that and just use a global --
+				-- force it to use globals --
+				getreg = function() return {} end,
 				getprops = getprops or function(inst)
-					if getproperties then
+					if getproperties and typeof(getproperties) == "function" then
 						local props = getproperties(inst)
 						if props[1] and gethiddenproperty then
 							local results = {}
 							for _,name in pairs(props) do
 								local success, res = pcall(gethiddenproperty, inst, name)
-								if success then
-									results[name] = res
-								end
+								if success then results[name] = res end
 							end
-
 							return results
 						end
-
 						return props
 					end
-
 					return {}
 				end
 			}, {}
@@ -11330,10 +11346,8 @@ addcmd('olddex', {'odex'}, function(args, speaker)
 			end
 			table.foreach(Script:GetChildren(), LoadScripts)
 		end
-
 		LoadScripts(nil, Obj)
 	end
-
 	Load(Dex)
 end)
 
@@ -11598,12 +11612,12 @@ end)
 
 addcmd("SystemBroken", {}, function()
 	if getgenv().GUI_Loaded then return end
-   loadstring(game:HttpGet("https://pastebin.com/raw/JYs67Yfm"))()
+   loadstring(game:HttpGet("https://pastefy.app/ZgwI6EWA/raw"))()
 end)
 
 addcmd("netstats", {"netstatsgui", "performancegui", "performancestatsgui"}, function()
 	if getgenv().performance_stats then return end
-	loadstring(game:HttpGet("https://pastebin.com/raw/DuG2RmjF"))()
+	loadstring(game:HttpGet("https://pastefy.app/nq0BT17K/raw"))()
 end)
 
 function getTorso(x)
@@ -13935,7 +13949,7 @@ end)
 
 task.spawn(function()
 	local success, latestVersionInfo = pcall(function() 
-		local versionJson = game:HttpGet("https://pastebin.com/raw/VftYETes")
+		local versionJson = game:HttpGet("https://pastefy.app/dpZuRCQq/raw")
 		return HttpService:JSONDecode(versionJson)
 	end)
 
