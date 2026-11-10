@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.1.6"
+local Raw_Version = "V2.1.7"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -474,6 +474,70 @@ else
 	g.notify("Success", "Staff-Watch V2 has been enabled for this session.", 5)
 end
 
+FlamesLibrary.spawn("gameplay_pause_kill_watcher", "Heartbeat", function()
+    local PAUSE_THRESHOLD = 15
+    local streaming_ok, streaming = pcall(function() return Workspace.StreamingEnabled end)
+    if not streaming_ok or not streaming then
+        print("StreamingEnabled is off — watcher aborted.")
+        return
+    end
+
+    local pause_start = nil
+    local triggered = false
+    FlamesLibrary.connect("gameplay_pause_kill_loop", RunService.Heartbeat:Connect(function()
+        local speaker = Players.LocalPlayer
+        if not speaker then return end
+        local ok, paused = pcall(function() return speaker.GameplayPaused end)
+        if not ok then
+            pause_start = nil
+            triggered = false
+            return
+        end
+
+        if paused == true then
+            if not pause_start then
+                pause_start = tick()
+                triggered = false
+            end
+
+            if not triggered and (tick() - pause_start) >= PAUSE_THRESHOLD then
+                triggered = true
+                local human = g.get_human and g.get_human(speaker) or g.Humanoid
+                if not human or not human.Parent or not human:IsDescendantOf(game) then return end
+                local kill_ok, kill_err = pcall(function() human.Health = 0 end)
+                if not kill_ok then
+                    warn("[Error]: Kill trigger failed: "..tostring(kill_err))
+                else
+                    warn("[Success]: GameplayPaused threshold hit — executed.")
+                end
+            end
+        else
+            pause_start = nil
+            triggered = false
+        end
+    end))
+end)
+
+if hookmetamethod and checkcaller and typeof(hookmetamethod) == "function" and typeof(checkcaller) == "function" then
+    local lp = speaker
+    local hooks = {
+        walkspeed = StarterPlayer.CharacterWalkSpeed or 16,
+        jumppower = StarterPlayer.CharacterJumpPower or 50,
+        jumpheight = StarterPlayer.CharacterJumpHeight or 7.2
+    }
+    local index
+    local newindex
+    index = hookmetamethod(game,"__index",function(self,property)
+        if not checkcaller() and self:IsA("Humanoid") and self:IsDescendantOf(lp.Character) and hooks[property:lower()] then return hooks[property:lower()] end
+        return index(self,property)
+    end)
+
+    newindex = hookmetamethod(game,"__newindex",function(self,property,value)
+        if not checkcaller() and self:IsA("Humanoid") and self:IsDescendantOf(lp.Character) and hooks[property:lower()] then return value end
+        return newindex(self,property,value)
+    end)
+end
+wait(0.15)
 local PROXIMITY_RADIUS_ROADS = 100
 local PROXIMITY_RADIUS_BUILDINGS = 100
 g.Hit_All_Lamp_Posts = function()
@@ -2780,28 +2844,72 @@ g.Toggle_Night_Enhancer = function(state)
     return true
 end
 
+g.target_walkspeed = g.target_walkspeed or 16
+g.target_jump_power = g.target_jump_power or 50
+g.target_jump_height = g.target_jump_height or 7.2
 g.set_walkspeed_char = function(speed)
     if not Validate_Number(speed) then speed = 16 end
+    g.target_walkspeed = speed
     local char = g.Character or speaker.Character or g.get_char(speaker)
     if not char or not char:IsDescendantOf(game) then return end
     local human = g.Humanoid or char:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
     if not human or not human.Parent or not human:IsDescendantOf(game) then return end
-    human.WalkSpeed = speed or StarterPlayer.CharacterWalkSpeed
+    human.WalkSpeed = speed
 end
 
-g.set_jump_power_height_char = function(speed)
-    if not Validate_Number(speed) then speed = 16 end
+g.set_jump_power_height_char = function(value)
+    local Use_Jump_Power = StarterPlayer.CharacterUseJumpPower or true
+    if Use_Jump_Power then
+        if not Validate_Number(value) then value = g.target_jump_power end
+        g.target_jump_power = value
+    else
+        if not Validate_Number(value) then value = g.target_jump_height end
+        g.target_jump_height = value
+    end
     local char = g.Character or speaker.Character or g.get_char(speaker)
     if not char or not char:IsDescendantOf(game) then return end
     local human = g.Humanoid or char:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
     if not human or not human.Parent or not human:IsDescendantOf(game) then return end
-    local Use_Jump_Power = StarterPlayer.CharacterUseJumpPower or true
     if Use_Jump_Power then
-        human.JumpPower = speed or StarterPlayer.CharacterJumpPower
+        human.JumpPower = value
     else
-        human.JumpHeight = speed or StarterPlayer.CharacterJumpHeight
+        human.JumpHeight = value
     end
 end
+
+g.start_movement_lock = function()
+    local char = g.Character or speaker.Character or g.get_char(speaker)
+    if not char or not char:IsDescendantOf(game) then return end
+    local human = g.Humanoid or char:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
+    if not human or not human.Parent or not human:IsDescendantOf(game) then return end
+    FlamesLibrary.connect("movement_lock_walkspeed", human:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+        if human.WalkSpeed ~= g.target_walkspeed then
+            human.WalkSpeed = g.target_walkspeed
+        end
+    end))
+
+    local Use_Jump_Power = StarterPlayer.CharacterUseJumpPower or true
+    if Use_Jump_Power then
+        FlamesLibrary.connect("movement_lock_jump", human:GetPropertyChangedSignal("JumpPower"):Connect(function()
+            if human.JumpPower ~= g.target_jump_power then
+                human.JumpPower = g.target_jump_power
+            end
+        end))
+    else
+        FlamesLibrary.connect("movement_lock_jump", human:GetPropertyChangedSignal("JumpHeight"):Connect(function()
+            if human.JumpHeight ~= g.target_jump_height then
+                human.JumpHeight = g.target_jump_height
+            end
+        end))
+    end
+end
+
+g.stop_movement_lock = function()
+    FlamesLibrary.disconnect("movement_lock_walkspeed")
+    FlamesLibrary.disconnect("movement_lock_jump")
+end
+
+g.start_movement_lock()
 
 g.FlyEnabled = g.FlyEnabled or false
 g.FlySpeed = g.FlySpeed or 1
@@ -3136,7 +3244,7 @@ local function ensure_seated()
     return human.Sit and human.SeatPart ~= nil
 end
 
-local function get_model_length_along_forward(model, forward)
+g.get_model_length_along_forward = function(model, forward)
     local min_proj, max_proj = math.huge, -math.huge
     for _, v in ipairs(model:GetDescendants()) do
         if v:IsA("BasePart") then
