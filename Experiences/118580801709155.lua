@@ -344,14 +344,17 @@ g.Format_UserName = Format_UserName
 
 local target_group = 15286501
 local watched_attrs = {"IdentityLabel", "IdentityTag"}
-local staff_roles = {
-	"mod", "admin", "staff", "dev", "founder", "owner",
-	"supervis", "manager", "management", "executive",
-	"president", "chairman", "chairwoman", "chairperson",
-	"director",
+
+local exact_staff_roles = {
+    "mod",
+    "admin",
+    "head developer",
+    "owner",
+    "group holder",
 }
 
 g.Staffwatch_Teleport_Check = true
+
 local function get_staff_role(player)
     if not player or not player:IsDescendantOf(game) then return { Role = "Unknown", Staff = false } end
     local ok, player_role = pcall(function() return player:GetRoleInGroup(target_group) end)
@@ -361,85 +364,85 @@ local function get_staff_role(player)
     if ok2 and in_roblox then
         result.Role = "Roblox Employee"
         result.Staff = true
+        return result
     end
-    for _, role in pairs(staff_roles) do
-        if string.find(string.lower(player_role), role) then
+    local normalized = string.lower(player_role)
+    for _, role in ipairs(exact_staff_roles) do
+        if normalized == role then
             result.Staff = true
+            break
         end
     end
     return result
 end
 
 local function is_identity_mod(player)
-	for _, attr_name in ipairs(watched_attrs) do
-		local val = player:GetAttribute(attr_name)
-		if type(val) == "string" and string.find(string.lower(val), "moderator") then
-			return true, attr_name
-		end
-	end
-	return false, nil
+    for _, attr_name in ipairs(watched_attrs) do
+        local val = player:GetAttribute(attr_name)
+        if val ~= nil then
+            return true, attr_name
+        end
+    end
+    return false, nil
 end
 
 local function hop()
-	local place_id = game.PlaceId
-	local job_id = game.JobId
-	local servers = {}
-	local fetch_ok, res = pcall(game.HttpGet, game,"https://games.roblox.com/v1/games/" .. place_id .. "/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true")
-	if not fetch_ok then
-		g.notify("Error", "Server request failed.", 3)
-		return
-	end
-
-	local parse_ok, body = pcall(HttpService.JSONDecode, HttpService, res)
-	if not parse_ok or not body or not body.data then
-		g.notify("Error", "Server list parse failed.", 3)
-		return
-	end
-
-	for _, v in next, body.data do
-		if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) and v.playing < v.maxPlayers and v.id ~= job_id then
-			table.insert(servers, 1, v.id)
-		end
-	end
-
-	if #servers > 0 then
-		TeleportService:TeleportToPlaceInstance(place_id, servers[math.random(1, #servers)], Players.LocalPlayer)
-	else
-		g.notify("Error", "No available servers found.", 3)
-	end
+    local place_id = game.PlaceId
+    local job_id = game.JobId
+    local servers = {}
+    local fetch_ok, res = pcall(game.HttpGet, game, "https://games.roblox.com/v1/games/" .. place_id .. "/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true")
+    if not fetch_ok then
+        g.notify("Error", "Server request failed.", 3)
+        return
+    end
+    local parse_ok, body = pcall(HttpService.JSONDecode, HttpService, res)
+    if not parse_ok or not body or not body.data then
+        g.notify("Error", "Server list parse failed.", 3)
+        return
+    end
+    for _, v in next, body.data do
+        if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) and v.playing < v.maxPlayers and v.id ~= job_id then
+            table.insert(servers, 1, v.id)
+        end
+    end
+    if #servers > 0 then
+        TeleportService:TeleportToPlaceInstance(place_id, servers[math.random(1, #servers)], Players.LocalPlayer)
+    else
+        g.notify("Error", "No available servers found.", 3)
+    end
 end
 
 local function bind_attr_watch(player)
-	for _, attr_name in ipairs(watched_attrs) do
-		local conn_name = "staffwatch_attr_" .. tostring(player.UserId) .. "_" .. attr_name
-		FL.connect(conn_name, player:GetAttributeChangedSignal(attr_name):Connect(function()
-			local flagged, hit_attr = is_identity_mod(player)
-			if flagged then
-				g.notify("Warning", Format_UserName(player).." flagged as moderator via " .. hit_attr .. ". Hopping.", 5)
-				hop()
-			end
-		end))
-	end
+    for _, attr_name in ipairs(watched_attrs) do
+        local conn_name = "staffwatch_attr_" .. tostring(player.UserId) .. "_" .. attr_name
+        FL.connect(conn_name, player:GetAttributeChangedSignal(attr_name):Connect(function()
+            local flagged, hit_attr = is_identity_mod(player)
+            if flagged then
+                g.notify("Warning", Format_UserName(player) .. " flagged via " .. hit_attr .. ". Hopping.", 5)
+                hop()
+            end
+        end))
+    end
 end
 
 FL.connect("staffwatch_join", Players.PlayerAdded:Connect(function(player)
-	local result = get_staff_role(player)
-	if result.Staff then
-		g.notify("Warning", Format_UserName(player) .. " joined as " .. result.Role .. ". Hopping.", 5)
-		hop()
-		return
-	end
-	local flagged, hit_attr = is_identity_mod(player)
-	if flagged then
-		g.notify("Warning", Format_UserName(player) .. " joined flagged via " .. hit_attr .. ". Hopping.", 5)
-		hop()
-		return
-	end
-	bind_attr_watch(player)
+    local result = get_staff_role(player)
+    if result.Staff then
+        g.notify("Warning", Format_UserName(player) .. " joined as " .. result.Role .. ". Hopping.", 5)
+        hop()
+        return
+    end
+    local flagged, hit_attr = is_identity_mod(player)
+    if flagged then
+        g.notify("Warning", Format_UserName(player) .. " joined flagged via " .. hit_attr .. ". Hopping.", 5)
+        hop()
+        return
+    end
+    bind_attr_watch(player)
 end))
 
 FL.connect("staffwatch_leaving", Players.PlayerRemoving:Connect(function(player)
-	for _, attr_name in ipairs(watched_attrs) do FL.disconnect("staffwatch_attr_" .. tostring(player.UserId) .. "_" .. attr_name) end
+    for _, attr_name in ipairs(watched_attrs) do FL.disconnect("staffwatch_attr_" .. tostring(player.UserId) .. "_" .. attr_name) end
 end))
 
 if queueteleport and typeof(queueteleport) == "function" then
@@ -460,7 +463,7 @@ for _, player in ipairs(Players:GetPlayers()) do
     else
         local flagged, hit_attr = is_identity_mod(player)
         if flagged then
-            table.insert(found, Format_UserName(player) .. " — moderator (" .. hit_attr .. ")")
+            table.insert(found, Format_UserName(player) .. " — has identity attr (" .. hit_attr .. ")")
         else
             bind_attr_watch(player)
         end
@@ -468,10 +471,10 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 
 if #found > 0 then
-	g.notify("Warning", table.concat(found, ",\n") .. "\nHopping server.", 5)
-	hop()
+    g.notify("Warning", table.concat(found, ",\n") .. "\nHopping server.", 5)
+    hop()
 else
-	g.notify("Success", "Staff-Watch V2 has been enabled for this session.", 5)
+    g.notify("Success", "Staff-Watch V2 has been enabled for this session.", 5)
 end
 
 FlamesLibrary.spawn("gameplay_pause_kill_watcher", "Heartbeat", function()
@@ -3621,7 +3624,7 @@ local Atlas = loadstring(g.http_get("https://gitlab.com/flames2431233/Starter/-/
 local UI = Atlas.new({
     Name = "Flames Hub | Carolina Leaners | "..tostring(g.Script_Version),
     ConfigFolder = "FlamesHub_Carolina_Leaners_Menu_Configuration",
-    Color = Color3.fromRGB(21, 103, 251),
+    Color = Color3.fromRGB(219, 223, 13),
     Credit = "Flames Hub",
     Bind = "RightShift",
 })
@@ -3660,6 +3663,16 @@ local Lighting_Section = Home_Page:CreateSection("Lighting")
 local Vehicles_Section = Home_Page:CreateSection("Vehicles")
 local Job_Section = Home_Page:CreateSection("Job")
 local UI_Section = Home_Page:CreateSection("UI")
+
+g.get_main_Frame = function()
+    return UI and UI:FindFirstChildOfClass("Frame")
+end
+
+g.rainbow_UI_toggle = function(state)
+    if UI then
+        
+    end
+end
 
 g.create_ui_element("Toggle", Home_Section, {
 Name = "Minimap Toggle",
