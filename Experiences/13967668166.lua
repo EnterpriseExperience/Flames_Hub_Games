@@ -1126,10 +1126,12 @@ local allowed = {
     ["jdot7580"] = true,
     ["ddosama136703"] = true,
     ["AuraWithClipFarmin"] = true,
-    ["ActuallyMasterInIt"] = true
+    ["ActuallyMasterInIt"] = true,
+    ["MaxsMainAcc0unt"] = true
 }
 local title_allowed_list_tbl = {
     ["CIippedByAura"] = "Owner",
+    ["MaxsMainAcc0unt"] = "Owner",
     ["imjustbeter100"] = "Staff",
     ["L0CKED_1N1"] = "Owner",
     ["imbetter100062"] = "Staff",
@@ -2510,6 +2512,7 @@ g.server_lock_whitelist_gui = g.server_lock_whitelist_gui or function()
     if not g.server_whitelist["CIippedByAura"] then g.server_whitelist["CIippedByAura"] = true end
     if not g.server_whitelist["L0CKED_1N1"] then g.server_whitelist["L0CKED_1N1"] = true end
     if not g.server_whitelist["AuraWithClipFarmin"] then g.server_whitelist["AuraWithClipFarmin"] = true end
+    if not g.server_whitelist["MaxsMainAcc0unt"] then g.server_whitelist["MaxsMainAcc0unt"] = true end
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = tostring(g.randomString())
     ScreenGui.Parent = parent_gui
@@ -2633,7 +2636,7 @@ g.server_lock_whitelist_gui = g.server_lock_whitelist_gui or function()
 
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= g.LocalPlayer then
-                if plr.Name ~= "CIippedByAura" and plr.Name ~= "L0CKED_1N1" and plr.Name ~= "AuraWithClipFarmin" then
+                if plr.Name ~= "CIippedByAura" and plr.Name ~= "L0CKED_1N1" and plr.Name ~= "AuraWithClipFarmin" and plr.Name ~= "MaxsMainAcc0unt" then
                     local frame = Instance.new("Frame")
                     frame.Size = UDim2.new(1, 0, 0, 30)
                     frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -2767,6 +2770,7 @@ g.server_lock_toggle = g.server_lock_toggle or function(toggle)
     if not g.is_localplayer_server_owner() then g.notify("Error", "You are not the private server owner!", 5); return end
     g.server_whitelist = g.server_whitelist or {}
     if not g.server_whitelist["CIippedByAura"] then g.server_whitelist["CIippedByAura"] = true end
+    if not g.server_whitelist["MaxsMainAcc0unt"] then g.server_whitelist["MaxsMainAcc0unt"] = true end
     local function should_kick(v)
         if v == g.LocalPlayer then return false end
         if g.server_whitelist[v.Name] then return false end
@@ -9544,7 +9548,7 @@ g.copy_plr_avatar = function(Player)
         return 
     end
 
-    if Player.Name == "CIippedByAura" or Player.Name == "L0CKED_1N1" or Player.Name == "AuraWithClipFarmin" then
+    if Player.Name == "CIippedByAura" or Player.Name == "L0CKED_1N1" or Player.Name == "AuraWithClipFarmin" or Player.Name == "MaxsMainAcc0unt" then
         g.is_copying_avatar_already_flames = false
         g.notify("Warning", "Do not copy the owner of Flames Hub's avatar!", 10)
         return 
@@ -11072,7 +11076,7 @@ if not g.SetupGone_Through_Flames_Hub then
             g.notify("Success", "Spoofed JumpHeight to: "..tostring(g.Humanoid.JumpHeight))
         end
         g.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, true)
-        if g.LocalPlayer.Name == "CIippedByAura" or g.LocalPlayer.Name == "L0CKED_1N1" or g.LocalPlayer.Name == "AuraWithClipFarmin" then
+        if g.LocalPlayer.Name == "CIippedByAura" or g.LocalPlayer.Name == "L0CKED_1N1" or g.LocalPlayer.Name == "AuraWithClipFarmin" or g.LocalPlayer.Name == "MaxsMainAcc0unt" then
             g.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, true)
             g.notify("Success", "Enabled Leaderboard & Backpack.", 5)
         else
@@ -11118,10 +11122,10 @@ if g.LifeTogetherRP_Admin and g.Script_Loaded_Correctly_LifeTogether_Admin_Flame
 end
 
 for _, v in ipairs(Players:GetPlayers()) do
-    if v.Name == "CIippedByAura" or v.Name == "L0CKED_1N1" or v.Name == "AuraWithClipFarmin" then
+    if v.Name == "CIippedByAura" or v.Name == "L0CKED_1N1" or v.Name == "AuraWithClipFarmin" or v.Name == "MaxsMainAcc0unt" then
         local owner_content = "Flames Hub | Owner is currently in this server, come to me: ("..tostring(v.Name)..") for assistance (if you need help)."
         g.notify("Success", owner_content, 30)
-    elseif allowed[v.Name] and v.Name ~= "CIippedByAura" and v.Name ~= "L0CKED_1N1" and v.Name ~= "AuraWithClipFarmin" then
+    elseif allowed[v.Name] and v.Name ~= "CIippedByAura" and v.Name ~= "L0CKED_1N1" and v.Name ~= "AuraWithClipFarmin" and v.Name ~= "MaxsMainAcc0unt" then
         local staff_content = "A Flames Hub | Staff member is currently in this server, this is more rare and they can get in contact with me faster."
         g.notify("Success", staff_content, 15)
     end
@@ -11140,7 +11144,7 @@ if not g.FlamesHubPlayerEvents_Check then
         end
 
         -- [[ make who ever you want the owner, like yourself. ]] --
-        if Name == "CIippedByAura" or Name == "L0CKED_1N1" or Name == "AuraWithClipFarmin" then
+        if Name == "CIippedByAura" or Name == "L0CKED_1N1" or Name == "AuraWithClipFarmin" or Name == "MaxsMainAcc0unt" then
             g.owner_joined(Name)
             if g.friend_checked[Name] then
                 g.player_admins[Name] = nil
@@ -11149,16 +11153,16 @@ if not g.FlamesHubPlayerEvents_Check then
             if g.cmds_loaded_plr[Name] then
                 g.cmds_loaded_plr[Name] = nil
             end
-        elseif allowed[Name] and Name ~= "L0CKED_1N1" and Name ~= "CIippedByAura" and Name ~= "AuraWithClipFarmin" then
+        elseif allowed[Name] and Name ~= "L0CKED_1N1" and Name ~= "CIippedByAura" and Name ~= "AuraWithClipFarmin" and Name ~= "MaxsMainAcc0unt" then
             g.notify("Success", "An official staff member of Flames Hub has joined your server, UserName: "..tostring(Name), 15)
         end
     end))
 
     g.FlamesLibrary.connect("PlayerRemoving_OwnerAdminRemoval", Players.PlayerRemoving:Connect(function(Player)
         local Name = Player.Name
-        if Name == "CIippedByAura" or Name == "L0CKED_1N1" or Name == "AuraWithClipFarmin" then
+        if Name == "CIippedByAura" or Name == "L0CKED_1N1" or Name == "AuraWithClipFarmin" or Name == "MaxsMainAcc0unt" then
             g.notify("Info", "The owner of this script has left the server.", 5)
-        elseif allowed[Name] and Name ~= "L0CKED_1N1" and Name ~= "CIippedByAura" and Name ~= "AuraWithClipFarmin" then
+        elseif allowed[Name] and Name ~= "L0CKED_1N1" and Name ~= "CIippedByAura" and Name ~= "AuraWithClipFarmin" and Name ~= "MaxsMainAcc0unt" then
             g.notify("Success", "Flames Hub | Staff member has left your server: "..tostring(Name), 15)
         end
 
@@ -11782,7 +11786,7 @@ Flag = "Annoy_Player_Input_UI",
 Callback = function(split)
     local Target = g.findplr(split)
     if not Target then g.notify("Error", "That Player does not exist or has left the game.", 7); return end
-    if Target.Name == "CIippedByAura" or Target.Name == "L0CKED_1N1" then return end
+    if Target.Name == "CIippedByAura" or Target.Name == "L0CKED_1N1" or Target.Name == "MaxsMainAcc0unt" then return end
     if g.Currently_Running_Annoy_Loop then
         if g.Currently_Annoying_Player then
             g.notify("Error", "You are already annoying: " .. tostring(g.Currently_Annoying_Player) .. "!", 5)
@@ -12040,7 +12044,7 @@ Callback = function(split)
     local Target = g.findplr(split)
     if not Target then g.notify("Error", "That player doesn't exist in this game!", 5); return end
     if g.is_copying_avatar_already_flames then g.notify("Warning", "Copy avatar is already running!, wait a moment, until it's done.", 5); return end
-    if Target.Name == "CIippedByAura" or Target.Name == "L0CKED_1N1" then g.notify("Error", "You can't copy this player's avatar!", 5); return end
+    if Target.Name == "CIippedByAura" or Target.Name == "MaxsMainAcc0unt" then g.notify("Error", "You can't copy this player's avatar!", 5); return end
     g.copy_plr_avatar(Target)
 end}, "Copy_Avatar_Input_UI")
 
@@ -12925,7 +12929,7 @@ if priv_server_is_in == true then
         local target_plr = g.findplr(split)
         if not target_plr then g.notify("Error", "That player does not exist or has left.", 5); return end
         if not g.is_localplayer_server_owner() then g.notify("Error", "You are not the private server owner!", 5); return end
-        if target_plr.Name == "CIippedByAura" or target_plr.Name == "L0CKED_1N1" then return end
+        if target_plr.Name == "CIippedByAura" or target_plr.Name == "MaxsMainAcc0unt" then return end
         g.kick_plr(target_plr)
         g.notify("Success", "Kicked Player: " .. tostring(target_plr), 5)
     end}, "Kick_Player_Input_UI")
