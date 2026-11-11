@@ -477,19 +477,15 @@ else
     g.notify("Success", "Staff-Watch V2 has been enabled for this session.", 5)
 end
 
-FlamesLibrary.spawn("gameplay_pause_kill_watcher", "Heartbeat", function()
-    local PAUSE_THRESHOLD = 15
-    local streaming_ok, streaming = pcall(function() return Workspace.StreamingEnabled end)
-    if not streaming_ok or not streaming then
-        print("StreamingEnabled is off — watcher aborted.")
-        return
-    end
-
+local PAUSE_THRESHOLD = 15
+local streaming_ok, streaming = pcall(function() return Workspace.StreamingEnabled end)
+if not streaming_ok or not streaming then
+    print("StreamingEnabled is off — watcher aborted.")
+    FlamesLibrary.disconnect("gameplay_pause_kill_watcher")
+else
     local pause_start = nil
     local triggered = false
-    FlamesLibrary.connect("gameplay_pause_kill_loop", RunService.Heartbeat:Connect(function()
-        local speaker = Players.LocalPlayer
-        if not speaker then return end
+    FlamesLibrary.connect("gameplay_pause_kill_watcher", RunService.Heartbeat:Connect(function()
         local ok, paused = pcall(function() return speaker.GameplayPaused end)
         if not ok then
             pause_start = nil
@@ -505,11 +501,11 @@ FlamesLibrary.spawn("gameplay_pause_kill_watcher", "Heartbeat", function()
 
             if not triggered and (tick() - pause_start) >= PAUSE_THRESHOLD then
                 triggered = true
-                local human = g.get_human and g.get_human(speaker) or g.Humanoid
+                local human = g.Humanoid or g.get_human(speaker)
                 if not human or not human.Parent or not human:IsDescendantOf(game) then return end
                 local kill_ok, kill_err = pcall(function() human.Health = 0 end)
                 if not kill_ok then
-                    warn("[Error]: Kill trigger failed: "..tostring(kill_err))
+                    warn("[Error]: Kill trigger failed: " .. tostring(kill_err))
                 else
                     warn("[Success]: GameplayPaused threshold hit — executed.")
                 end
@@ -519,7 +515,7 @@ FlamesLibrary.spawn("gameplay_pause_kill_watcher", "Heartbeat", function()
             triggered = false
         end
     end))
-end)
+end
 
 if hookmetamethod and checkcaller and typeof(hookmetamethod) == "function" and typeof(checkcaller) == "function" then
     local lp = speaker
