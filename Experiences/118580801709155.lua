@@ -70,7 +70,7 @@ if not In_Studio then
     end
 end
 wait(0.15)
-local Announcement_Message = "Fixed Vehicle Fly not working with trailers!"
+local Announcement_Message = "Fixed Vehicle Fly not working with trailers + fixed Hay Farm also not working with trailers."
 g.displayTimeMax = 45
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.1.9"
+local Raw_Version = "V2.2.1"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -112,6 +112,12 @@ if not lib or type(lib) ~= "table" then
     return
 end
 task.wait(0.1)
+local function suppress_group_bonus(child)
+    if child:IsA("ScreenGui") and child.Name:lower():find("group") and child.Name:lower():find("bonus") then child.Enabled = false end
+end
+
+for _, child in ipairs(PlayerGui:GetChildren()) do suppress_group_bonus(child) end
+lib.connect("hay_farm_group_bonus_suppress", PlayerGui.ChildAdded:Connect(function(child) suppress_group_bonus(child) end))
 if g.notify and typeof(g.notify) == "function" then g.notify("Success", "Gathering Vehicle names, one moment...", 3) end
 local function Find_Vehicle_Catalog_Remote_Function()
     local cache = g.Vehicle_Catalog_Remote_Function_Found
@@ -3147,22 +3153,30 @@ g.Set_Max_Zoom_Distance = function(distance)
 end
 
 local BUDGET_VEHICLE_NAME  = "2002 Raymo 2500 5.9 Cobbins"
-local FARM_COORDS          = Vector3.new(1045, 7, 958)
-local DROP1_COORDS         = Vector3.new(-737, 7, 374)
-local DROP2_COORDS         = Vector3.new(-1750, 7, 2439)
-local DROP_ZONE_CF         = CFrame.new(
+g.hay_farm_coords = g.hay_farm_coords or {}
+g.hay_farm_coords.farm_sandhills         = Vector3.new(1045, 7, 958)
+g.hay_farm_coords.farm_sandhills_trailer = Vector3.new(1009, 7, 960)
+g.hay_farm_coords.farm_pungo             = Vector3.new(1069, 7, 957)
+g.hay_farm_coords.drop1                  = Vector3.new(-737, 7, 374)
+g.hay_farm_coords.drop2                  = Vector3.new(-1750, 7, 2439)
+g.hay_farm_coords.drop_zone              = CFrame.new(
     -734.186767578125, 3.587284564971924, 378.3937683105469,
     -0.6228994727134705, 0, 0.7823023796081543,
     0, 1, 0,
     -0.7823023796081543, 0, -0.6228994727134705
 )
 
-local PHASE_POLL_RATE = 0.5
-local LOAD_TIMEOUT    = 20
-local DELIVER_TIMEOUT = 25
-g.hay_farm_running        = g.hay_farm_running        or false
-g.hay_farm_state          = g.hay_farm_state          or "idle"
-g.hay_farm_cruise_height  = g.hay_farm_cruise_height  or 500
+local PHASE_POLL_RATE    = 0.5
+local LOAD_TIMEOUT       = 20
+local DELIVER_TIMEOUT    = 25
+local ALIGN_INTERVAL     = 0.016
+local ALIGN_DOT_THRESH   = 0.998
+local BEACON_IN_THRESH   = 8
+
+g.hay_farm_running       = g.hay_farm_running       or false
+g.hay_farm_state         = g.hay_farm_state         or "idle"
+g.hay_farm_cruise_height = g.hay_farm_cruise_height or 500
+
 local function resolve_anchor_auto_farm(model, is_trailer)
     if not model or not model:IsDescendantOf(game or workspace) then return nil end
     if is_trailer then
@@ -3232,9 +3246,7 @@ local function get_hud_objective()
 end
 
 local function is_clocked_in()
-    local attr = speaker:GetAttribute("ActiveJob")
-    if attr ~= nil then return true end
-    return false
+    return speaker:GetAttribute("ActiveJob") ~= nil
 end
 
 local function is_hay_job_active()
@@ -3250,31 +3262,92 @@ local function get_hud_phase()
     local text = get_hud_objective()
     if not text then return "unknown" end
     local lower = text:lower()
-    if lower:find("next load in")                               then return "cooldown"      end
-    if lower:find("deliver")                                    then return "deliver"       end
-    if lower:find("loading")                                    then return "loading"       end
-    if lower:find("stop inside")                               then return "loading"       end
-    if lower:find("zone to load")                              then return "loading"       end
-    if lower:find("drive to") and lower:find("load")           then return "drive_to_farm" end
-    if lower:find("drive to")                                   then return "drive_to_farm" end
-    warn("[HAY FARM] unknown phase text: " .. text)
+    if lower:find("next load in")                     then return "cooldown"      end
+    if lower:find("deliver")                          then return "deliver"       end
+    if lower:find("loading")                          then return "loading"       end
+    if lower:find("stop inside")                      then return "loading"       end
+    if lower:find("zone to load")                     then return "loading"       end
+    if lower:find("trailer into")                     then return "deliver"       end
+    if lower:find("marked zone")                      then return "deliver"       end
+    if lower:find("drive to") and lower:find("load") then return "drive_to_farm" end
+    if lower:find("drive to")                         then return "drive_to_farm" end
+    warn("[HAY FARM DEBUG]: unknown phase text: " .. text)
     return "unknown"
 end
 
-local function get_active_drop_cf()
-    local text = get_hud_objective()
-    if not text then return DROP_ZONE_CF end
-    local lower = text:lower()
-    if lower:find("hay fields") or lower:find("hay field") then
-        return CFrame.new(DROP2_COORDS)
-    end
-    if lower:find("milling") then
-        return CFrame.new(DROP1_COORDS)
-    end
-    return DROP_ZONE_CF
+local function get_has_trailer()
+    local trailer = g.get_lp_trailer and g.get_lp_trailer()
+    return trailer ~= nil and trailer:IsDescendantOf(game or Workspace)
 end
 
-g.get_drop_target = get_active_drop_cf
+local function find_job_beacon()
+    for _, v in ipairs(Workspace:GetDescendants()) do
+        if v:IsA("BasePart") and v.Name:lower():find("beacon") then
+            return v
+        end
+    end
+    return nil
+end
+
+local function get_farm_cf()
+    local has_trailer = get_has_trailer()
+    local beacon = find_job_beacon()
+    if beacon then
+        local bp = beacon.Position
+        if has_trailer then
+            local d_sandhills = (bp - g.hay_farm_coords.farm_sandhills).Magnitude
+            local d_pungo     = (bp - g.hay_farm_coords.farm_pungo).Magnitude
+            if d_pungo < d_sandhills then
+                return CFrame.new(g.hay_farm_coords.farm_pungo)
+            end
+            return CFrame.new(g.hay_farm_coords.farm_sandhills_trailer)
+        end
+        return CFrame.new(bp)
+    end
+    if has_trailer then
+        return CFrame.new(g.hay_farm_coords.farm_sandhills_trailer)
+    end
+    return CFrame.new(g.hay_farm_coords.farm_sandhills)
+end
+
+g.get_active_drop_cf = function()
+    local text        = get_hud_objective()
+    local has_trailer = get_has_trailer()
+
+    if has_trailer then
+        local beacon = find_job_beacon()
+        if beacon then
+            local car    = g.get_lp_vehicle and g.get_lp_vehicle()
+            local trailer = g.get_lp_trailer and g.get_lp_trailer()
+            if car and trailer then
+                local car_anchor     = resolve_anchor_auto_farm(car, false)
+                local trailer_anchor = resolve_anchor_auto_farm(trailer, true)
+                if car_anchor and trailer_anchor then
+                    local hitch_offset = car_anchor.CFrame:ToObjectSpace(trailer_anchor.CFrame)
+                    local truck_target = CFrame.new(beacon.CFrame.Position) * CFrame.new(
+                        -hitch_offset.Position.X,
+                        0,
+                        -hitch_offset.Position.Z
+                    )
+                    return truck_target
+                end
+            end
+            return CFrame.new(beacon.Position)
+        end
+    end
+
+    if not text then
+        return g.hay_farm_coords.drop_zone
+    end
+    local lower = text:lower()
+    if lower:find("hay fields") or lower:find("hay field") then
+        return CFrame.new(g.hay_farm_coords.drop2)
+    elseif lower:find("milling") then
+        return CFrame.new(g.hay_farm_coords.drop1)
+    end
+    return g.hay_farm_coords.drop_zone
+end
+
 local function find_Purchase_Vehicle_RF()
     local cache = g.Purchase_Vehicle_RF_Found
     if cache and cache:IsA("RemoteFunction") then return cache end
@@ -3287,7 +3360,7 @@ local function find_Purchase_Vehicle_RF()
     return nil
 end
 
-task.wait(0.1)
+wait(0.1)
 if not g.Purchase_Vehicle_RF_Found then pcall(find_Purchase_Vehicle_RF) end
 
 local function ensure_vehicle_available()
@@ -3458,15 +3531,14 @@ local function set_cross_constraints(entries, enabled)
 end
 
 local function collect_sub_assemblies_with_offsets(model, anchor)
-    local seen = {}
+    local seen    = {}
     local entries = {}
     for _, v in ipairs(model:GetDescendants()) do
         if v:IsA("BasePart") then
             local ok, root = pcall(function() return v.AssemblyRootPart end)
             if ok and root and root ~= anchor and root:IsDescendantOf(model) then
-                local path = root:GetFullName()
-                if not seen[path] then
-                    seen[path] = true
+                if not seen[root] then
+                    seen[root] = true
                     local ok_cf, offset = pcall(function() return anchor.CFrame:ToObjectSpace(root.CFrame) end)
                     if ok_cf then table.insert(entries, {root = root, offset = offset}) end
                 end
@@ -3484,6 +3556,31 @@ local function move_sub_assemblies(entries, anchor_cf)
             pcall(function() root.AssemblyLinearVelocity  = Vector3.zero end)
             pcall(function() root.AssemblyAngularVelocity = Vector3.zero end)
         end
+    end
+end
+
+local function align_trailer_to_beacon(anchor, trailer_anchor, trailer_subs, beacon)
+    if not beacon or not trailer_anchor or not trailer_anchor.Parent then return end
+    local beacon_pos    = beacon.Position
+    local deadline      = os.clock() + 3
+    while os.clock() < deadline do
+        if not g.hay_farm_running then break end
+        local t_pos  = trailer_anchor.Position
+        local dist   = (Vector3.new(t_pos.X, beacon_pos.Y, t_pos.Z) - Vector3.new(beacon_pos.X, beacon_pos.Y, beacon_pos.Z)).Magnitude
+        local to_beacon = (Vector3.new(beacon_pos.X, t_pos.Y, beacon_pos.Z) - t_pos).Unit
+        local t_look    = trailer_anchor.CFrame.LookVector
+        local dot       = math.abs(t_look:Dot(to_beacon))
+        if dist <= BEACON_IN_THRESH and dot >= ALIGN_DOT_THRESH then break end
+        local ideal_cf = CFrame.new(
+            Vector3.new(beacon_pos.X, t_pos.Y, beacon_pos.Z),
+            Vector3.new(beacon_pos.X, t_pos.Y, beacon_pos.Z) + anchor.CFrame.LookVector
+        )
+        local next_cf = trailer_anchor.CFrame:Lerp(ideal_cf, 0.25)
+        pcall(function() trailer_anchor.CFrame = next_cf end)
+        pcall(function() trailer_anchor.AssemblyLinearVelocity  = Vector3.zero end)
+        pcall(function() trailer_anchor.AssemblyAngularVelocity = Vector3.zero end)
+        if trailer_subs then move_sub_assemblies(trailer_subs, next_cf) end
+        task.wait(ALIGN_INTERVAL)
     end
 end
 
@@ -3515,7 +3612,7 @@ g.tween_vehicle_to = function(target_cf)
         trailer_anchor = resolve_anchor_auto_farm(trailer, true)
         if trailer_anchor then
             trailer_offset_cf = anchor.CFrame:ToObjectSpace(trailer_anchor.CFrame)
-            trailer_subs    = collect_sub_assemblies_with_offsets(trailer, trailer_anchor)
+            trailer_subs      = collect_sub_assemblies_with_offsets(trailer, trailer_anchor)
             local ok_tr, trailer_root = pcall(function() return trailer_anchor.AssemblyRootPart end)
             local t_root = (ok_tr and trailer_root) or trailer_anchor
             trailer_crosses = collect_cross_constraints(trailer, t_root)
@@ -3526,6 +3623,7 @@ g.tween_vehicle_to = function(target_cf)
     local car_crosses = collect_cross_constraints(car, anchor)
     set_cross_constraints(car_crosses, false)
     if trailer_crosses then set_cross_constraints(trailer_crosses, false) end
+
     local collision_store = {}
     for _, v in ipairs(car:GetDescendants()) do
         if v:IsA("BasePart") then
@@ -3550,6 +3648,7 @@ g.tween_vehicle_to = function(target_cf)
         end
     end
     target_cf = CFrame.new(target_cf.Position + Vector3.new(0, floor_drop, 0)) * (target_cf - target_cf.Position)
+
     local function restore()
         move_sub_assemblies(car_subs, anchor.CFrame)
         if trailer_anchor and trailer_subs then move_sub_assemblies(trailer_subs, trailer_anchor.CFrame) end
@@ -3562,7 +3661,7 @@ g.tween_vehicle_to = function(target_cf)
         end
     end
 
-    local CRUISE_HEIGHT = g.hay_farm_cruise_height or 550
+    local CRUISE_HEIGHT = g.hay_farm_cruise_height or 500
     local ASCENT_FRAC   = 0.15
     local DESCENT_FRAC  = 0.35
     local start_pos     = anchor.Position
@@ -3573,6 +3672,7 @@ g.tween_vehicle_to = function(target_cf)
     local duration      = math.max(g.vehicle_tp_duration or 1, distance / 125)
     local steps         = math.max(10, math.floor(duration * 60))
     local interval      = duration / steps
+
     for i = 1, steps do
         if not g.hay_farm_running then restore(); return false end
         local alpha = i / steps
@@ -3603,7 +3703,6 @@ g.tween_vehicle_to = function(target_cf)
             pcall(function() trailer_anchor.AssemblyAngularVelocity = Vector3.zero end)
             if trailer_subs then move_sub_assemblies(trailer_subs, trailer_next_cf) end
         end
-
         task.wait(interval)
     end
 
@@ -3618,6 +3717,14 @@ g.tween_vehicle_to = function(target_cf)
     end
 
     restore()
+
+    if trailer_anchor and trailer_anchor:IsDescendantOf(game or workspace) and trailer_subs then
+        local beacon = find_job_beacon()
+        if beacon then
+            align_trailer_to_beacon(anchor, trailer_anchor, trailer_subs, beacon)
+        end
+    end
+
     return true
 end
 
@@ -3664,7 +3771,6 @@ local function hay_farm_loop()
         end
 
         local phase = get_hud_phase()
-
         if phase == "wrong_job" then
             if g.notify then g.notify("Warning", "Hay Farm: wrong job active on HUD, waiting for hay job...", 3) end
             task.wait(2)
@@ -3679,7 +3785,6 @@ local function hay_farm_loop()
         end
 
         bind_vehicle_destroy_watch(car)
-
         local human = g.Humanoid or (g.get_human and g.get_human(speaker))
         if not human or not human.Parent or not human:IsDescendantOf(game) then
             if g.notify then g.notify("Error", "Hay Farm: humanoid not found, waiting...", 3) end
@@ -3709,11 +3814,8 @@ local function hay_farm_loop()
         if phase == "drive_to_farm" or phase == "unknown" then
             g.hay_farm_state = "going_to_farm"
             if g.notify then g.notify("Info", "Hay Farm: heading to farm.", 2) end
-            if not wait_until_seated(5) then
-                task.wait(1)
-                continue
-            end
-            local ok = g.tween_vehicle_to(CFrame.new(FARM_COORDS))
+            if not wait_until_seated(5) then task.wait(1); continue end
+            local ok = g.tween_vehicle_to(get_farm_cf())
             if not ok then
                 if g.notify then g.notify("Error", "Hay Farm: tween failed, retrying.", 3) end
                 task.wait(2)
@@ -3740,16 +3842,16 @@ local function hay_farm_loop()
         if phase == "loading" then
             g.hay_farm_state = "loading"
             if g.notify then g.notify("Info", "Hay Farm: loading bale...", 2) end
-            local loaded   = false
+            local loaded     = false
             local load_start = os.clock()
             while not loaded and g.hay_farm_running do
                 local current_phase = get_hud_phase()
-                if current_phase == "deliver" then loaded = true; break end
+                if current_phase == "deliver"  then loaded = true; break end
                 if current_phase == "cooldown" then break end
                 if (os.clock() - load_start) >= LOAD_TIMEOUT then
                     if g.notify then g.notify("Warning", "Hay Farm: load timeout, repositioning.", 3) end
                     if not wait_until_seated(5) then task.wait(1); break end
-                    g.tween_vehicle_to(CFrame.new(FARM_COORDS))
+                    g.tween_vehicle_to(get_farm_cf())
                     load_start = os.clock()
                 end
                 task.wait(PHASE_POLL_RATE)
@@ -3761,11 +3863,8 @@ local function hay_farm_loop()
         if phase == "deliver" then
             g.hay_farm_state = "delivering"
             if g.notify then g.notify("Info", "Hay Farm: delivering bale.", 2) end
-            if not wait_until_seated(5) then
-                task.wait(1)
-                continue
-            end
-            local drop_cf = get_active_drop_cf()
+            if not wait_until_seated(5) then wait(1); continue end
+            local drop_cf = g.get_active_drop_cf()
             local ok = g.tween_vehicle_to(drop_cf)
             if not ok then
                 if g.notify then g.notify("Error", "Hay Farm: delivery tween failed.", 3) end
@@ -3778,13 +3877,12 @@ local function hay_farm_loop()
             if not next_phase then
                 if g.notify then g.notify("Warning", "Hay Farm: delivery timeout, nudging.", 3) end
                 if not wait_until_seated(5) then task.wait(1); continue end
-                g.tween_vehicle_to(get_active_drop_cf())
+                g.tween_vehicle_to(g.get_active_drop_cf())
                 task.wait(2)
                 continue
             end
             task.wait(0.5)
         end
-
         task.wait(0.5)
     end
 
