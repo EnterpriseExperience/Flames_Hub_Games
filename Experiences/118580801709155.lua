@@ -70,7 +70,7 @@ if not In_Studio then
     end
 end
 wait(0.15)
-local Announcement_Message = "ADDED AUTO FARM! (only supports Hay Hauling FOR NOW!) + it even lifts you over the hills, mountains and stuff, plus it buys a Vehicle for you if you don't own any."
+local Announcement_Message = "Fixed Vehicle Fly not working with trailers!"
 g.displayTimeMax = 45
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.1.7"
+local Raw_Version = "V2.1.8"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -342,9 +342,9 @@ end
 wait(0.1)
 g.Format_UserName = Format_UserName
 
+local _blacklisted_users_aka_rats = {"Xoslac2000"} -- will be used later once more users are added.
 local target_group = 15286501
 local watched_attrs = {"IdentityLabel", "IdentityTag"}
-
 local exact_staff_roles = {
     "mod",
     "admin",
@@ -354,7 +354,6 @@ local exact_staff_roles = {
 }
 
 g.Staffwatch_Teleport_Check = true
-
 local function get_staff_role(player)
     if not player or not player:IsDescendantOf(game) then return { Role = "Unknown", Staff = false } end
     local ok, player_role = pcall(function() return player:GetRoleInGroup(target_group) end)
@@ -1265,23 +1264,40 @@ if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
 end
 
 g.vehicle_fly           = g.vehicle_fly           or false
-g.vehicle_fly_speed     = g.vehicle_fly_speed     or 3
-g.vehiclefly_conns      = g.vehiclefly_conns      or {}
-g.vehiclefly_control    = g.vehiclefly_control    or {f=0,b=0,l=0,r=0,q=0,e=0}
-g.vehiclefly_noclip     = g.vehiclefly_noclip     or false
-g.vehiclefly_collisions = g.vehiclefly_collisions or {}
-local function resolve_anchor(car)
-    if not car or not car:IsDescendantOf(game or workspace) then return nil end
-    local primary = car.PrimaryPart
-    if primary then return primary end
-    local seat = car:FindFirstChild("DriveSeat")
-    if seat then return seat end
-    return car:FindFirstChildWhichIsA("BasePart")
+g.vehicle_fly_speed     = g.vehicle_fly_speed      or 3
+g.vehiclefly_conns      = g.vehiclefly_conns       or {}
+g.vehiclefly_control    = g.vehiclefly_control     or {f=0,b=0,l=0,r=0,q=0,e=0}
+g.vehiclefly_noclip     = g.vehiclefly_noclip      or false
+g.vehiclefly_collisions = g.vehiclefly_collisions  or {}
+local function resolve_anchor(model, is_trailer)
+    if not model or not model:IsDescendantOf(game or workspace) then return nil end
+    if is_trailer then
+        local hitch = model:FindFirstChild("Hitch")
+        if hitch and hitch:IsA("BasePart") then return hitch end
+    end
+    local primary = model.PrimaryPart
+    if primary then
+        local ok, root = pcall(function() return primary.AssemblyRootPart end)
+        if ok and root and root ~= primary and root:IsDescendantOf(model) then return root end
+        return primary
+    end
+    local seat = model:FindFirstChild("DriveSeat")
+    if seat then
+        local ok, root = pcall(function() return seat.AssemblyRootPart end)
+        if ok and root and root:IsDescendantOf(model) then return root end
+        return seat
+    end
+    local any = model:FindFirstChildWhichIsA("BasePart")
+    if any then
+        local ok, root = pcall(function() return any.AssemblyRootPart end)
+        if ok and root and root:IsDescendantOf(model) then return root end
+        return any
+    end
+    return nil
 end
 
 local function resolve_active_car()
-    local sitting = (g.get_vehicle and g.get_vehicle())
-        or (g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle())
+    local sitting = (g.get_vehicle and g.get_vehicle()) or (g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle())
     if sitting and sitting:IsDescendantOf(game) then return sitting end
     local own = g.get_lp_vehicle and g.get_lp_vehicle()
     if own and own:IsDescendantOf(game) then return own end
@@ -1300,6 +1316,23 @@ g.vf_cleanup = function()
     if g.vehiclefly_bg then
         pcall(function() g.vehiclefly_bg:Destroy() end)
         g.vehiclefly_bg = nil
+    end
+    if g.vehiclefly_trailer_bv then
+        pcall(function() g.vehiclefly_trailer_bv.Velocity = Vector3.zero end)
+        pcall(function() g.vehiclefly_trailer_bv:Destroy() end)
+        g.vehiclefly_trailer_bv = nil
+    end
+    if g.vehiclefly_trailer_bg then
+        pcall(function() g.vehiclefly_trailer_bg:Destroy() end)
+        g.vehiclefly_trailer_bg = nil
+    end
+    if g.vehiclefly_mover_store then
+        for mover, saved in pairs(g.vehiclefly_mover_store) do
+            if mover and mover.Parent then
+                pcall(function() mover.Enabled = saved end)
+            end
+        end
+        g.vehiclefly_mover_store = nil
     end
 end
 
@@ -1351,6 +1384,15 @@ local function watch_seats(model)
     end
 end
 
+local function disable_competing_movers(model, store)
+    for _, v in ipairs(model:GetDescendants()) do
+        if v:IsA("AlignOrientation") and v.Name == "FlipAlign" then
+            store[v] = v.Enabled
+            pcall(function() v.Enabled = false end)
+        end
+    end
+end
+
 local function silent_stop_fly()
     g.vehicle_fly = false
     g.disable_vehicle_noclip()
@@ -1371,9 +1413,7 @@ g.enable_vehicle_noclip = function()
     local targets = {car}
     if is_own then
         local trailer = g.get_lp_trailer and g.get_lp_trailer()
-        if trailer and trailer:IsA("Model") and trailer:IsDescendantOf(game or workspace) then
-            table.insert(targets, trailer)
-        end
+        if trailer and trailer:IsA("Model") and trailer:IsDescendantOf(game or workspace) then table.insert(targets, trailer) end
     end
     for _, model in ipairs(targets) do
         for _, v in ipairs(model:GetDescendants()) do
@@ -1410,16 +1450,22 @@ g.start_vehicle_fly = function()
         return
     end
 
-    local anchor = resolve_anchor(car)
+    local anchor = resolve_anchor(car, false)
     if not anchor or not anchor:IsDescendantOf(game) then
         g.notify("Error", "Vehicle-Fly: could not resolve anchor Part.", 3)
         g.vf_cleanup()
         return
     end
 
+    local trailer        = g.get_lp_trailer and g.get_lp_trailer()
+    local trailer_anchor = nil
+    if trailer and trailer:IsA("Model") and trailer:IsDescendantOf(game or workspace) then trailer_anchor = resolve_anchor(trailer, true) end
+    g.vehiclefly_mover_store = {}
+    disable_competing_movers(car, g.vehiclefly_mover_store)
+    if trailer then disable_competing_movers(trailer, g.vehiclefly_mover_store) end
     local bg = Instance.new("BodyGyro")
-    bg.P         = 3e4
-    bg.D         = 1e3
+    bg.P         = 1e4
+    bg.D         = 1e4
     bg.MaxTorque = Vector3.new(0, 9e9, 0)
     bg.CFrame    = anchor.CFrame
     bg.Parent    = anchor
@@ -1431,15 +1477,29 @@ g.start_vehicle_fly = function()
 
     g.vehiclefly_bg = bg
     g.vehiclefly_bv = bv
-    g.vehiclefly_conns.destroy_watch = car.AncestryChanged:Connect(function()
-        if not car:IsDescendantOf(game) then
-            silent_stop_fly()
-        end
-    end)
+    if trailer_anchor then
+        local trailer_bg = Instance.new("BodyGyro")
+        trailer_bg.P         = 1e4
+        trailer_bg.D         = 1e4
+        trailer_bg.MaxTorque = Vector3.new(0, 9e9, 0)
+        trailer_bg.CFrame    = trailer_anchor.CFrame
+        trailer_bg.Parent    = trailer_anchor
+        g.vehiclefly_trailer_bg = trailer_bg
 
+        local trailer_bv = Instance.new("BodyVelocity")
+        trailer_bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        trailer_bv.Velocity = Vector3.zero
+        trailer_bv.Parent   = trailer_anchor
+        g.vehiclefly_trailer_bv = trailer_bv
+    end
+
+    g.vehiclefly_conns.destroy_watch = car.AncestryChanged:Connect(function() if not car:IsDescendantOf(game) then silent_stop_fly() end end)
     g.vehiclefly_conns.render = RunService.Heartbeat:Connect(function()
         if not g.vehicle_fly then
             pcall(function() bv.Velocity = Vector3.zero end)
+            if g.vehiclefly_trailer_bv then
+                pcall(function() g.vehiclefly_trailer_bv.Velocity = Vector3.zero end)
+            end
             g.vehiclefly_control = {f=0,b=0,l=0,r=0,q=0,e=0}
             return
         end
@@ -1458,6 +1518,7 @@ g.start_vehicle_fly = function()
         end
 
         pcall(function() anchor.AssemblyAngularVelocity = Vector3.zero end)
+        if trailer_anchor and trailer_anchor.Parent then pcall(function() trailer_anchor.AssemblyAngularVelocity = Vector3.zero end) end
         local cam   = Workspace.CurrentCamera or Workspace:FindFirstChildOfClass("Camera")
         local speed = 45 * (g.vehicle_fly_speed or 3)
         if UserInputService.TouchEnabled and control_module then
@@ -1468,22 +1529,40 @@ g.start_vehicle_fly = function()
                 if mv.X ~= 0 then vel = vel + cam.CFrame.RightVector * (mv.X * speed) end
                 if mv.Z ~= 0 then vel = vel - cam.CFrame.LookVector * (mv.Z * speed) end
                 pcall(function() bv.Velocity = vel end)
+                if g.vehiclefly_trailer_bv and trailer_anchor and trailer_anchor.Parent then
+                    pcall(function() g.vehiclefly_trailer_bg.CFrame = cam.CFrame end)
+                    pcall(function() g.vehiclefly_trailer_bv.Velocity = vel end)
+                end
             end
         else
             local look = cam.CFrame.LookVector
             local yaw  = math.atan2(-look.X, -look.Z)
-            pcall(function() bg.CFrame = CFrame.new(anchor.Position) * CFrame.Angles(0, yaw, 0) end)
-            local c       = g.vehiclefly_control
-            local forward = (c.f or 0) + (c.b or 0)
-            local right   = (c.l or 0) + (c.r or 0)
-            local up      = (c.q or 0) + (c.e or 0)
-            pcall(function()
-                bv.Velocity = (
-                    cam.CFrame.LookVector  * forward +
-                    cam.CFrame.RightVector * right   +
-                    Vector3.new(0, up, 0)
-                ) * speed
-            end)
+            local ctrl   = g.vehiclefly_control
+            local moving = (ctrl.f or 0) ~= 0 or (ctrl.b or 0) ~= 0 or (ctrl.l or 0) ~= 0 or (ctrl.r or 0) ~= 0 or (ctrl.q or 0) ~= 0 or (ctrl.e or 0) ~= 0
+            if moving then
+                g.vehiclefly_locked_yaw = yaw
+            elseif not g.vehiclefly_locked_yaw then
+                g.vehiclefly_locked_yaw = yaw
+            end
+
+            local active_yaw = g.vehiclefly_locked_yaw
+            pcall(function() bg.CFrame = CFrame.new(anchor.Position) * CFrame.Angles(0, active_yaw, 0) end)
+            local forward = (ctrl.f or 0) + (ctrl.b or 0)
+            local right   = (ctrl.l or 0) + (ctrl.r or 0)
+            local up      = (ctrl.q or 0) + (ctrl.e or 0)
+            local vel     = (
+                cam.CFrame.LookVector  * forward +
+                cam.CFrame.RightVector * right   +
+                Vector3.new(0, up, 0)
+            ) * speed
+
+            pcall(function() bv.Velocity = vel end)
+            if g.vehiclefly_trailer_bv and trailer_anchor and trailer_anchor.Parent then
+                pcall(function()
+                    g.vehiclefly_trailer_bg.CFrame = CFrame.new(trailer_anchor.Position) * CFrame.Angles(0, active_yaw, 0)
+                end)
+                pcall(function() g.vehiclefly_trailer_bv.Velocity = vel end)
+            end
         end
     end)
 
@@ -1510,6 +1589,7 @@ end
 
 g.stop_vehicle_fly = function()
     g.vehicle_fly = false
+    g.vehiclefly_locked_yaw = nil
     g.disable_vehicle_noclip()
     g.vf_cleanup()
     g.vehiclefly_control = {f=0,b=0,l=0,r=0,q=0,e=0}
