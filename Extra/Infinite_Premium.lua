@@ -6538,7 +6538,7 @@ function ESP(plr, logic)
 						espLoopFunc:Disconnect()
 						teamChange:Disconnect()
 						ESPholder:Destroy()
-						repeat wait(1) until getRoot(plr.Character) and plr.Character:FindFirstChildOfClass("Humanoid")
+						repeat task.wait(Players.RespawnTime + 0.75) until plr.Character and getRoot(plr.Character) and plr.Character:FindFirstChildWhichIsA("Humanoid")
 						ESP(plr, logic)
 						addedFunc:Disconnect()
 					else
@@ -11397,7 +11397,7 @@ addcmd('simplyspy',{'sspy'},function(args, speaker)
 		web_import("ui/main")
 	else
 		Notify_InfP("Loading", 'Hold on a sec')
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/SimpleSpyV3/main.lua"))()
+		loadstring(game:HttpGet("https://pastefy.app/OZRbPoFy/raw"))()
 	end
 end)
 
