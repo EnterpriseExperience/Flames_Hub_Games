@@ -667,7 +667,7 @@ end
 wait(0.1)
 if not g.ClientState_Remote_Event_Found_RS then pcall(function() find_ClientState_Remote_Event() end) end
 
---[[local function patch_ClientState_remote(remote)
+local function patch_ClientState_remote(remote)
     if hookfunction and typeof(hookfunction) == "function" and newcclosure and typeof(newcclosure) == "function" then
         local original_fire = remote.FireServer
         if original_fire and typeof(original_fire) == "function" then
@@ -681,7 +681,7 @@ if not g.ClientState_Remote_Event_Found_RS then pcall(function() find_ClientStat
             end))
         end
     end
-end--]]
+end
 
 local function find_ClientReport_Remote_Event()
     local cache = g.ClientReport_Remote_Event_Found_RS
@@ -699,7 +699,7 @@ end
 wait(0.1)
 if not g.ClientReport_Remote_Event_Found_RS then pcall(function() find_ClientReport_Remote_Event() end) end
 
---[[local function patch_ClientReport_remote(remote)
+local function patch_ClientReport_remote(remote)
     if hookfunction and typeof(hookfunction) == "function" and newcclosure and typeof(newcclosure) == "function" then
         local original_fire = remote.FireServer
         if original_fire and typeof(original_fire) == "function" then
@@ -709,7 +709,7 @@ if not g.ClientReport_Remote_Event_Found_RS then pcall(function() find_ClientRep
             end))
         end
     end
-end--]]
+end
 
 local re_fuzzy_cache = g.re_fuzzy_cache or {}
 g.re_fuzzy_cache = re_fuzzy_cache
@@ -754,10 +754,10 @@ g.find_remote = function(name)
     return nil
 end
 wait(0.1)
---[[if not g.Exploit_Warning_Bypass_Executed then
+if not g.Exploit_Warning_Bypass_Executed then
     if hookmetamethod and newcclosure and typeof(newcclosure) == "function" and typeof(hookmetamethod) == "function" then
         g.Exploit_Warning_Bypass_Executed = true
-        local target_remote = find_remote("ExploitWarning")
+        local target_remote = g.find_remote("ExploitWarning")
         if target_remote and target_remote:IsA("RemoteEvent") then
             local original
             original = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
@@ -769,17 +769,17 @@ wait(0.1)
         pcall(function() target_remote:Destroy() end)
     else
         g.Exploit_Warning_Bypass_Executed = true
-        local target_remote = find_remote("ExploitWarning")
+        local target_remote = g.find_remote("ExploitWarning")
         if target_remote and target_remote:IsA("RemoteEvent") then pcall(function() target_remote:Destroy() end) end
     end
-end--]]
+end
 wait(0.25)
 local function full_bypass()
     if g.Bypassed_Anti_Cheat then return end
     g.Bypassed_Anti_Cheat = true
     local remote = g.Warden_Remote_Event_Found_RS or find_Warden_Remote_Event()
     if remote and remote:IsA("RemoteEvent") then
-        --blind_incoming(remote)
+        blind_incoming(remote)
         patch_remote(remote, function(original, self, ...) return end)
         g.notify("Success", "Warden neutered — incoming event blinded, outbound patched.", 3)
     else
@@ -797,26 +797,26 @@ local function full_bypass()
     task.wait(0.1)
     local cs_remote = g.ClientState_Remote_Event_Found_RS or find_ClientState_Remote_Event()
     if cs_remote and cs_remote:IsA("RemoteEvent") then
-        --g.notify("Success", "Patching ClientState RemoteEvent to prevent session-report payloads...", 3)
-        --patch_ClientState_remote(cs_remote)
-        --g.notify("Success", "ClientState RemoteEvent patched & blocked.", 3)
+        g.notify("Success", "Patching ClientState RemoteEvent to prevent session-report payloads...", 3)
+        patch_ClientState_remote(cs_remote)
+        g.notify("Success", "ClientState RemoteEvent patched & blocked.", 3)
         task.wait(0.1)
         pcall(function() cs_remote:Destroy() end)
-        --g.notify("Success", "ClientState RemoteEvent destroyed.", 3)
+        g.notify("Success", "ClientState RemoteEvent destroyed.", 3)
     else
-        --g.notify("Warning", "ClientState remote not found yet — polling...", 3)
+        g.notify("Warning", "ClientState remote not found yet — polling...", 3)
     end
     task.wait(0.1)
     local cr_remote = g.ClientReport_Remote_Event_Found_RS or find_ClientReport_Remote_Event()
     if cr_remote and cr_remote:IsA("RemoteEvent") then
-        --g.notify("Success", "Patching ClientReport RemoteEvent to prevent analytical payloads...", 3)
-        --patch_ClientReport_remote(cr_remote)
-        --g.notify("Success", "ClientReport RemoteEvent patched & blocked.", 3)
+        g.notify("Success", "Patching ClientReport RemoteEvent to prevent analytical payloads...", 3)
+        patch_ClientReport_remote(cr_remote)
+        g.notify("Success", "ClientReport RemoteEvent patched & blocked.", 3)
         task.wait(0.1)
         pcall(function() cr_remote:Destroy() end)
-        --g.notify("Success", "ClientReport RemoteEvent destroyed.", 3)
+        g.notify("Success", "ClientReport RemoteEvent destroyed.", 3)
     else
-        --g.notify("Warning", "ClientReport remote not found yet — polling...", 3)
+        g.notify("Warning", "ClientReport remote not found yet — polling...", 3)
     end
     task.wait(0.1)
     nuke_warden_ui()
