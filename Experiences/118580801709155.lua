@@ -70,7 +70,7 @@ if not In_Studio then
     end
 end
 wait(0.15)
-local Announcement_Message = "Added Log Auto Farming, Auto Farming Time Slider (Soon)"
+local Announcement_Message = "Fixed GroupBonusGui still appearing automatically after script start."
 g.displayTimeMax = 45
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.2.4"
+local Raw_Version = "V2.2.5"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -112,12 +112,26 @@ if not lib or type(lib) ~= "table" then
     return
 end
 task.wait(0.1)
-local function suppress_group_bonus(child)
-    if child:IsA("ScreenGui") and child.Name:lower():find("group") and child.Name:lower():find("bonus") then child.Enabled = false end
+local function kill_gui(gui)
+    FL.spawn("group_bonus_kill_" .. gui:GetDebugId(), "defer", function()
+        while gui and gui.Parent do
+            pcall(function() gui.Enabled = false end)
+            FL.wait(0.05)
+        end
+    end)
 end
 
-for _, child in ipairs(PlayerGui:GetChildren()) do suppress_group_bonus(child) end
-lib.connect("hay_farm_group_bonus_suppress", PlayerGui.ChildAdded:Connect(function(child) suppress_group_bonus(child) end))
+for _, child in ipairs(PlayerGui:GetChildren()) do
+    if child:IsA("ScreenGui") and child.Name == "GroupBonusGui" then
+        kill_gui(child)
+    end
+end
+
+FL.connect("group_bonus_gui_watch", PlayerGui.ChildAdded:Connect(function(child)
+    if child:IsA("ScreenGui") and child.Name == "GroupBonusGui" then
+        kill_gui(child)
+    end
+end))
 if g.notify and typeof(g.notify) == "function" then g.notify("Success", "Gathering Vehicle names, one moment...", 3) end
 local function Find_Vehicle_Catalog_Remote_Function()
     local cache = g.Vehicle_Catalog_Remote_Function_Found
