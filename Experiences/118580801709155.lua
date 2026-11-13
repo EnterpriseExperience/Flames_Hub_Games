@@ -4881,7 +4881,7 @@ Callback = function(state)
 end}, "Hay_Farm_Toggle_UI")
 
 g.Auto_Farm_Log_Farm_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
-Name = "Log Hauling Auto Farm (FE)",
+Name = "Log Hauling Auto Farm (Not Working)",
 Default = g.log_farm_running or false,
 Flag = "Log_Farm_Toggle_UI",
 Callback = function(state)
