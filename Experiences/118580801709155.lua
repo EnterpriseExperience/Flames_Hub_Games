@@ -4965,8 +4965,8 @@ Callback = function(state)
             if g.Auto_Farm_Log_Farm_Toggle_UI then g.Auto_Farm_Log_Farm_Toggle_UI:Set(false, false) end
             return
         end
-        if g.log_farm_use_semi and g.Log_Farm_Semi_Toggle_UI then
-            g.notify("Warning", "Log Farm: semi mode is active, stop it first.", 3)
+        if g.log_farm_running and g.log_farm_use_semi then
+            g.notify("Warning", "Log Farm: semi-truck mode is active, stop it first.", 3)
             if g.Auto_Farm_Log_Farm_Toggle_UI then g.Auto_Farm_Log_Farm_Toggle_UI:Set(false, false) end
             return
         end
@@ -5010,8 +5010,8 @@ Callback = function(state)
             if g.Log_Farm_Semi_Toggle_UI then g.Log_Farm_Semi_Toggle_UI:Set(false, false) end
             return
         end
-        if not g.log_farm_use_semi and g.Auto_Farm_Log_Farm_Toggle_UI then
-            g.notify("Warning", "Log Farm: regular mode is active, stop it first.", 3)
+        if g.log_farm_running and not g.log_farm_use_semi then
+            g.notify("Warning", "Log Farm: regular-trucks mode is active, stop it first.", 3)
             if g.Log_Farm_Semi_Toggle_UI then g.Log_Farm_Semi_Toggle_UI:Set(false, false) end
             return
         end
