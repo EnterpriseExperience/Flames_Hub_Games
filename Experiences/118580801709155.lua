@@ -70,7 +70,7 @@ if not In_Studio then
     end
 end
 wait(0.15)
-local Announcement_Message = "Fixed Log Farming not working + added toggle for semi-only AND regular truck-only log farm + fixed Vehicle Speed (FE) + added Vehicle Spin (FE)."
+local Announcement_Message = "Fixed Log Farming not working + added toggle for semi-only AND regular truck-only log farm + fixed Vehicle Speed (FE) + added Vehicle Spin (FE) + fixed Disable Pole Collision lag."
 g.displayTimeMax = 45
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.2.8"
+local Raw_Version = "V2.2.9"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -262,58 +262,50 @@ wait(0.1)
 if not g.Buildings_Folder_Found_WS then pcall(function() Find_Buildings_Folder_WS() end) end
 
 g.Pole_Collision_Cache = g.Pole_Collision_Cache or {}
-local function disable_folder_poles(folder, target_color)
-    if not folder or not folder:IsA("Folder") then return end
-    for _, v in ipairs(folder:GetChildren()) do
-        if v:IsA("Model") then
-            local matched = false
-            for _, child in ipairs(v:GetChildren()) do
-                if child:IsA("BasePart") and child.Color == target_color then
-                    matched = true
-                    break
-                end
-            end
-            if matched then
-                for _, part in ipairs(v:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        if not g.Pole_Collision_Cache[part] then
-                            g.Pole_Collision_Cache[part] = {
-                                CanCollide = part.CanCollide,
-                                CanQuery   = part.CanQuery,
-                                CanTouch   = part.CanTouch,
-                            }
-                        end
-                        part.CanCollide = false
-                        part.CanQuery   = false
-                        part.CanTouch   = false
-                    end
-                end
-            end
-        end
-    end
-end
-
 g.Disable_Pole_Collision = function(state)
     g.Disable_Pole_Collision_State = state
     if state then
         g.Pole_Collision_Cache = {}
-        local Roads     = g.Roads_Folder_Found_WS     or Find_Roads_Folder_WS()
-        local Buildings = g.Buildings_Folder_Found_WS or Find_Buildings_Folder_WS()
-        disable_folder_poles(Roads,     Color3.fromRGB(86,  66,  54))
-        disable_folder_poles(Buildings, Color3.fromRGB(163, 162, 165))
-        disable_folder_poles(Roads,     Color3.fromRGB(27, 42, 53))
-        task.wait(0.15)
         lib.connect("pole_collision_disable", RunService.Heartbeat:Connect(function()
+            local vehicle = g.get_lp_vehicle and g.get_lp_vehicle()
+            if not vehicle or not vehicle.PrimaryPart then
+                g.Disable_Pole_Collision(false)
+                if g.Disable_Pole_Collision_Toggle_UI then g.Disable_Pole_Collision_Toggle_UI:Set(false, false) end
+                return
+            end
+
+            local vpos = vehicle.PrimaryPart.Position
             local Roads     = g.Roads_Folder_Found_WS     or Find_Roads_Folder_WS()
             local Buildings = g.Buildings_Folder_Found_WS or Find_Buildings_Folder_WS()
-            disable_folder_poles(Roads,     Color3.fromRGB(86,  66,  54))
-            disable_folder_poles(Buildings, Color3.fromRGB(163, 162, 165))
-            disable_folder_poles(Roads,     Color3.fromRGB(27, 42, 53))
+            local function scan(folder)
+                if not folder or not folder:IsA("Folder") then return end
+                for _, model in ipairs(folder:GetChildren()) do
+                    if model:IsA("Model") then
+                        for _, part in ipairs(model:GetDescendants()) do
+                            if part:IsA("BasePart") and (part.Position - vpos).Magnitude < 60 then
+                                if not g.Pole_Collision_Cache[part] then
+                                    g.Pole_Collision_Cache[part] = {
+                                        CanCollide = part.CanCollide,
+                                        CanQuery   = part.CanQuery,
+                                        CanTouch   = part.CanTouch,
+                                    }
+                                end
+                                part.CanCollide = false
+                                part.CanQuery   = false
+                                part.CanTouch   = false
+                            end
+                        end
+                    end
+                end
+            end
+
+            scan(Roads)
+            scan(Buildings)
         end))
     else
         lib.disconnect("pole_collision_disable")
         for part, original in pairs(g.Pole_Collision_Cache) do
-            if part:IsA("BasePart") and part.Parent then
+            if part and part.Parent then
                 part.CanCollide = original.CanCollide
                 part.CanQuery   = original.CanQuery
                 part.CanTouch   = original.CanTouch
@@ -338,6 +330,28 @@ local function find_remotes_folder()
 end
 wait(0.1)
 if not g.Remotes_Folder_Found_RS then pcall(function() find_remotes_folder() end) end
+
+local function Find_Reward_Action_Remote_Event()
+    local cache = g.Reward_Action_Remote_Event_Found_RS
+    if cache and cache:IsA("RemoteEvent") then return cache end
+    local remotes = g.Remotes_Folder_Found_RS or find_remotes_folder()
+    if not remotes or not remotes:IsA("Folder") then return nil end
+    for _, v in ipairs(remotes:GetChildren()) do
+        if v:IsA("RemoteEvent") and v.Name:lower():find("reward") and v.Name:lower():find("action") then
+            g.Reward_Action_Remote_Event_Found_RS = v
+            return v
+        end
+    end
+    return nil
+end
+wait(0.1)
+if not g.Reward_Action_Remote_Event_Found_RS then pcall(function() g.Find_Reward_Action_Remote_Event() end) end
+
+g.Claim_PlayTime_Rewards = function()
+    local r = g.Reward_Action_Remote_Event_Found_RS or Find_Reward_Action_Remote_Event()
+    if not r or not r:IsA("RemoteEvent") then return end
+    for i = 1, 5 do r:FireServer(i) end
+end
 
 local function Hit_Lamp_Post_Remote_Event()
     local cache = g.Lamp_Post_Remote_Event_Found_RS
@@ -620,10 +634,9 @@ if not g.Apply_Customization_Remote_Function_Found_RS then pcall(function() Find
 
 local function find_Warden_Remote_Event()
     local cache = g.Warden_Remote_Event_Found_RS
-    if cache and typeof(cache) == "Instance" and cache:IsA("RemoteEvent") then return cache end
+    if cache and cache:IsA("RemoteEvent") then return cache end
     local remotes = g.Remotes_Folder_Found_RS or find_remotes_folder()
     if not remotes or typeof(remotes) ~= "Instance" or not remotes:IsA("Folder") then return nil end
-
     for _, v in ipairs(remotes:GetChildren()) do
         if typeof(v) == "Instance" and v:IsA("RemoteEvent") and v.Name:lower():find("warden") then
             g.Warden_Remote_Event_Found_RS = v
@@ -635,39 +648,9 @@ end
 wait(0.1)
 if not g.Warden_Remote_Event_Found_RS then pcall(function() find_Warden_Remote_Event() end) end
 
-local function nuke_warden_ui()
-    local w_gui = PlayerGui:FindFirstChild("Warden")
-    if w_gui and typeof(w_gui) == "Instance" and w_gui:IsA("ScreenGui") then w_gui:Destroy() end
-    pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true) end)
-    pcall(function() GuiService.SelectedObject = nil end)
-end
-
-local function patch_remote(remote, callback)
-    local namecall
-    namecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        if not checkcaller() and self == remote then
-            local method = getnamecallmethod()
-            if method == "FireServer" or method == "InvokeServer" then return callback(newcclosure(namecall), self, ...) end
-        end
-        return namecall(self, ...)
-    end))
-    return namecall
-end
-
-local function blind_incoming(remote)
-    if not (getconnections and typeof(getconnections) == "function") then return end
-    local conns = getconnections(remote.OnClientEvent)
-    if not conns then return end
-    for _, c in ipairs(conns) do
-        pcall(function()
-            if c.Disable and typeof(c.Disable) == "function" then c:Disable() end
-        end)
-    end
-end
-
 local function find_ClientState_Remote_Event()
     local cache = g.ClientState_Remote_Event_Found_RS
-    if cache and typeof(cache) == "Instance" and cache:IsA("RemoteEvent") then return cache end
+    if cache and cache:IsA("RemoteEvent") then return cache end
     local remotes = g.Remotes_Folder_Found_RS or find_remotes_folder()
     if not remotes or typeof(remotes) ~= "Instance" or not remotes:IsA("Folder") then return nil end
     for _, v in ipairs(remotes:GetChildren()) do
@@ -681,27 +664,11 @@ end
 wait(0.1)
 if not g.ClientState_Remote_Event_Found_RS then pcall(function() find_ClientState_Remote_Event() end) end
 
-local function patch_ClientState_remote(remote)
-    if hookfunction and typeof(hookfunction) == "function" and newcclosure and typeof(newcclosure) == "function" then
-        local original_fire = remote.FireServer
-        if original_fire and typeof(original_fire) == "function" then
-            hookfunction(original_fire, newcclosure(function(self, ...)
-                if rawequal and typeof(rawequal) == "function" and rawequal(self, remote) then
-                    local args = table.pack(...)
-                    local payload = args[1]
-                    if typeof(payload) == "table" and payload.r == 2 then return end
-                end
-                return original_fire(self, ...)
-            end))
-        end
-    end
-end
-
 local function find_ClientReport_Remote_Event()
     local cache = g.ClientReport_Remote_Event_Found_RS
     if cache and cache:IsA("RemoteEvent") then return cache end
     local remotes = g.Remotes_Folder_Found_RS or find_remotes_folder()
-    if not remotes or not remotes:IsA("Folder") then return nil end
+    if not remotes or typeof(remotes) ~= "Instance" or not remotes:IsA("Folder") then return nil end
     for _, v in ipairs(remotes:GetChildren()) do
         if typeof(v) == "Instance" and v:IsA("RemoteEvent") and v.Name:lower():find("clientreport") then
             g.ClientReport_Remote_Event_Found_RS = v
@@ -713,17 +680,21 @@ end
 wait(0.1)
 if not g.ClientReport_Remote_Event_Found_RS then pcall(function() find_ClientReport_Remote_Event() end) end
 
-local function patch_ClientReport_remote(remote)
-    if hookfunction and typeof(hookfunction) == "function" and newcclosure and typeof(newcclosure) == "function" then
-        local original_fire = remote.FireServer
-        if original_fire and typeof(original_fire) == "function" then
-            hookfunction(original_fire, newcclosure(function(self, ...)
-                if rawequal and typeof(rawequal) == "function" and rawequal(self, remote) then return end
-                return original_fire(self, ...)
-            end))
+local function Find_Clock_Sync_Remote_Event()
+    local cache = g.Clock_Sync_Remote_Event_Found_RS
+    if cache and typeof(cache) == "Instance" and cache:IsA("RemoteEvent") then return cache end
+    local remotes = g.Remotes_Folder_Found_RS or find_remotes_folder()
+    if not remotes or typeof(remotes) ~= "Instance" or not remotes:IsA("Folder") then return nil end
+    for _, v in ipairs(remotes:GetChildren()) do
+        if v:IsA("RemoteEvent") and v.Name:lower():find("clock") and v.Name:lower():find("sync") then
+            g.Clock_Sync_Remote_Event_Found_RS = v
+            return v
         end
     end
+    return nil
 end
+wait(0.1)
+if not g.Clock_Sync_Remote_Event_Found_RS then pcall(function() Find_Clock_Sync_Remote_Event() end) end
 
 local re_fuzzy_cache = g.re_fuzzy_cache or {}
 g.re_fuzzy_cache = re_fuzzy_cache
@@ -736,7 +707,7 @@ local function fuzzy_score(haystack, needle)
         local idx = haystack:find(c, j, true)
         if idx then
             score = score + (100 - idx)
-            j     = idx + 1
+            j = idx + 1
         else
             score = score - 15
         end
@@ -757,7 +728,7 @@ g.find_remote = function(name)
             local s = fuzzy_score(v.Name:lower(), key)
             if s > best_score then
                 best_score = s
-                best       = v
+                best = v
             end
         end
     end
@@ -768,96 +739,41 @@ g.find_remote = function(name)
     return nil
 end
 wait(0.1)
-if not g.Exploit_Warning_Bypass_Executed then
-    if hookmetamethod and newcclosure and typeof(newcclosure) == "function" and typeof(hookmetamethod) == "function" then
-        g.Exploit_Warning_Bypass_Executed = true
-        local target_remote = g.find_remote("ExploitWarning")
-        if target_remote and target_remote:IsA("RemoteEvent") then
-            local original
-            original = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-                if self == target_remote and getnamecallmethod() == "FireServer" then return end
-                return original(self, ...)
-            end))
-        end
-        wait(0.1)
-        pcall(function() target_remote:Destroy() end)
-    else
-        g.Exploit_Warning_Bypass_Executed = true
-        local target_remote = g.find_remote("ExploitWarning")
-        if target_remote and target_remote:IsA("RemoteEvent") then pcall(function() target_remote:Destroy() end) end
-    end
+local function hook_block(remote)
+    if not remote then return end
+    if not hookfunction or typeof(hookfunction) ~= "function" then return end
+    hookfunction(remote.FireServer, newcclosure(function() end))
 end
-wait(0.25)
+
 local function full_bypass()
     if g.Bypassed_Anti_Cheat then return end
     g.Bypassed_Anti_Cheat = true
-    local remote = g.Warden_Remote_Event_Found_RS or find_Warden_Remote_Event()
-    if remote and remote:IsA("RemoteEvent") then
-        blind_incoming(remote)
-        patch_remote(remote, function(original, self, ...) return end)
-        g.notify("Success", "Warden neutered — incoming event blinded, outbound patched.", 3)
-    else
-        g.notify("Warning", "Warden remote not found yet — polling...", 3)
+    hook_block(g.Warden_Remote_Event_Found_RS or find_Warden_Remote_Event())
+    hook_block(g.ClientReport_Remote_Event_Found_RS or find_ClientReport_Remote_Event())
+    hook_block(g.find_remote("ExploitWarning"))
+    local cs = g.ClientState_Remote_Event_Found_RS or find_ClientState_Remote_Event()
+    if cs then
+        hookfunction(cs.FireServer, newcclosure(function(self, ...)
+            local args = table.pack(...)
+            if typeof(args[1]) == "table" and args[1].r == 2 then return end
+            return cs.FireServer(self, ...)
+        end))
     end
 
-    for _, v in ipairs(speaker:GetDescendants()) do
-        if v:IsA("ModuleScript") and v.Name:lower():find("warden") then
-            g.notify("Warning", "Warden ModuleScript found — hooking before destroy...", 3)
-            pcall(function() v:Destroy() end)
-            task.wait(0.75)
-            g.notify("Success", "Warden neutralized and destroyed.", 3)
-        end
+    local clock = g.Clock_Sync_Remote_Event_Found_RS or Find_Clock_Sync_Remote_Event()
+    if clock then
+        hookfunction(clock.FireServer, newcclosure(function(self, op, ...)
+            if op == "p" then return end
+            return clock.FireServer(self, op, ...)
+        end))
     end
-    task.wait(0.1)
-    local cs_remote = g.ClientState_Remote_Event_Found_RS or find_ClientState_Remote_Event()
-    if cs_remote and cs_remote:IsA("RemoteEvent") then
-        g.notify("Success", "Patching ClientState RemoteEvent to prevent session-report payloads...", 3)
-        patch_ClientState_remote(cs_remote)
-        g.notify("Success", "ClientState RemoteEvent patched & blocked.", 3)
-        task.wait(0.1)
-        pcall(function() cs_remote:Destroy() end)
-        g.notify("Success", "ClientState RemoteEvent destroyed.", 3)
-    else
-        g.notify("Warning", "ClientState remote not found yet — polling...", 3)
-    end
-    task.wait(0.1)
-    local cr_remote = g.ClientReport_Remote_Event_Found_RS or find_ClientReport_Remote_Event()
-    if cr_remote and cr_remote:IsA("RemoteEvent") then
-        g.notify("Success", "Patching ClientReport RemoteEvent to prevent analytical payloads...", 3)
-        patch_ClientReport_remote(cr_remote)
-        g.notify("Success", "ClientReport RemoteEvent patched & blocked.", 3)
-        task.wait(0.1)
-        pcall(function() cr_remote:Destroy() end)
-        g.notify("Success", "ClientReport RemoteEvent destroyed.", 3)
-    else
-        g.notify("Warning", "ClientReport remote not found yet — polling...", 3)
-    end
-    task.wait(0.1)
-    nuke_warden_ui()
-    task.spawn(function()
-        local attempts = 0
-        local max_attempts = 60
-        while attempts < max_attempts do
-            task.wait(0.5)
-            attempts = attempts + 1
-            local r = g.Warden_Remote_Event_Found_RS or find_Warden_Remote_Event()
-            if r and r:IsA("RemoteEvent") then
-                blind_incoming(r)
-                patch_remote(r, function(original, self, ...) return end)
-                g.notify("Success", "Warden Anti-Cheat has been successfully disabled, you may continue.", 5)
-                break
-            end
-            nuke_warden_ui()
-        end
-    end)
+
+    local w_gui = PlayerGui:FindFirstChild("Warden")
+    if w_gui then w_gui:Destroy() end
+    pcall(function() GuiService.SelectedObject = nil end)
 end
-wait(0.25)
-if not g.Bypassed_Anti_Cheat then
-    task.spawn(function()
-        task.wait(0.1)
-        full_bypass()
-    end)
-end
+
+if not g.Bypassed_Anti_Cheat then task.spawn(full_bypass) end
 wait(0.25)
 lib.connect("warden_ui_watchdog", RunService.Heartbeat:Connect(function()
     local w = PlayerGui:FindFirstChild("Warden")
