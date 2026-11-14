@@ -70,7 +70,7 @@ if not In_Studio then
     end
 end
 wait(0.15)
-local Announcement_Message = "Fixed Log Farming not working + added toggle for semi-only AND regular truck-only log farm + fixed Vehicle Speed (FE) + added Vehicle Spin (FE) + fixed Disable Pole Collision lag."
+local Announcement_Message = "Fixed Semi-Truck Log Farm not working + fixed updated detections."
 g.displayTimeMax = 45
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.3.0"
+local Raw_Version = "V2.3.2"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -750,33 +750,98 @@ g.find_remote = function(name)
     return nil
 end
 wait(0.1)
+local _hookfunction   = hookfunction   and typeof(hookfunction)   == "function" and hookfunction   or nil
+local _newcclosure    = newcclosure    and typeof(newcclosure)    == "function" and newcclosure    or nil
+local _hookmetamethod = hookmetamethod and typeof(hookmetamethod) == "function" and hookmetamethod or nil
+local _getrawmetatable = getrawmetatable and typeof(getrawmetatable) == "function" and getrawmetatable or nil
+local _setreadonly     = setreadonly    and typeof(setreadonly)    == "function" and setreadonly    or nil
+local mt_hooks_active = {}
+local function safe_hook(fn, replacement)
+    if not _hookfunction or not _newcclosure then return end
+    pcall(function() _hookfunction(fn, _newcclosure(replacement)) end)
+end
+
 local function hook_block(remote)
     if not remote then return end
-    if not hookfunction or typeof(hookfunction) ~= "function" then return end
-    hookfunction(remote.FireServer, newcclosure(function() end))
+    safe_hook(remote.FireServer, function() end)
+end
+
+local function apply_metatable_bypass(instance)
+    if not instance then return end
+    if not _hookmetamethod or not _getrawmetatable then return end
+    if mt_hooks_active[instance] then return end
+    mt_hooks_active[instance] = true
+
+    local mt = _getrawmetatable(instance)
+    if not mt then return end
+    if _setreadonly then pcall(function() _setreadonly(mt, false) end) end
+
+    if mt.__namecall then
+        local orig_namecall = mt.__namecall
+        mt.__namecall = _newcclosure and _newcclosure(function(self, ...)
+            if self == instance then
+                local method = getnamecallmethod and getnamecallmethod() or ""
+                if method == "FireServer" or method == "InvokeServer" then return end
+            end
+            return orig_namecall(self, ...)
+        end) or function(self, ...)
+            if self == instance then
+                local method = getnamecallmethod and getnamecallmethod() or ""
+                if method == "FireServer" or method == "InvokeServer" then return end
+            end
+            return orig_namecall(self, ...)
+        end
+    end
+end
+
+local function blind_getconnections(instance)
+    if not instance then return end
+    if not getconnections or typeof(getconnections) ~= "function" then return end
+    local ok, conns = pcall(getconnections, instance)
+    if not ok or not conns then return end
+    for _, conn in ipairs(conns) do
+        pcall(function()
+            if conn and conn.Function then
+                local info = debug and debug.info and debug.info(conn.Function, "s")
+                if info and (info:lower():find("warden") or info:lower():find("anticheat") or info:lower():find("report")) then
+                    conn:Disable()
+                end
+            end
+        end)
+    end
 end
 
 local function full_bypass()
     if g.Bypassed_Anti_Cheat then return end
     g.Bypassed_Anti_Cheat = true
-    hook_block(g.Warden_Remote_Event_Found_RS or find_Warden_Remote_Event())
-    hook_block(g.ClientReport_Remote_Event_Found_RS or find_ClientReport_Remote_Event())
-    hook_block(g.find_remote("ExploitWarning"))
+    local warden = g.Warden_Remote_Event_Found_RS or find_Warden_Remote_Event()
+    hook_block(warden)
+    apply_metatable_bypass(warden)
+    blind_getconnections(warden)
+    local report = g.ClientReport_Remote_Event_Found_RS or find_ClientReport_Remote_Event()
+    hook_block(report)
+    apply_metatable_bypass(report)
+    blind_getconnections(report)
+    local exploit_warn = g.find_remote("ExploitWarning")
+    hook_block(exploit_warn)
+    apply_metatable_bypass(exploit_warn)
     local cs = g.ClientState_Remote_Event_Found_RS or find_ClientState_Remote_Event()
     if cs then
-        hookfunction(cs.FireServer, newcclosure(function(self, ...)
+        apply_metatable_bypass(cs)
+        safe_hook(cs.FireServer, function(self, ...)
             local args = table.pack(...)
             if typeof(args[1]) == "table" and args[1].r == 2 then return end
             return cs.FireServer(self, ...)
-        end))
+        end)
     end
 
     local clock = g.Clock_Sync_Remote_Event_Found_RS or Find_Clock_Sync_Remote_Event()
     if clock then
-        hookfunction(clock.FireServer, newcclosure(function(self, op, ...)
+        apply_metatable_bypass(clock)
+        safe_hook(clock.FireServer, function(self, op, ...)
             if op == "p" then return end
             return clock.FireServer(self, op, ...)
-        end))
+        end)
     end
 
     local w_gui = PlayerGui:FindFirstChild("Warden")
@@ -830,16 +895,13 @@ g.get_lp_trailer = function()
             return v
         end
     end
-
     return nil
 end
 
 g.Get_Current_Sitting_In_Vehicle = function()
     local char = g.Character or speaker.Character or g.get_char(speaker)
     if not char or not char:IsDescendantOf(game or workspace) then return nil end
-    local humanoid = g.Humanoid
-        or (char and char:FindFirstChildOfClass("Humanoid"))
-        or g.get_human(speaker)
+    local humanoid = g.Humanoid or (char and char:FindFirstChildOfClass("Humanoid")) or g.get_human(speaker)
     if not humanoid or not humanoid.Parent or not humanoid:IsDescendantOf(game) then return nil end
     if not humanoid.Sit or not humanoid.SeatPart then return nil end
     local seat = humanoid.SeatPart
@@ -868,9 +930,7 @@ g.Apply_Paint_Customization = function(color)
             subcategory = "Color1"
         }
     )
-    if veh and veh:GetAttribute("owner") ~= speaker.UserId then
-        g.notify("Warning", "If it did not work, it is because you do not own this Vehicle.", 3)
-    end
+    if veh and veh:GetAttribute("owner") ~= speaker.UserId then g.notify("Warning", "If it did not work, it is because you do not own this Vehicle.", 3) end
 end
 
 g.Fire_All_Doors_Running = g.Fire_All_Doors_Running or false
@@ -925,7 +985,6 @@ g.Fire_All_Doors = function()
             end
         end
     end)
-
     safe_return()
 end
 
@@ -1054,7 +1113,7 @@ g.resolve_target_vehicle = function()
     return false
 end
 wait(0.1)
-if not g.Target_Vehicle_Copy_Id then pcall(g.resolve_target_vehicle) end
+if not g.Target_Vehicle_Copy_Id then pcall(function() g.resolve_target_vehicle() end) end
 
 local function find_Vehicles_Screen_Gui_PlayerGui()
     local cache = g.Vehicles_Screen_Gui_PlayerGui_Found
@@ -1101,7 +1160,6 @@ g.allow_walking_with_vehicles_menu_opened = function(state)
         if not Human or not Human.Parent or not Human:IsDescendantOf(game) then return end
         Human.WalkSpeed = StarterPlayer.CharacterWalkSpeed
     end
-
     lib.connect("veh_walk_fix", veh_GUI:GetPropertyChangedSignal("Enabled"):Connect(apply_walk))
     apply_walk()
 end
@@ -4155,6 +4213,46 @@ g.ensure_vehicle_available_log_clock_in = function()
     return false
 end
 
+local SEMI_TRAILER_FALLBACK = { ["log trailer"] = true, ["log trailer tri-axle"] = true }
+local function build_semi_trailer_names()
+    if g.semi_trailer_names then return g.semi_trailer_names end
+    local rf = ReplicatedStorage:FindFirstChild("GetVehicleCatalog", true)
+    if not rf or not rf:IsA("RemoteFunction") then
+        g.semi_trailer_names = SEMI_TRAILER_FALLBACK
+        return SEMI_TRAILER_FALLBACK
+    end
+    local ok, payload = pcall(function() return rf:InvokeServer() end)
+    if not ok or not payload then
+        g.semi_trailer_names = SEMI_TRAILER_FALLBACK
+        return SEMI_TRAILER_FALLBACK
+    end
+    local names = {}
+    local function sweep(tbl)
+        for _, entry in pairs(tbl) do
+            if type(entry) == "table" then
+                local is_trailer = entry.isTrailer == true
+                local label = tostring(entry.label or entry.name or ""):lower()
+                if is_trailer and label:find("log trailer") then
+                    names[label] = true
+                end
+                for _, v in pairs(entry) do if type(v) == "table" then sweep({ v }) end end
+            end
+        end
+    end
+    sweep(payload)
+    if next(names) == nil then
+        g.semi_trailer_names = SEMI_TRAILER_FALLBACK
+        return SEMI_TRAILER_FALLBACK
+    end
+    g.semi_trailer_names = names
+    return names
+end
+
+local function is_semi_compatible_trailer(name)
+    local names = g.semi_trailer_names or build_semi_trailer_names()
+    return names[tostring(name):lower()] == true
+end
+
 g.log_farm_use_semi = g.log_farm_use_semi or false
 local function ensure_vehicle_available_log_farm()
     local owned_rf = g.Get_Owned_Vehicles_RF_Found or (g.Get_Owned_Vehicles_RF and g.Get_Owned_Vehicles_RF())
@@ -4184,7 +4282,11 @@ local function ensure_vehicle_available_log_farm()
     for _, copy in ipairs(payload.copies) do
         local n = tostring(copy.name)
         if is_trailer_by_catalog(n) then
-            if is_valid_log_trailer(n) and not trailer_copy then trailer_copy = copy end
+            if g.log_farm_use_semi then
+                if is_semi_compatible_trailer(n) and not trailer_copy then trailer_copy = copy end
+            else
+                if is_valid_log_trailer(n) and not trailer_copy then trailer_copy = copy end
+            end
         elseif g.log_farm_use_semi then
             if is_semi(n) and not truck_copy then truck_copy = copy end
         else
@@ -4202,7 +4304,11 @@ local function ensure_vehicle_available_log_farm()
     end
 
     if not trailer_copy then
-        if g.notify then g.notify("Error", "Log Farm: no Lotra or Gooseneck found in owned vehicles.", 4) end
+        if g.log_farm_use_semi then
+            if g.notify then g.notify("Error", "Log Farm: no Log Trailer found in owned vehicles.", 4) end
+        else
+            if g.notify then g.notify("Error", "Log Farm: no Lotra or Gooseneck found in owned vehicles.", 4) end
+        end
         return false
     end
 
@@ -4216,7 +4322,6 @@ local function ensure_vehicle_available_log_farm()
     local existing_trailer = g.get_lp_trailer and g.get_lp_trailer()
     local vehicle_ok = existing_vehicle ~= nil and existing_vehicle:IsDescendantOf(game or workspace)
     local trailer_ok = existing_trailer ~= nil and existing_trailer:IsDescendantOf(game or workspace)
-
     if not vehicle_ok or not trailer_ok then
         pcall(function() g.HumanoidRootPart.CFrame = CFrame.new(733, 5, 648) end)
         task.wait(0.5)
@@ -4610,7 +4715,6 @@ local function log_farm_loop()
             task.wait(0.3)
         end
         if not g.log_farm_running then break end
-
         if not is_clocked_in() then
             local clocked = try_clock_in_logs()
             if not clocked then
@@ -4926,7 +5030,7 @@ Callback = function(val)
     g.Set_Max_Zoom_Distance(val)
 end}, "Max_Zoom_Distance_Slider_UI")
 
-g.create_ui_element("Button", LocalPlayer_Section, {
+g.create_ui_element("Button", Home_Section, {
 Name = "Infinite Premium",
 Callback = function()
     g.infinite_premium()
@@ -4956,11 +5060,11 @@ end}, "Hay_Farm_Toggle_UI")
 
 g.Auto_Farm_Log_Farm_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
 Name = "Log Hauling Auto Farm (Regular Trucks)",
-Default = g.log_farm_running or false,
+Default = (g.log_farm_running and not g.log_farm_use_semi) or false,
 Flag = "Log_Farm_Toggle_UI",
 Callback = function(state)
     if state then
-        if g.log_farm_running then
+        if g.log_farm_running and not g.log_farm_use_semi then
             g.notify("Warning", "Log Farm: already running, stop it first.", 3)
             if g.Auto_Farm_Log_Farm_Toggle_UI then g.Auto_Farm_Log_Farm_Toggle_UI:Set(false, false) end
             return
@@ -4971,6 +5075,7 @@ Callback = function(state)
             return
         end
         g.log_farm_use_semi = false
+        g.log_farm_running = false
         if not ensure_vehicle_available_log_farm() then
             g.notify("Error", "Log Farm: could not ensure vehicle and trailer, aborting.", 5)
             if g.Auto_Farm_Log_Farm_Toggle_UI then g.Auto_Farm_Log_Farm_Toggle_UI:Set(false, false) end
@@ -5001,11 +5106,11 @@ end}, "Log_Farm_Toggle_UI")
 
 g.Log_Farm_Semi_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
 Name = "Log Hauling Auto Farm (Semi Trucks)",
-Default = false,
+Default = (g.log_farm_running and g.log_farm_use_semi) or false,
 Flag = "Log_Farm_Semi_Toggle_UI",
 Callback = function(state)
     if state then
-        if g.log_farm_running then
+        if g.log_farm_running and g.log_farm_use_semi then
             g.notify("Warning", "Log Farm: already running, stop it first.", 3)
             if g.Log_Farm_Semi_Toggle_UI then g.Log_Farm_Semi_Toggle_UI:Set(false, false) end
             return
@@ -5016,6 +5121,25 @@ Callback = function(state)
             return
         end
         g.log_farm_use_semi = true
+        g.log_farm_running = false
+        local owned_rf = g.Get_Owned_Vehicles_RF_Found
+        if owned_rf and owned_rf:IsA("RemoteFunction") then
+            local ok, payload = pcall(function() return owned_rf:InvokeServer() end)
+            if ok and payload and type(payload.copies) == "table" then
+                local found_semi_trailer = false
+                for _, copy in ipairs(payload.copies) do
+                    if is_semi_compatible_trailer(tostring(copy.name)) then
+                        found_semi_trailer = true
+                        break
+                    end
+                end
+                if not found_semi_trailer then
+                    g.notify("Error", "Log Farm: no semi-compatible trailer found in owned vehicles. Own a Gooseneck or Lowboy.", 6)
+                    if g.Log_Farm_Semi_Toggle_UI then g.Log_Farm_Semi_Toggle_UI:Set(false, false) end
+                    return
+                end
+            end
+        end
         if not ensure_vehicle_available_log_farm() then
             g.notify("Error", "Log Farm: could not ensure semi and trailer, aborting.", 5)
             if g.Log_Farm_Semi_Toggle_UI then g.Log_Farm_Semi_Toggle_UI:Set(false, false) end
