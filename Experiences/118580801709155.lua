@@ -70,7 +70,7 @@ if not In_Studio then
     end
 end
 wait(0.15)
-local Announcement_Message = "Fixed Log Farming not working + added toggle for semi-only AND regular truck-only log farm + fixed Vehicle Speed (FE)."
+local Announcement_Message = "Fixed Log Farming not working + added toggle for semi-only AND regular truck-only log farm + fixed Vehicle Speed (FE) + added Vehicle Spin (FE)."
 g.displayTimeMax = 45
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
@@ -4875,7 +4875,7 @@ local Atlas = loadstring(g.http_get("https://gitlab.com/flames2431233/Starter/-/
 local UI = Atlas.new({
     Name = "Flames Hub | Carolina Leaners | "..tostring(g.Script_Version),
     ConfigFolder = "FlamesHub_Carolina_Leaners_Menu_Configuration",
-    Color = Color3.fromRGB(0, 255, 0),
+    Color = Color3.fromRGB(255, 0, 0),
     Credit = "Flames Hub",
     Bind = "RightShift",
 })
