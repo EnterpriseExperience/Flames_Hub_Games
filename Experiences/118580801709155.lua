@@ -70,7 +70,7 @@ if not In_Studio then
     end
 end
 wait(0.15)
-local Announcement_Message = "Fixed Log Farming not working + added toggle for semi-only AND regular truck-only log farm."
+local Announcement_Message = "Fixed Log Farming not working + added toggle for semi-only AND regular truck-only log farm + fixed Vehicle Speed (FE)."
 g.displayTimeMax = 45
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.2.7"
+local Raw_Version = "V2.2.8"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -2130,11 +2130,12 @@ g.start_vehicle_orbit = function()
         return
     end
 
-    local use_pivot      = car.PrimaryPart ~= nil
-    local locked_origin  = anchor.CFrame.Position
-    local locked_y       = anchor.CFrame.Position.Y
-    local angle          = 0
-    local last_t         = tick()
+    local use_pivot     = car.PrimaryPart ~= nil
+    local locked_origin = anchor.CFrame.Position
+    local locked_y      = anchor.CFrame.Position.Y
+    local angle         = 0
+    local last_t        = tick()
+    local current_cf    = anchor.CFrame
     g.VehicleOrbit_Enabled = true
     FlamesLibrary.connect("VehicleOrbit_Loop", RunService.RenderStepped:Connect(function()
         if not g.VehicleOrbit_Enabled then return end
@@ -2143,24 +2144,26 @@ g.start_vehicle_orbit = function()
             return
         end
 
-        local now      = tick()
-        local dt       = now - last_t
-        last_t         = now
-        local speed    = math.clamp(g.VehicleOrbit_Speed or 20, 1, 100)
-        local radius   = math.clamp(g.VehicleOrbit_Radius or 15, 1, 100)
+        local now         = tick()
+        local dt          = now - last_t
+        last_t            = now
+        local speed       = math.clamp(g.VehicleOrbit_Speed or 20, 1, 100)
+        local radius      = math.clamp(g.VehicleOrbit_Radius or 15, 1, 100)
+        local smooth      = math.clamp(g.VehicleOrbit_Smooth or 0.12, 0.01, 1)
         local rad_per_sec = (speed / 100) * (2 * math.pi) * 1.5
         angle = angle + rad_per_sec * dt
-        local offset_x   = math.cos(angle) * radius
-        local offset_z   = math.sin(angle) * radius
-        local new_pos    = Vector3.new(locked_origin.X + offset_x, locked_y, locked_origin.Z + offset_z)
-        local tangent_x  = -math.sin(angle)
-        local tangent_z  =  math.cos(angle)
-        local look_dir   = Vector3.new(tangent_x, 0, tangent_z).Unit
-        local target_cf  = CFrame.lookAt(new_pos, new_pos + look_dir)
+        local offset_x  = math.cos(angle) * radius
+        local offset_z  = math.sin(angle) * radius
+        local new_pos   = Vector3.new(locked_origin.X + offset_x, locked_y, locked_origin.Z + offset_z)
+        local tangent_x = -math.sin(angle)
+        local tangent_z =  math.cos(angle)
+        local look_dir  = Vector3.new(tangent_x, 0, tangent_z).Unit
+        local target_cf = CFrame.lookAt(new_pos, new_pos + look_dir)
+        current_cf = current_cf:Lerp(target_cf, smooth)
         if use_pivot then
-            pcall(function() car:PivotTo(target_cf) end)
+            pcall(function() car:PivotTo(current_cf) end)
         else
-            pcall(function() anchor.CFrame = target_cf end)
+            pcall(function() anchor.CFrame = current_cf end)
         end
     end))
 end
@@ -2170,104 +2173,169 @@ g.stop_vehicle_orbit = function()
     FlamesLibrary.disconnect("VehicleOrbit_Loop")
 end
 
-g._vehicle_tune_cache = g._vehicle_tune_cache or {}
-local function get_cached_tune(car, Tune)
-    local cached = g._vehicle_tune_cache[car]
-    if cached then return cached end
-    local Stock = {
-        car        = car,
-        Horsepower = Tune.Horsepower,
-        FinalDrive = Tune.FinalDrive,
-        Redline    = Tune.Redline,
-        PeakRPM    = Tune.PeakRPM,
-        Ratios     = type(Tune.Ratios) == "table" and table.clone(Tune.Ratios) or nil,
-    }
-    g._vehicle_tune_cache[car] = Stock
-    return Stock
+g.vehicle_spin_running = g.vehicle_spin_running or false
+g.vehicle_spin_speed   = g.vehicle_spin_speed   or 10
+g.start_vehicle_spin = function()
+    if g.vehicle_spin_running then
+        g.notify("Warning", "Vehicle Spin: already enabled.", 3)
+        return
+    end
+
+    local car = g.get_vehicle() or g.Get_Current_Sitting_In_Vehicle()
+    if not car or not car:IsDescendantOf(game or workspace) then
+        g.notify("Error", "Vehicle Spin: no vehicle found.", 3)
+        return
+    end
+
+    local anchor = car.PrimaryPart
+    if not anchor then for _, v in ipairs(car:GetDescendants()) do if v:IsA("VehicleSeat") then anchor = v; break end end end
+    if not anchor then anchor = car:FindFirstChildWhichIsA("BasePart", true) end
+    if not anchor or not anchor:IsDescendantOf(game or workspace) then
+        g.notify("Error", "Vehicle Spin: could not resolve anchor.", 3)
+        return
+    end
+
+    local existing = anchor:FindFirstChild("VehicleSpinBAV")
+    if existing then existing:Destroy() end
+    local bav = Instance.new("BodyAngularVelocity")
+    bav.Name           = "VehicleSpinBAV"
+    bav.MaxTorque      = Vector3.new(0, math.huge, 0)
+    bav.AngularVelocity = Vector3.new(0, g.vehicle_spin_speed, 0)
+    bav.Parent         = anchor
+
+    g.vehicle_spin_running = true
+    g._vehicle_spin_bav    = bav
+    g._vehicle_spin_anchor = anchor
+    FlamesLibrary.connect("vehicle_spin_speed_watch", RunService.Heartbeat:Connect(function()
+        if not g.vehicle_spin_running then return end
+        if not bav or not bav.Parent then
+            g.stop_vehicle_spin()
+            return
+        end
+        bav.AngularVelocity = Vector3.new(0, g.vehicle_spin_speed, 0)
+    end))
+
+    g.notify("Success", "Vehicle Spin: enabled.", 3)
 end
 
-local function validate_cache(car)
-    local cached = g._vehicle_tune_cache[car]
-    if not cached then return false end
-    if cached.car ~= car then
-        g._vehicle_tune_cache[car] = nil
-        return false
+g.stop_vehicle_spin = function()
+    g.vehicle_spin_running = false
+    FlamesLibrary.disconnect("vehicle_spin_speed_watch")
+    if g._vehicle_spin_bav and g._vehicle_spin_bav.Parent then
+        pcall(function() g._vehicle_spin_bav:Destroy() end)
     end
-    if not cached.car:IsDescendantOf(game) then
-        g._vehicle_tune_cache[car] = nil
-        return false
-    end
-    return true
+    g._vehicle_spin_bav    = nil
+    g._vehicle_spin_anchor = nil
+    g.notify("Success", "Vehicle Spin: disabled.", 3)
 end
 
-local function is_read_only_client() return executor_contains("xeno") and true or false end
-g.set_vehicle_speed = function(Mult)
-    Mult = Mult or 2
-    local car = g.get_vehicle()
-    if not car or not car:IsA("Model") or not car:IsDescendantOf(game) then
-        g.notify("Error", "Vehicle-Speed: no vehicle found.", 3)
-        return
-    end
-    wait(0.1)
-    local Tune_Script = car:FindFirstChild("A-Chassis Tune")
-    if not Tune_Script or not Tune_Script:IsA("ModuleScript") or not Tune_Script.Parent then
-        g.notify("Error", "Vehicle-Speed: no A-Chassis Tune found.", 3)
+g.toggle_vehicle_spin = function() if g.vehicle_spin_running then g.stop_vehicle_spin() else g.start_vehicle_spin() end end
+g.vehicle_boost_running = g.vehicle_boost_running or false
+g.vehicle_boost_speed   = g.vehicle_boost_speed or 75
+local STUDS_TO_MPH = 0.44704
+local MPH_TO_STUDS = 1 / STUDS_TO_MPH
+g.start_vehicle_boost = function()
+    if g.vehicle_boost_running then
+        g.notify("Warning", "Vehicle Boost: already active.", 3)
         return
     end
 
-    local ok, Tune = pcall(require, Tune_Script)
-    if not ok or type(Tune) ~= "table" then
-        g.notify("Error", "Vehicle-Speed: failed to require tune.", 3)
+    local car = g.get_vehicle() or g.Get_Current_Sitting_In_Vehicle()
+    if not car or not car:IsDescendantOf(game or workspace) then
+        g.notify("Error", "Vehicle Boost: no vehicle found.", 3)
         return
     end
 
-    local Stock = get_cached_tune(car, Tune)
-    if is_read_only_client() then
-        g.notify("Error", "Vehicle-Speed: client cannot write tune values.", 5)
-        return
-    end
-
-    pcall(function() Tune.Horsepower = Stock.Horsepower * Mult end)
-    pcall(function() Tune.Redline    = Stock.Redline    * Mult end)
-    pcall(function() Tune.PeakRPM    = Stock.PeakRPM    * Mult end)
-    pcall(function() Tune.FinalDrive = Stock.FinalDrive * Mult end)
-    if type(Tune.Ratios) == "table" and type(Stock.Ratios) == "table" then
-        for i = 1, #Stock.Ratios do
-            pcall(function() Tune.Ratios[i] = Stock.Ratios[i] * Mult end)
+    local anchor = car.PrimaryPart
+    local seat = nil
+    if not anchor then
+        for _, v in ipairs(car:GetDescendants()) do
+            if v:IsA("VehicleSeat") then anchor = v; seat = v; break end
         end
     end
-end
-
-g.reset_vehicle_speed = function()
-    local car = g.get_vehicle()
-    if not car or not car:IsA("Model") then return end
-    if not validate_cache(car) then
-        g.notify("Error", "Vehicle-Speed: cached vehicle is gone or changed.", 3)
-        return
-    end
-    wait(0.1)
-    local Tune_Script = car:FindFirstChild("A-Chassis Tune")
-    if not Tune_Script or not Tune_Script:IsA("ModuleScript") or not Tune_Script.Parent then return end
-    local ok, Tune = pcall(require, Tune_Script)
-    if not ok or type(Tune) ~= "table" then return end
-    local Stock = g._vehicle_tune_cache[car]
-    if not Stock then return end
-    if is_read_only_client() then
-        g.notify("Error", "Vehicle-Speed: client cannot write tune values.", 5)
-        return
-    end
-
-    pcall(function() Tune.Horsepower = Stock.Horsepower end)
-    pcall(function() Tune.FinalDrive = Stock.FinalDrive end)
-    pcall(function() Tune.Redline    = Stock.Redline    end)
-    pcall(function() Tune.PeakRPM    = Stock.PeakRPM    end)
-    if type(Tune.Ratios) == "table" and type(Stock.Ratios) == "table" then
-        for i = 1, #Stock.Ratios do
-            pcall(function() Tune.Ratios[i] = Stock.Ratios[i] end)
+    if not seat then
+        for _, v in ipairs(car:GetDescendants()) do
+            if v:IsA("VehicleSeat") then seat = v; break end
         end
     end
+    if not anchor then anchor = car:FindFirstChildWhichIsA("BasePart", true) end
+    if not anchor or not anchor:IsDescendantOf(game or workspace) then
+        g.notify("Error", "Vehicle Boost: could not resolve anchor.", 3)
+        return
+    end
 
-    g._vehicle_tune_cache[car] = nil
+    local existing = anchor:FindFirstChild("VehicleBoostBV")
+    if existing then existing:Destroy() end
+    local function get_game_mph_scale()
+        if not seat or not seat.Parent then return MPH_TO_STUDS end
+        local current_studs = seat.AssemblyLinearVelocity.Magnitude
+        local speedometer_val = seat:GetAttribute("Speed") or seat:GetAttribute("SpeedMPH") or seat:GetAttribute("DisplaySpeed")
+        if speedometer_val and speedometer_val > 0 and current_studs > 1 then return current_studs / speedometer_val end
+        return MPH_TO_STUDS
+    end
+
+    local bv = Instance.new("BodyVelocity")
+    bv.Name     = "VehicleBoostBV"
+    bv.MaxForce = Vector3.new(9e9, 0, 9e9)
+    bv.Velocity = Vector3.zero
+    bv.Parent   = anchor
+
+    g.vehicle_boost_running = true
+    g._vehicle_boost_bv     = bv
+    g._vehicle_boost_anchor = anchor
+    local calibrated_scale = MPH_TO_STUDS
+    local calibration_ticks = 0
+    FlamesLibrary.connect("vehicle_boost_heartbeat", RunService.Heartbeat:Connect(function(dt)
+        if not g.vehicle_boost_running then return end
+        if not bv or not bv.Parent or not anchor or not anchor.Parent then
+            g.stop_vehicle_boost()
+            return
+        end
+
+        if calibration_ticks < 60 then
+            local sampled = get_game_mph_scale()
+            if sampled ~= MPH_TO_STUDS then
+                calibrated_scale = sampled
+            end
+            calibration_ticks = calibration_ticks + 1
+        end
+
+        local pressing_forward = false
+        if IsMobile and control_module then
+            local ok, mv = pcall(function() return control_module:GetMoveVector() end)
+            if ok and mv and mv.Z < -0.1 then pressing_forward = true end
+        else
+            pressing_forward = UserInputService:IsKeyDown(Enum.KeyCode.W) or UserInputService:IsKeyDown(Enum.KeyCode.Up)
+        end
+
+        if pressing_forward then
+            local target_studs = (g.vehicle_boost_speed or 100) * calibrated_scale
+            local look = (seat or anchor).CFrame.LookVector
+            local flat_look = Vector3.new(look.X, 0, look.Z)
+            if flat_look.Magnitude > 0.01 then
+                flat_look = flat_look.Unit
+            else
+                flat_look = look
+            end
+            local current = bv.Velocity
+            local target  = flat_look * target_studs
+            bv.Velocity   = current:Lerp(target, math.min(1, dt * 18))
+        else
+            local current = bv.Velocity
+            bv.Velocity = current:Lerp(Vector3.zero, math.min(1, dt * 18))
+        end
+    end))
+
+    g.notify("Success", "Vehicle Boost: active.", 3)
+end
+
+g.stop_vehicle_boost = function()
+    g.vehicle_boost_running = false
+    FlamesLibrary.disconnect("vehicle_boost_heartbeat")
+    if g._vehicle_boost_bv and g._vehicle_boost_bv.Parent then pcall(function() g._vehicle_boost_bv:Destroy() end) end
+    g._vehicle_boost_bv     = nil
+    g._vehicle_boost_anchor = nil
+    g.notify("Success", "Vehicle Boost: disabled.", 3)
 end
 
 g.get_minimap_enabled = function()
@@ -5307,24 +5375,29 @@ Callback = function(selected)
     g.notify("Success", "Painting vehicle: " ..tostring(selected), 1)
 end}, "Vehicle_Paint_Dropdown_UI")
 
-local low_level = low_level_client()
-if low_level == false then
-    g.create_ui_element("Slider", Vehicles_Section, {
-    Name = "Vehicle Speed Multiplier",
-    Min = 1,
-    Max = 50,
-    Default = 1,
-    Flag = "Vehicle_Speed_Slider_UI",
-    Callback = function(val)
-        g.set_vehicle_speed(val)
-    end}, "Vehicle_Speed_Slider_UI")
+g.Vehicle_Boost_Speed_BV_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
+Name = "Vehicle Speed Boost (FE)",
+Default = g.vehicle_boost_running or false,
+Flag = "Vehicle_Boost_Toggle_UI",
+Callback = function(state)
+    if state then
+        g.start_vehicle_boost()
+    else
+        g.stop_vehicle_boost()
+    end
+end}, "Vehicle_Boost_Toggle_UI")
 
-    g.create_ui_element("Button", Vehicles_Section, {
-    Name = "Reset Vehicle Speed",
-    Callback = function()
-        g.reset_vehicle_speed()
-    end,})
-end
+g.Vehicle_Boost_Speed_Slider_UI = g.create_ui_element("Slider", Vehicles_Section, {
+Name = "Vehicle Boost Speed",
+Min = 10,
+Max = 300,
+Default = g.vehicle_boost_speed or 100,
+Flag = "Vehicle_Boost_Speed_Slider_UI",
+Callback = function(val)
+    g.vehicle_boost_speed = val
+end}, "Vehicle_Boost_Speed_Slider_UI")
+wait(0.1)
+if g.vehicle_boost_speed and g.Vehicle_Boost_Speed_Slider_UI then g.Vehicle_Boost_Speed_Slider_UI:Set(g.vehicle_boost_speed) end
 
 g.create_ui_element("Button", UI_Section, {
 Name = "Destroy GUI",
