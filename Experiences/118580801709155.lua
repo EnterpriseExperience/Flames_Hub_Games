@@ -70,7 +70,7 @@ if not In_Studio then
     end
 end
 wait(0.15)
-local Announcement_Message = "Fixed GroupBonusGui still appearing automatically after script start."
+local Announcement_Message = "Fixed Log Farming not working + added toggle for semi-only AND regular truck-only log farm."
 g.displayTimeMax = 45
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V2.2.5"
+local Raw_Version = "V2.2.7"
 g.Script_Version = tostring(Raw_Version).."-CL"
 g._vehicle_light_cache = g._vehicle_light_cache or {}
 g.fullbright_enabled = g.fullbright_enabled or false
@@ -3533,223 +3533,12 @@ end
 wait(0.1)
 if not g.Job_Board_Part_JobSites_Folder then pcall(function() Find_Job_Board_Part_JobSites_Folder() end) end
 
-local function open_job_board()
-    local part = g.Job_Board_Part_JobSites_Folder or Find_Job_Board_Part_JobSites_Folder()
-    if not part then
-        if g.notify then g.notify("Error", "Log Farm: job board part not found.", 3) end
-        return false
-    end
-    pcall(function() g.HumanoidRootPart.CFrame = CFrame.new(part.Position) + Vector3.new(0, 3, 0) end)
-    wait(0.5)
-    local prompt_ok = pcall(function()
-        local prompt = part:FindFirstChildOfClass("ProximityPrompt")
-        if fireproximityprompt and typeof(fireproximityprompt) == "function" then
-            fireproximityprompt(prompt)
-        end
-    end)
-    if not prompt_ok then
-        if g.notify then g.notify("Error", "Log Farm: could not fire job board prompt.", 3) end
-        return false
-    end
-    local deadline = os.clock() + 10
-    while get_level_label_text() == nil do
-        if os.clock() > deadline then
-            if g.notify then g.notify("Error", "Log Farm: job board label never appeared.", 4) end
-            return false
-        end
-        task.wait(0.3)
-    end
-    pcall(function()
-        local gui = g.PlayerGui:FindFirstChild("JobBoard")
-        if gui and gui:IsA("ScreenGui") then gui.Enabled = false end
-    end)
-    return true
-end
-
 local function is_semi_tier_locked()
     local text = get_level_label_text()
     if not text then return true end
     local tier = text:lower():match("tier%s*(%d+)")
     if not tier then return true end
     return tonumber(tier) < 2
-end
-
-g.ensure_vehicle_available_log_clock_in = function() -- not used right now.
-    local existing = g.get_lp_vehicle and g.get_lp_vehicle()
-    if existing and existing:IsDescendantOf(game or workspace) then return true end
-    local owned_rf = g.Get_Owned_Vehicles_RF_Found or (g.Get_Owned_Vehicles_RF and g.Get_Owned_Vehicles_RF())
-    if not owned_rf or not owned_rf:IsA("RemoteFunction") then
-        if g.notify then g.notify("Error", "Log Farm: could not reach owned vehicles remote.", 3) end
-        return false
-    end
-    local payload = owned_rf:InvokeServer()
-    if not payload or type(payload.copies) ~= "table" then
-        if g.notify then g.notify("Error", "Log Farm: owned vehicles payload invalid.", 3) end
-        return false
-    end
-    local function is_trailer(name) return is_trailer_by_catalog(name) end
-    local function is_semi(name)
-        for _, semi_name in ipairs(g.all_semi_trucks) do
-            if name:lower():find(semi_name:lower(), 1, true) then return true end
-        end
-        return false
-    end
-    local tier_locked = is_semi_tier_locked()
-    local semi_copy   = nil
-    local fallback    = nil
-    for _, c in ipairs(payload.copies) do
-        local n = tostring(c.name)
-        if not is_trailer(n) then
-            if is_semi(n) then
-                if not semi_copy then semi_copy = c end
-            else
-                if not fallback then fallback = c end
-            end
-        end
-    end
-    local copy = (not tier_locked and semi_copy) or fallback
-    if not copy then
-        if g.notify then g.notify("Error", "Log Farm: no suitable vehicle found in payload.", 3) end
-        return false
-    end
-    local spawn_rf = g.Spawn_Vehicle_Remote_Function_Found or (g.find_Spawn_Vehicle_Remote_Function and g.find_Spawn_Vehicle_Remote_Function())
-    if not spawn_rf or not spawn_rf:IsA("RemoteFunction") then
-        if g.notify then g.notify("Error", "Log Farm: spawn remote not found.", 3) end
-        return false
-    end
-    if g.notify then g.notify("Info", "Log Farm: spawning " .. copy.name .. "...", 3) end
-    pcall(function() spawn_rf:InvokeServer(copy.id) end)
-    local car_deadline = os.clock() + 10
-    repeat task.wait(0.3) until (g.get_lp_vehicle and g.get_lp_vehicle() and g.get_lp_vehicle():IsDescendantOf(game or workspace)) or os.clock() > car_deadline
-    local spawned = g.get_lp_vehicle and g.get_lp_vehicle()
-    if spawned and spawned:IsDescendantOf(game or workspace) then
-        if g.notify then g.notify("Success", "Log Farm: " .. copy.name .. " spawned.", 3) end
-        return true
-    end
-    if g.notify then g.notify("Error", "Log Farm: vehicle did not spawn in time.", 4) end
-    return false
-end
-
-local function ensure_vehicle_available_log_farm()
-    local owned_rf = g.Get_Owned_Vehicles_RF_Found or (g.Get_Owned_Vehicles_RF and g.Get_Owned_Vehicles_RF())
-    if not owned_rf or not owned_rf:IsA("RemoteFunction") then
-        if g.notify then g.notify("Error", "Log Farm: could not reach owned vehicles remote.", 3) end
-        return false
-    end
-
-    local payload = owned_rf:InvokeServer()
-    if not payload or type(payload.copies) ~= "table" then
-        if g.notify then g.notify("Error", "Log Farm: owned vehicles payload invalid.", 3) end
-        return false
-    end
-
-    local function is_trailer(name) return is_trailer_by_catalog(name) end
-    local function is_semi(name)
-        for _, semi_name in ipairs(g.all_semi_trucks) do if name:lower():find(semi_name:lower(), 1, true) then return true end end
-        return false
-    end
-
-    local semi_copy    = nil
-    local trailer_copy = nil
-    local fallback     = nil
-    for _, copy in ipairs(payload.copies) do
-        local n = tostring(copy.name)
-        if is_trailer(n) then
-            if not trailer_copy then trailer_copy = copy end
-        elseif is_semi(n) then
-            if not semi_copy then semi_copy = copy end
-        else
-            if not fallback then fallback = copy end
-        end
-    end
-
-    local spawn_rf = g.Spawn_Vehicle_Remote_Function_Found or (g.find_Spawn_Vehicle_Remote_Function and g.find_Spawn_Vehicle_Remote_Function())
-    if not spawn_rf or not spawn_rf:IsA("RemoteFunction") then
-        if g.notify then g.notify("Error", "Log Farm: spawn remote not found.", 3) end
-        return false
-    end
-
-    local existing_vehicle = g.get_lp_vehicle and g.get_lp_vehicle()
-    local existing_trailer = g.get_lp_trailer and g.get_lp_trailer()
-    local vehicle_ok = existing_vehicle ~= nil and existing_vehicle:IsDescendantOf(game or workspace)
-    local trailer_ok = existing_trailer ~= nil and existing_trailer:IsDescendantOf(game or workspace)
-    if not vehicle_ok then
-        local tier_locked = is_semi_tier_locked()
-        local copy_to_spawn = (not tier_locked and semi_copy) or fallback
-        if not copy_to_spawn then
-            for _, copy in ipairs(payload.copies) do
-                if not is_trailer(tostring(copy.name)) then
-                    copy_to_spawn = copy
-                    break
-                end
-            end
-        end
-        if not copy_to_spawn then
-            if g.notify then g.notify("Error", "Log Farm: no vehicle found in payload.", 4) end
-            return false
-        end
-        if g.notify then g.notify("Info", "Log Farm: spawning " .. copy_to_spawn.name .. "...", 3) end
-        pcall(function() spawn_rf:InvokeServer(copy_to_spawn.id) end)
-        local car_deadline = os.clock() + 10
-        while not (g.get_lp_vehicle and g.get_lp_vehicle() and g.get_lp_vehicle():IsDescendantOf(game or workspace)) do
-            if os.clock() > car_deadline then
-                if g.notify then g.notify("Error", "Log Farm: vehicle did not spawn in time.", 4) end
-                return false
-            end
-            task.wait(0.3)
-        end
-        if g.notify then g.notify("Success", "Log Farm: " .. copy_to_spawn.name .. " spawned.", 3) end
-        vehicle_ok = true
-    end
-    wait(0.1)
-    if not trailer_ok then
-        if not trailer_copy then
-            if g.notify then g.notify("Error", "Log Farm: no trailer found in owned vehicles.", 4) end
-            return false
-        end
-        if g.notify then g.notify("Info", "Log Farm: spawning trailer " .. trailer_copy.name .. "...", 3) end
-        pcall(function() spawn_rf:InvokeServer(trailer_copy.id) end)
-        local trailer_deadline = os.clock() + 10
-        while not (g.get_lp_trailer and g.get_lp_trailer() and g.get_lp_trailer():IsDescendantOf(game or workspace)) do
-            if os.clock() > trailer_deadline then
-                if g.notify then g.notify("Error", "Log Farm: trailer did not spawn in time.", 4) end
-                return false
-            end
-            task.wait(0.3)
-        end
-        if g.notify then g.notify("Success", "Log Farm: trailer spawned.", 3) end
-        trailer_ok = true
-    end
-    return true
-end
-
-local function try_clock_in_logs()
-    if is_clocked_in() then return true end
-    local human = g.Humanoid or (g.get_human and g.get_human(speaker))
-    if not human or not human.Parent or not human:IsDescendantOf(game) then
-        if g.notify then g.notify("Error", "Log Farm: humanoid not found.", 3) end
-        return false
-    end
-    if human.Sit then
-        pcall(function() human:ChangeState(3) end)
-        human.Sit = false
-        task.wait(0.2)
-    end
-    if g.notify then g.notify("Info", "Log Farm: clocking in to Log Hauling...", 3) end
-    pcall(function() g.HumanoidRootPart.CFrame = CFrame.new(770, 5, 709) end)
-    task.wait(0.5)
-    local Event = ReplicatedStorage:FindFirstChild("JobAction", true)
-    if not Event or not Event.Parent or not Event:IsA("RemoteFunction") then
-        if g.notify then g.notify("Error", "Log Farm: JobAction remote not found.", 3) end
-        return false
-    end
-    pcall(function() Event:InvokeServer("start", "LogHaul") end)
-    local deadline = os.clock() + 6
-    while os.clock() < deadline do
-        task.wait(0.5)
-        if is_clocked_in() then return true end
-    end
-    return is_clocked_in()
 end
 
 local function ensure_seated()
@@ -4053,7 +3842,6 @@ local function hay_farm_loop()
     while g.hay_farm_running == true do
         loop_count = loop_count + 1
         if g.notify then g.notify("Info", "Hay Farm: cycle " .. loop_count .. " starting.", 2) end
-
         if not is_clocked_in() then
             local clocked = try_clock_in()
             if not clocked then
@@ -4253,6 +4041,264 @@ g.toggle_hay_farm = function()
     if g.hay_farm_running then g.stop_hay_farm() else g.start_hay_farm() end
 end
 -- Log Farm Below --
+g.log_farm_trailer_touch_cache = g.log_farm_trailer_touch_cache or {}
+local function start_trailer_collision_watcher()
+    local trailer = g.get_lp_trailer and g.get_lp_trailer()
+    local car     = g.get_lp_vehicle and g.get_lp_vehicle()
+    lib.disconnect("log_farm_trailer_touch_watcher")
+    g.log_farm_trailer_touch_cache = {}
+    local function watch_part(part)
+        if not part:IsA("BasePart") then return end
+        lib.connect("log_farm_trailer_touch_" .. part:GetDebugId(), part.Touched:Connect(function(hit)
+            if not g.log_farm_running then return end
+            if not hit or not hit.Parent then return end
+            if trailer and hit:IsDescendantOf(trailer) then return end
+            if car and hit:IsDescendantOf(car) then return end
+            if g.log_farm_trailer_touch_cache[hit] then return end
+            g.log_farm_trailer_touch_cache[hit] = {
+                can_collide = hit.CanCollide,
+                can_touch   = hit.CanTouch,
+            }
+            pcall(function() hit.CanCollide = false end)
+            pcall(function() hit.CanTouch   = false end)
+        end))
+    end
+
+    if trailer and trailer:IsDescendantOf(game or workspace) then
+        for _, part in ipairs(trailer:GetDescendants()) do
+            watch_part(part)
+        end
+    end
+
+    if car and car:IsDescendantOf(game or workspace) then
+        for _, part in ipairs(car:GetDescendants()) do
+            watch_part(part)
+        end
+    end
+end
+
+local function stop_trailer_collision_watcher()
+    local trailer = g.get_lp_trailer and g.get_lp_trailer()
+    local car     = g.get_lp_vehicle and g.get_lp_vehicle()
+    if trailer then
+        for _, part in ipairs(trailer:GetDescendants()) do
+            if part:IsA("BasePart") then
+                lib.disconnect("log_farm_trailer_touch_" .. part:GetDebugId())
+            end
+        end
+    end
+    if car then
+        for _, part in ipairs(car:GetDescendants()) do
+            if part:IsA("BasePart") then
+                lib.disconnect("log_farm_trailer_touch_" .. part:GetDebugId())
+            end
+        end
+    end
+    lib.disconnect("log_farm_trailer_touch_watcher")
+    for hit, state in pairs(g.log_farm_trailer_touch_cache) do
+        if hit and hit.Parent then
+            pcall(function() hit.CanCollide = state.can_collide end)
+            pcall(function() hit.CanTouch   = state.can_touch   end)
+        end
+    end
+    g.log_farm_trailer_touch_cache = {}
+end
+
+g.ensure_vehicle_available_log_clock_in = function()
+    local existing = g.get_lp_vehicle and g.get_lp_vehicle()
+    if existing and existing:IsDescendantOf(game or workspace) then return true end
+    local owned_rf = g.Get_Owned_Vehicles_RF_Found or (g.Get_Owned_Vehicles_RF and g.Get_Owned_Vehicles_RF())
+    if not owned_rf or not owned_rf:IsA("RemoteFunction") then
+        if g.notify then g.notify("Error", "Log Farm: could not reach owned vehicles remote.", 3) end
+        return false
+    end
+    local payload = owned_rf:InvokeServer()
+    if not payload or type(payload.copies) ~= "table" then
+        if g.notify then g.notify("Error", "Log Farm: owned vehicles payload invalid.", 3) end
+        return false
+    end
+    local function is_trailer(name) return is_trailer_by_catalog(name) end
+    local function is_semi(name)
+        for _, semi_name in ipairs(g.all_semi_trucks) do
+            if name:lower():find(semi_name:lower(), 1, true) then return true end
+        end
+        return false
+    end
+    local tier_locked = is_semi_tier_locked()
+    local semi_copy   = nil
+    local fallback    = nil
+    for _, c in ipairs(payload.copies) do
+        local n = tostring(c.name)
+        if not is_trailer(n) then
+            if is_semi(n) then
+                if not semi_copy then semi_copy = c end
+            else
+                if not fallback then fallback = c end
+            end
+        end
+    end
+    local copy = (not tier_locked and semi_copy) or fallback
+    if not copy then
+        if g.notify then g.notify("Error", "Log Farm: no suitable vehicle found in payload.", 3) end
+        return false
+    end
+    local spawn_rf = g.Spawn_Vehicle_Remote_Function_Found or (g.find_Spawn_Vehicle_Remote_Function and g.find_Spawn_Vehicle_Remote_Function())
+    if not spawn_rf or not spawn_rf:IsA("RemoteFunction") then
+        if g.notify then g.notify("Error", "Log Farm: spawn remote not found.", 3) end
+        return false
+    end
+    if g.notify then g.notify("Info", "Log Farm: spawning " .. copy.name .. "...", 3) end
+    pcall(function() spawn_rf:InvokeServer(copy.id) end)
+    local car_deadline = os.clock() + 10
+    repeat task.wait(0.3) until (g.get_lp_vehicle and g.get_lp_vehicle() and g.get_lp_vehicle():IsDescendantOf(game or workspace)) or os.clock() > car_deadline
+    local spawned = g.get_lp_vehicle and g.get_lp_vehicle()
+    if spawned and spawned:IsDescendantOf(game or workspace) then
+        if g.notify then g.notify("Success", "Log Farm: " .. copy.name .. " spawned.", 3) end
+        return true
+    end
+    if g.notify then g.notify("Error", "Log Farm: vehicle did not spawn in time.", 4) end
+    return false
+end
+
+g.log_farm_use_semi = g.log_farm_use_semi or false
+local function ensure_vehicle_available_log_farm()
+    local owned_rf = g.Get_Owned_Vehicles_RF_Found or (g.Get_Owned_Vehicles_RF and g.Get_Owned_Vehicles_RF())
+    if not owned_rf or not owned_rf:IsA("RemoteFunction") then
+        if g.notify then g.notify("Error", "Log Farm: could not reach owned vehicles remote.", 3) end
+        return false
+    end
+
+    local payload = owned_rf:InvokeServer()
+    if not payload or type(payload.copies) ~= "table" then
+        if g.notify then g.notify("Error", "Log Farm: owned vehicles payload invalid.", 3) end
+        return false
+    end
+
+    local function is_valid_log_trailer(name)
+        local n = name:lower()
+        return n:find("lotra") ~= nil or n:find("gooseneck") ~= nil
+    end
+
+    local function is_semi(name)
+        for _, semi_name in ipairs(g.all_semi_trucks) do if tostring(name):lower():find(semi_name:lower(), 1, true) then return true end end
+        return false
+    end
+
+    local truck_copy   = nil
+    local trailer_copy = nil
+    for _, copy in ipairs(payload.copies) do
+        local n = tostring(copy.name)
+        if is_trailer_by_catalog(n) then
+            if is_valid_log_trailer(n) and not trailer_copy then trailer_copy = copy end
+        elseif g.log_farm_use_semi then
+            if is_semi(n) and not truck_copy then truck_copy = copy end
+        else
+            if not is_semi(n) and not truck_copy then truck_copy = copy end
+        end
+    end
+
+    if not truck_copy then
+        if g.log_farm_use_semi then
+            if g.notify then g.notify("Error", "Log Farm: no semi truck found in owned vehicles.", 4) end
+        else
+            if g.notify then g.notify("Error", "Log Farm: no regular truck found in owned vehicles.", 4) end
+        end
+        return false
+    end
+
+    if not trailer_copy then
+        if g.notify then g.notify("Error", "Log Farm: no Lotra or Gooseneck found in owned vehicles.", 4) end
+        return false
+    end
+
+    local spawn_rf = g.Spawn_Vehicle_Remote_Function_Found or (g.find_Spawn_Vehicle_Remote_Function and g.find_Spawn_Vehicle_Remote_Function())
+    if not spawn_rf or not spawn_rf:IsA("RemoteFunction") then
+        if g.notify then g.notify("Error", "Log Farm: spawn remote not found.", 3) end
+        return false
+    end
+
+    local existing_vehicle = g.get_lp_vehicle and g.get_lp_vehicle()
+    local existing_trailer = g.get_lp_trailer and g.get_lp_trailer()
+    local vehicle_ok = existing_vehicle ~= nil and existing_vehicle:IsDescendantOf(game or workspace)
+    local trailer_ok = existing_trailer ~= nil and existing_trailer:IsDescendantOf(game or workspace)
+
+    if not vehicle_ok or not trailer_ok then
+        pcall(function() g.HumanoidRootPart.CFrame = CFrame.new(733, 5, 648) end)
+        task.wait(0.5)
+    end
+
+    if not vehicle_ok then
+        if g.notify then g.notify("Info", "Log Farm: spawning " .. truck_copy.name .. "...", 3) end
+        pcall(function() spawn_rf:InvokeServer(truck_copy.id) end)
+        local car_deadline = os.clock() + 12
+        while os.clock() < car_deadline do
+            task.wait(0.3)
+            local v = g.get_lp_vehicle and g.get_lp_vehicle()
+            if v and v:IsDescendantOf(game or workspace) then
+                vehicle_ok = true
+                break
+            end
+        end
+        if not vehicle_ok then
+            if g.notify then g.notify("Error", "Log Farm: vehicle did not spawn in time.", 4) end
+            return false
+        end
+        if g.notify then g.notify("Success", "Log Farm: " .. truck_copy.name .. " spawned.", 3) end
+        task.wait(1.5)
+    end
+
+    if not trailer_ok then
+        if g.notify then g.notify("Info", "Log Farm: spawning trailer " .. trailer_copy.name .. "...", 3) end
+        pcall(function() spawn_rf:InvokeServer(trailer_copy.id) end)
+        local trailer_deadline = os.clock() + 12
+        while os.clock() < trailer_deadline do
+            task.wait(0.3)
+            local t = g.get_lp_trailer and g.get_lp_trailer()
+            if t and t:IsDescendantOf(game or workspace) then
+                trailer_ok = true
+                break
+            end
+        end
+        if not trailer_ok then
+            if g.notify then g.notify("Error", "Log Farm: trailer did not spawn in time.", 4) end
+            return false
+        end
+        if g.notify then g.notify("Success", "Log Farm: trailer spawned.", 3) end
+        task.wait(1)
+    end
+
+    return true
+end
+
+local function try_clock_in_logs()
+    if is_clocked_in() then return true end
+    local human = g.Humanoid or (g.get_human and g.get_human(speaker))
+    if not human or not human.Parent or not human:IsDescendantOf(game) then
+        if g.notify then g.notify("Error", "Log Farm: humanoid not found.", 3) end
+        return false
+    end
+    if human.Sit then
+        pcall(function() human:ChangeState(3) end)
+        human.Sit = false
+        task.wait(0.2)
+    end
+    if g.notify then g.notify("Info", "Log Farm: clocking in to Log Hauling...", 3) end
+    pcall(function() g.HumanoidRootPart.CFrame = CFrame.new(770, 5, 709) end)
+    task.wait(0.5)
+    local Event = ReplicatedStorage:FindFirstChild("JobAction", true)
+    if not Event or not Event.Parent or not Event:IsA("RemoteFunction") then
+        if g.notify then g.notify("Error", "Log Farm: JobAction remote not found.", 3) end
+        return false
+    end
+    pcall(function() Event:InvokeServer("start", "LogHaul") end)
+    local deadline = os.clock() + 6
+    while os.clock() < deadline do
+        task.wait(0.5)
+        if is_clocked_in() then return true end
+    end
+    return is_clocked_in()
+end
+
 local NEARBY_GHOST_RADIUS = 100
 local function ghost_nearby_models(anchor_pos, own_car, own_trailer)
     local store = {}
@@ -4356,13 +4402,14 @@ local function get_hud_phase_logs()
     local lower = text:lower()
     if lower:find("next load in")                          then return "cooldown"      end
     if lower:find("unloading")                             then return "deliver"       end
+    if lower:find("stop inside the zone to unload")        then return "deliver"       end
     if lower:find("deliver")                               then return "deliver"       end
+    if lower:find("stop inside the zone to load")          then return "loading"       end
     if lower:find("loading")                               then return "loading"       end
     if lower:find("picking up")                            then return "loading"       end
     if lower:find("drive to") and lower:find("load")       then return "drive_to_farm" end
     if lower:find("drive to") and lower:find("pickup")     then return "drive_to_farm" end
     if lower:find("drive to")                              then return "drive_to_farm" end
-    warn("[LOG FARM DEBUG]: unknown phase text: " .. text)
     return "unknown"
 end
 
@@ -4370,6 +4417,19 @@ local function get_log_farm_cf()
     local beacon = find_job_beacon()
     if beacon then return CFrame.new(beacon.Position) end
     return CFrame.new(g.log_farm_coords.farm_sandhills)
+end
+
+local function wait_for_phase_any_logs(phases, timeout)
+    local start = os.clock()
+    while (os.clock() - start) < timeout do
+        if not g.log_farm_running then return nil end
+        local phase = get_hud_phase_logs()
+        for _, p in ipairs(phases) do
+            if phase == p then return phase end
+        end
+        task.wait(PHASE_POLL_RATE)
+    end
+    return nil
 end
 
 g.get_active_log_drop_cf = function()
@@ -4533,15 +4593,33 @@ g.tween_vehicle_log_farm = function(target_cf)
 end
 
 local function log_farm_loop()
-    if g.notify then g.notify("Success", "Log Farm: loop started.", 3) end
+    g.notify("Success", "Log Farm: loop started.", 3)
     local loop_count = 0
     while g.log_farm_running == true do
         loop_count = loop_count + 1
-        if g.notify then g.notify("Info", "Log Farm: cycle " .. loop_count .. " starting.", 2) end
+        g.notify("Info", "Log Farm: cycle " .. loop_count .. " starting.", 2)
+
+        local vehicle_wait_start = os.clock()
+        while g.log_farm_running do
+            local v = g.get_lp_vehicle and g.get_lp_vehicle()
+            local t = g.get_lp_trailer and g.get_lp_trailer()
+            if v and v:IsDescendantOf(game or workspace) and t and t:IsDescendantOf(game or workspace) then
+                start_trailer_collision_watcher()
+                break
+            end
+            if (os.clock() - vehicle_wait_start) >= 60 then
+                g.notify("Error", "Log Farm: vehicle or trailer did not appear within 60s, stopping.", 5)
+                g.stop_log_farm()
+                break
+            end
+            task.wait(0.3)
+        end
+        if not g.log_farm_running then break end
+
         if not is_clocked_in() then
             local clocked = try_clock_in_logs()
             if not clocked then
-                if g.notify then g.notify("Error", "Log Farm: clock-in failed, stopping.", 5) end
+                g.notify("Error", "Log Farm: clock-in failed, stopping.", 5)
                 g.stop_log_farm()
                 break
             end
@@ -4551,14 +4629,14 @@ local function log_farm_loop()
 
         local phase = get_hud_phase_logs()
         if phase == "wrong_job" then
-            if g.notify then g.notify("Warning", "Log Farm: wrong job active on HUD, waiting for log job...", 3) end
+            g.notify("Warning", "Log Farm: wrong job active on HUD, waiting for log job...", 3)
             task.wait(2)
             continue
         end
 
         local car = g.get_lp_vehicle and g.get_lp_vehicle()
         if not car or not car:IsDescendantOf(game or workspace) then
-            if g.notify then g.notify("Error", "Log Farm: vehicle not found, stopping.", 4) end
+            g.notify("Error", "Log Farm: vehicle not found, stopping.", 4)
             g.stop_log_farm()
             break
         end
@@ -4566,21 +4644,21 @@ local function log_farm_loop()
         bind_vehicle_destroy_watch(car)
         local human = g.Humanoid or (g.get_human and g.get_human(speaker))
         if not human or not human.Parent or not human:IsDescendantOf(game) then
-            if g.notify then g.notify("Error", "Log Farm: humanoid not found, waiting...", 3) end
+            g.notify("Error", "Log Farm: humanoid not found, waiting...", 3)
             task.wait(2)
             continue
         end
 
         if phase == "cooldown" then
-            if g.notify then g.notify("Info", "Log Farm: cooldown, waiting for next load...", 2) end
-            wait_for_phase_any({"drive_to_farm", "loading"}, 60)
+            g.notify("Info", "Log Farm: cooldown, waiting for next load...", 2)
+            wait_for_phase_any_logs({"drive_to_farm", "loading"}, 60)
             continue
         end
 
         if not human.Sit or not human.SeatPart then
             local seated = ensure_seated()
             if not seated then
-                if g.notify then g.notify("Warning", "Log Farm: could not seat in vehicle, retrying...", 3) end
+                g.notify("Warning", "Log Farm: could not seat in vehicle, retrying...", 3)
                 task.wait(2)
                 continue
             end
@@ -4589,17 +4667,17 @@ local function log_farm_loop()
 
         if phase == "drive_to_farm" or phase == "unknown" then
             g.log_farm_state = "going_to_farm"
-            if g.notify then g.notify("Info", "Log Farm: heading to log farm location.", 2) end
+            g.notify("Info", "Log Farm: heading to log farm location.", 2)
             if not wait_until_seated(5) then task.wait(1); continue end
             local ok = g.tween_vehicle_log_farm(get_log_farm_cf())
             if not ok then
-                if g.notify then g.notify("Error", "Log Farm: tween failed at log farm, retrying.", 3) end
+                g.notify("Error", "Log Farm: tween failed at log farm, retrying.", 3)
                 task.wait(2)
                 continue
             end
-            local arrived_phase = wait_for_phase_any({"loading", "deliver", "cooldown"}, LOAD_TIMEOUT)
+            local arrived_phase = wait_for_phase_any_logs({"loading", "deliver", "cooldown"}, LOAD_TIMEOUT)
             if not arrived_phase then
-                if g.notify then g.notify("Warning", "Log Farm: phase timeout at log farm, re-centering.", 3) end
+                g.notify("Warning", "Log Farm: phase timeout at log farm, re-centering.", 3)
                 task.wait(1)
                 continue
             end
@@ -4607,17 +4685,17 @@ local function log_farm_loop()
         end
 
         if phase == "cooldown" then
-            if g.notify then g.notify("Info", "Log Farm: cooldown after arrival, waiting...", 2) end
-            local cooldown_done = wait_for_phase_any({"drive_to_farm", "loading"}, 60)
+            g.notify("Info", "Log Farm: cooldown after arrival, waiting...", 2)
+            local cooldown_done = wait_for_phase_any_logs({"drive_to_farm", "loading"}, 60)
             if not cooldown_done then
-                if g.notify then g.notify("Warning", "Log Farm: cooldown wait exceeded, re-checking.", 3) end
+                g.notify("Warning", "Log Farm: cooldown wait exceeded, re-checking.", 3)
             end
             continue
         end
 
         if phase == "loading" then
             g.log_farm_state = "loading"
-            if g.notify then g.notify("Info", "Log Farm: loading bale...", 2) end
+            g.notify("Info", "Log Farm: loading bale...", 2)
             local loaded     = false
             local load_start = os.clock()
             while not loaded and g.log_farm_running do
@@ -4625,7 +4703,7 @@ local function log_farm_loop()
                 if current_phase == "deliver"  then loaded = true; break end
                 if current_phase == "cooldown" then break end
                 if (os.clock() - load_start) >= LOAD_TIMEOUT then
-                    if g.notify then g.notify("Warning", "Log Farm: load timeout, repositioning.", 3) end
+                    g.notify("Warning", "Log Farm: load timeout, repositioning.", 3)
                     if not wait_until_seated(5) then task.wait(1); break end
                     g.tween_vehicle_log_farm(get_log_farm_cf())
                     load_start = os.clock()
@@ -4638,22 +4716,22 @@ local function log_farm_loop()
 
         if phase == "deliver" then
             g.log_farm_state = "delivering"
-            if g.notify then g.notify("Info", "Log Farm: delivering bale.", 1) end
+            g.notify("Info", "Log Farm: delivering bale.", 1)
             if not wait_until_seated(5) then task.wait(1); continue end
-            local drop_cf = g.get_active_drop_cf()
+            local drop_cf = g.get_active_log_drop_cf()
             local ok = g.tween_vehicle_log_farm(drop_cf)
             if not ok then
-                if g.notify then g.notify("Error", "Log Farm: delivery tween failed.", 3) end
+                g.notify("Error", "Log Farm: delivery tween failed.", 3)
                 task.wait(3)
                 continue
             end
             g.log_farm_state = "unloading"
-            if g.notify then g.notify("Info", "Log Farm: waiting for unload...", 1) end
-            local next_phase = wait_for_phase_any({"drive_to_farm", "loading", "cooldown"}, DELIVER_TIMEOUT)
+            g.notify("Info", "Log Farm: waiting for unload...", 1)
+            local next_phase = wait_for_phase_any_logs({"drive_to_farm", "loading", "cooldown"}, DELIVER_TIMEOUT)
             if not next_phase then
-                if g.notify then g.notify("Warning", "Log Farm: delivery timeout, nudging.", 3) end
+                g.notify("Warning", "Log Farm: delivery timeout, nudging.", 3)
                 if not wait_until_seated(5) then task.wait(1); continue end
-                g.tween_vehicle_log_farm(g.get_active_drop_cf())
+                g.tween_vehicle_log_farm(g.get_active_log_drop_cf())
                 task.wait(3)
                 continue
             end
@@ -4664,52 +4742,36 @@ local function log_farm_loop()
 
     lib.disconnect("log_farm_vehicle_destroy_watch")
     g.log_farm_state = "idle"
-    if g.notify then g.notify("Success", "Log Farm: loop stopped.", 3) end
+    g.notify("Success", "Log Farm: loop stopped.", 3)
 end
 
 g.start_log_farm = function()
     if g.log_farm_running then
-        if g.notify then g.notify("Warning", "Log Farm: already running.", 3) end
-        return
-    end
-    if not ensure_vehicle_available() then
-        if g.notify then g.notify("Error", "Log Farm: could not ensure a vehicle, aborting.", 5) end
-        return
-    end
-    task.wait(0.1)
-    if not is_clocked_in() then
-        local clocked = try_clock_in_logs()
-        if not clocked then
-            if g.notify then g.notify("Error", "Log Farm: could not clock in, aborting.", 5) end
-            return
-        end
-        task.wait(1)
-    end
-    if not get_job_hud() then
-        if g.notify then g.notify("Error", "Log Farm: JobHUD not found. Make sure Log Hauling is active.", 5) end
+        g.notify("Warning", "Log Farm: already running.", 3)
         return
     end
     g.log_farm_running = true
     g.log_farm_grace = true
     task.delay(3, function() g.log_farm_grace = false end)
-    lib.connect("log_farm_hud_title_watch", RunService.Heartbeat:Connect(function()
+    start_trailer_collision_watcher()
+    FlamesLibrary.connect("log_farm_hud_title_watch", RunService.Heartbeat:Connect(function()
         if not g.log_farm_running then return end
         if g.log_farm_grace then return end
         if not is_log_job_active() then
-            if g.notify then g.notify("Warning", "Log Farm: job changed or clocked out, stopping farm.", 3) end
+            g.notify("Warning", "Log Farm: job changed or clocked out, stopping farm.", 3)
             g.stop_log_farm()
             if g.Auto_Farm_Log_Farm_Toggle_UI then g.Auto_Farm_Log_Farm_Toggle_UI:Set(false, false) end
         end
     end))
-    lib.connect("log_farm_clockout_watch", speaker:GetAttributeChangedSignal("ActiveJob"):Connect(function()
+    FlamesLibrary.connect("log_farm_clockout_watch", speaker:GetAttributeChangedSignal("ActiveJob"):Connect(function()
         if g.log_farm_grace then return end
         if speaker:GetAttribute("ActiveJob") == nil and g.log_farm_running then
-            if g.notify then g.notify("Warning", "Log Farm: attribute clocked out, stopping farm.", 3) end
+            g.notify("Warning", "Log Farm: attribute clocked out, stopping farm.", 3)
             g.stop_log_farm()
             if g.Auto_Farm_Log_Farm_Toggle_UI then g.Auto_Farm_Log_Farm_Toggle_UI:Set(false, false) end
         end
     end))
-    lib.spawn("log_farm_loop_spawned", "spawn", function() log_farm_loop() end)
+    FlamesLibrary.spawn("log_farm_loop_spawned", "spawn", function() log_farm_loop() end)
 end
 
 g.stop_log_farm = function()
@@ -4729,8 +4791,11 @@ g.stop_log_farm = function()
     local Event = ReplicatedStorage:FindFirstChild("JobAction", true)
     if Event and Event.Parent and Event:IsA("RemoteFunction") then pcall(function() Event:InvokeServer("stop", "LogHaul") end) end
     g.log_farm_state = "idle"
+    stop_trailer_collision_watcher()
     g.despawn_current_vehicle()
     g.Clock_Off()
+    if g.Auto_Farm_Log_Farm_Toggle_UI then g.Auto_Farm_Log_Farm_Toggle_UI:Set(false, false) end
+    if g.Log_Farm_Semi_Toggle_UI then g.Log_Farm_Semi_Toggle_UI:Set(false, false) end
     if g.notify then g.notify("Success", "Log Farm: stopped.", 3) end
 end
 
@@ -4895,23 +4960,22 @@ Callback = function(state)
 end}, "Hay_Farm_Toggle_UI")
 
 g.Auto_Farm_Log_Farm_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
-Name = "Log Hauling Auto Farm (Not Working)",
+Name = "Log Hauling Auto Farm (Regular Trucks)",
 Default = g.log_farm_running or false,
 Flag = "Log_Farm_Toggle_UI",
 Callback = function(state)
     if state then
-        local human = g.Humanoid or (g.get_human and g.get_human(speaker))
-        if human and human.Sit then
-            pcall(function() human:ChangeState(3) end)
-            human.Sit = false
-            wait(0.3)
-        end
-        pcall(function() g.HumanoidRootPart.CFrame = CFrame.new(770, 5, 709) end)
-        wait(0.5)
-        if not open_job_board() then
+        if g.log_farm_running then
+            g.notify("Warning", "Log Farm: already running, stop it first.", 3)
             if g.Auto_Farm_Log_Farm_Toggle_UI then g.Auto_Farm_Log_Farm_Toggle_UI:Set(false, false) end
             return
         end
+        if g.log_farm_use_semi and g.Log_Farm_Semi_Toggle_UI then
+            g.notify("Warning", "Log Farm: semi mode is active, stop it first.", 3)
+            if g.Auto_Farm_Log_Farm_Toggle_UI then g.Auto_Farm_Log_Farm_Toggle_UI:Set(false, false) end
+            return
+        end
+        g.log_farm_use_semi = false
         if not ensure_vehicle_available_log_farm() then
             g.notify("Error", "Log Farm: could not ensure vehicle and trailer, aborting.", 5)
             if g.Auto_Farm_Log_Farm_Toggle_UI then g.Auto_Farm_Log_Farm_Toggle_UI:Set(false, false) end
@@ -4933,11 +4997,57 @@ Callback = function(state)
                 return
             end
         end
+        task.wait(0.5)
         g.start_log_farm()
     else
         g.stop_log_farm()
     end
 end}, "Log_Farm_Toggle_UI")
+
+g.Log_Farm_Semi_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
+Name = "Log Hauling Auto Farm (Semi Trucks)",
+Default = false,
+Flag = "Log_Farm_Semi_Toggle_UI",
+Callback = function(state)
+    if state then
+        if g.log_farm_running then
+            g.notify("Warning", "Log Farm: already running, stop it first.", 3)
+            if g.Log_Farm_Semi_Toggle_UI then g.Log_Farm_Semi_Toggle_UI:Set(false, false) end
+            return
+        end
+        if not g.log_farm_use_semi and g.Auto_Farm_Log_Farm_Toggle_UI then
+            g.notify("Warning", "Log Farm: regular mode is active, stop it first.", 3)
+            if g.Log_Farm_Semi_Toggle_UI then g.Log_Farm_Semi_Toggle_UI:Set(false, false) end
+            return
+        end
+        g.log_farm_use_semi = true
+        if not ensure_vehicle_available_log_farm() then
+            g.notify("Error", "Log Farm: could not ensure semi and trailer, aborting.", 5)
+            if g.Log_Farm_Semi_Toggle_UI then g.Log_Farm_Semi_Toggle_UI:Set(false, false) end
+            return
+        end
+        if not is_clocked_in() then
+            g.notify("Warning", "Log Farm: clocking in...", 3)
+            local clocked = try_clock_in_logs()
+            if not clocked then
+                g.notify("Error", "Log Farm: could not clock in, aborting.", 5)
+                if g.Log_Farm_Semi_Toggle_UI then g.Log_Farm_Semi_Toggle_UI:Set(false, false) end
+                return
+            end
+            local clock_deadline = os.clock() + 30
+            repeat task.wait(0.3) until is_clocked_in() or os.clock() > clock_deadline
+            if not is_clocked_in() then
+                g.notify("Error", "Log Farm: clock in timed out, aborting.", 5)
+                if g.Log_Farm_Semi_Toggle_UI then g.Log_Farm_Semi_Toggle_UI:Set(false, false) end
+                return
+            end
+        end
+        task.wait(0.5)
+        g.start_log_farm()
+    else
+        g.stop_log_farm()
+    end
+end}, "Log_Farm_Semi_Toggle_UI")
 
 g.create_ui_element("Slider", Vehicles_Section, {
 Name = "Auto Farm Tween Height (Recommended: 500)",
