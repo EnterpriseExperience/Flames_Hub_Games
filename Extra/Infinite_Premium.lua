@@ -356,7 +356,7 @@ if makefolder and isfolder and writefile and isfile then
 	end)
 end
 
-currentVersion = "7.7.8"
+currentVersion = "7.8.0"
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
 Holder = Instance.new("Frame")
@@ -5521,13 +5521,13 @@ CMDs[#CMDs + 1] = {NAME = 'visible / vis', DESC = 'Makes you visible to other pl
 CMDs[#CMDs + 1] = {NAME = 'toolinvisible / toolinvis / tinvis', DESC = 'Makes you invisible to other players and able to use tools'}
 CMDs[#CMDs + 1] = {NAME = 'speed / ws / walkspeed [num]', DESC = 'Change your walkspeed (default is 16)'}
 CMDs[#CMDs + 1] = {NAME = 'spoofspeed / spoofws [num]', DESC = 'Spoofs your WalkSpeed on the Client'}
-CMDs[#CMDs + 1] = {NAME = 'loopspeed / loopws [num]', DESC = 'Loops your walkspeed'}
-CMDs[#CMDs + 1] = {NAME = 'unloopspeed / unloopws', DESC = 'Turns off loopspeed'}
+CMDs[#CMDs + 1] = {NAME = 'loopspeed / loopws / lws [num]', DESC = 'Loops your walkspeed'}
+CMDs[#CMDs + 1] = {NAME = 'unloopspeed / unloopws / unlws', DESC = 'Turns off loopspeed'}
 CMDs[#CMDs + 1] = {NAME = 'hipheight / hheight [num]', DESC = 'Adjusts hip height'}
 CMDs[#CMDs + 1] = {NAME = 'jumppower / jpower / jp [num]', DESC = 'Change a players jump height (default is 50)'}
 CMDs[#CMDs + 1] = {NAME = 'spoofjumppower / spoofjp [num]', DESC = 'Spoofs your JumpPower on the Client'}
-CMDs[#CMDs + 1] = {NAME = 'loopjumppower / loopjp [num]', DESC = 'Loops your jump height'}
-CMDs[#CMDs + 1] = {NAME = 'unloopjumppower / unloopjp', DESC = 'Turns off loopjumppower'}
+CMDs[#CMDs + 1] = {NAME = 'loopjumppower / loopjp / ljp [num]', DESC = 'Loops your jump height'}
+CMDs[#CMDs + 1] = {NAME = 'unloopjumppower / unloopjp / unljp', DESC = 'Turns off loopjumppower'}
 CMDs[#CMDs + 1] = {NAME = 'maxslopeangle / msa [num]', DESC = 'Adjusts MaxSlopeAngle'}
 CMDs[#CMDs + 1] = {NAME = 'gravity / grav [num] (CLIENT)', DESC = 'Change your gravity'}
 CMDs[#CMDs + 1] = {NAME = 'sit', DESC = 'Makes your character sit'}
@@ -11071,16 +11071,22 @@ addcmd('copyposition',{'copypos'},function(args, speaker)
 	end
 end)
 
-addcmd('walktopos',{'walktoposition'},function(args, speaker)
-	local Char = speaker.Character or get_char(LocalPlayer)
-	if not Char or not Char:IsDescendantOf(game or workspace) then return end
-	local Human = Char and Char:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer)
-	if not Human or not Human.Parent or not Human:IsDescendantOf(game) then return end
-	if Human and Human.Parent and Human:IsDescendantOf(game) and Human.SeatPart then
-		Human.Sit = false
-		wait(.1)
-	end
-	if Human and Human.Parent then Human.WalkToPoint = Vector3.new(args[1],args[2],args[3]) end
+addcmd('walktopos', {'walktoposition'}, function(args, speaker)
+    local char = speaker.Character or get_char(LocalPlayer)
+    if not char or not char:IsDescendantOf(workspace) then return end
+    local human = char:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer)
+    if not human or not human.Parent or not human:IsDescendantOf(game) then return end
+    if human.SeatPart ~= nil or human.Sit == true then
+        human.Sit = false
+        wait(0.1)
+    end
+    if human and human.Parent and human:IsDescendantOf(game) then
+        human.WalkToPoint = Vector3.new(
+            tonumber(args[1]) or 0,
+            tonumber(args[2]) or 0,
+            tonumber(args[3]) or 0
+        )
+    end
 end)
 
 addcmd('speed',{'ws','walkspeed'},function(args, speaker)
@@ -11103,15 +11109,11 @@ addcmd('spoofspeed',{'spoofws','spoofwalkspeed'},function(args, speaker)
 			local char = speaker.Character or get_char(LocalPlayer)
 			local setspeed;
 			local index; index = hookmetamethod(game, "__index", function(self, key)
-				if not checkcaller() and typeof(self) == "Instance" and self:IsA("Humanoid") and (key == "WalkSpeed" or key == "walkSpeed") and self:IsDescendantOf(char) then
-					return setspeed or args[1]
-				end
+				if not checkcaller() and typeof(self) == "Instance" and self:IsA("Humanoid") and (key == "WalkSpeed" or key == "walkSpeed") and self:IsDescendantOf(char) then return setspeed or args[1] end
 				return index(self, key)
 			end)
 			local newindex; newindex = hookmetamethod(game, "__newindex", function(self, key, value)
-				if not checkcaller() and typeof(self) == "Instance" and self:IsA("Humanoid") and (key == "WalkSpeed" or key == "walkSpeed") and self:IsDescendantOf(char) then
-					setspeed = tonumber(value)
-				end
+				if not checkcaller() and typeof(self) == "Instance" and self:IsA("Humanoid") and (key == "WalkSpeed" or key == "walkSpeed") and self:IsDescendantOf(char) then setspeed = tonumber(value) end
 				return newindex(self, key, value)
 			end)
 		else
@@ -11120,32 +11122,26 @@ addcmd('spoofspeed',{'spoofws','spoofwalkspeed'},function(args, speaker)
 	end
 end)
 
-addcmd('loopspeed',{'loopws'},function(args, speaker)
-	local speed = args[1] or 16
-	if args[2] then speed = args[2] or 16 end
-	if isNumber(speed) then
-		local Char = speaker.Character or get_char(LocalPlayer)
-		if not Char or not Char:IsDescendantOf(game or workspace) then return end
-		local Human = Char and Char:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer)
-		if not Human or not Human.Parent or not Human:IsDescendantOf(game) then return end
-		local function WalkSpeedChange()
-			if Char and Human then
-				Human.WalkSpeed = speed
-			end
-		end
-		WalkSpeedChange()
-		HumanModCons.wsLoop = (HumanModCons.wsLoop and HumanModCons.wsLoop:Disconnect() and false) or Human:GetPropertyChangedSignal("WalkSpeed"):Connect(WalkSpeedChange)
-		HumanModCons.wsCA = (HumanModCons.wsCA and HumanModCons.wsCA:Disconnect() and false) or speaker.CharacterAdded:Connect(function(nChar)
-			Char, Human = nChar, nChar:WaitForChild("Humanoid")
-			WalkSpeedChange()
-			HumanModCons.wsLoop = (HumanModCons.wsLoop and HumanModCons.wsLoop:Disconnect() and false) or Human:GetPropertyChangedSignal("WalkSpeed"):Connect(WalkSpeedChange)
-		end)
-	end
+addcmd('loopspeed', {'loopws', 'lws'}, function(args, speaker)
+    local speed = tonumber(args[1]) or 16
+    local char = speaker.Character or get_char(LocalPlayer)
+    if not char or not char:IsDescendantOf(workspace) then return end
+    local human = char:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer)
+    if not human or not human:IsDescendantOf(game) then return end
+    local function set_speed() if char and char:IsDescendantOf(workspace) and human and human.Parent then human.WalkSpeed = speed end end
+    set_speed()
+    HumanModCons.wsLoop = (HumanModCons.wsLoop and HumanModCons.wsLoop:Disconnect() and false) or human:GetPropertyChangedSignal("WalkSpeed"):Connect(set_speed)
+    HumanModCons.wsCA = (HumanModCons.wsCA and HumanModCons.wsCA:Disconnect() and false) or speaker.CharacterAdded:Connect(function(new_char)
+        char = new_char
+        human = new_char:WaitForChild("Humanoid")
+        set_speed()
+        HumanModCons.wsLoop = (HumanModCons.wsLoop and HumanModCons.wsLoop:Disconnect() and false) or human:GetPropertyChangedSignal("WalkSpeed"):Connect(set_speed)
+    end)
 end)
 
-addcmd('unloopspeed',{'unloopws'},function(args, speaker)
-	HumanModCons.wsLoop = (HumanModCons.wsLoop and HumanModCons.wsLoop:Disconnect() and false) or nil
-	HumanModCons.wsCA = (HumanModCons.wsCA and HumanModCons.wsCA:Disconnect() and false) or nil
+addcmd('unloopspeed', {'unloopws', 'unlws'}, function(args, speaker)
+    HumanModCons.wsLoop = (HumanModCons.wsLoop and HumanModCons.wsLoop:Disconnect() and false) or nil
+    HumanModCons.wsCA = (HumanModCons.wsCA and HumanModCons.wsCA:Disconnect() and false) or nil
 end)
 
 addcmd('spoofjumppower',{'spoofjp'},function(args, speaker)
@@ -11167,46 +11163,45 @@ addcmd('spoofjumppower',{'spoofjp'},function(args, speaker)
 	end
 end)
 
-addcmd('loopjumppower',{'loopjp','loopjpower'},function(args, speaker)
-	local jpower = args[1] or 50
-	if isNumber(jpower) then
-		local Char = speaker.Character or get_char(LocalPlayer)
-		if not Char or not Char:IsDescendantOf(game or workspace) then return end
-		local Human = Char and Char:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer)
-		if not Human or not Human.Parent or not Human:IsDescendantOf(game) then return end
-		local function JumpPowerChange()
-			if Char and Human then
-				if Human.UseJumpPower then
-					Human.JumpPower = jpower
-				else
-					Human.JumpHeight  = jpower
-				end
-			end
-		end
-		JumpPowerChange()
-		HumanModCons.jpLoop = (HumanModCons.jpLoop and HumanModCons.jpLoop:Disconnect() and false) or Human:GetPropertyChangedSignal("JumpPower"):Connect(JumpPowerChange)
-		HumanModCons.jpCA = (HumanModCons.jpCA and HumanModCons.jpCA:Disconnect() and false) or speaker.CharacterAdded:Connect(function(nChar)
-			Char, Human = nChar, nChar:WaitForChild("Humanoid")
-			JumpPowerChange()
-			HumanModCons.jpLoop = (HumanModCons.jpLoop and HumanModCons.jpLoop:Disconnect() and false) or Human:GetPropertyChangedSignal("JumpPower"):Connect(JumpPowerChange)
-		end)
-	end
+addcmd('loopjumppower', {'loopjp', 'loopjpower'}, function(args, speaker)
+    local jpower = tonumber(args[1]) or 50
+    local char = speaker.Character or get_char(LocalPlayer)
+    if not char or not char:IsDescendantOf(workspace) then return end
+    local human = char:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer)
+    if not human or not human:IsDescendantOf(game) then return end
+    local function set_jump()
+        if char and human and human.Parent then
+            if StarterPlayer.CharacterUseJumpPower then
+                human.JumpPower = jpower
+            else
+                human.JumpHeight = jpower
+            end
+        end
+    end
+
+    local signal = StarterPlayer.CharacterUseJumpPower and "JumpPower" or "JumpHeight"
+    set_jump()
+    HumanModCons.jpLoop = (HumanModCons.jpLoop and HumanModCons.jpLoop:Disconnect() and false) or human:GetPropertyChangedSignal(signal):Connect(set_jump)
+    HumanModCons.jpCA = (HumanModCons.jpCA and HumanModCons.jpCA:Disconnect() and false) or speaker.CharacterAdded:Connect(function(new_char)
+        char = new_char
+        human = new_char:WaitForChild("Humanoid")
+        set_jump()
+        HumanModCons.jpLoop = (HumanModCons.jpLoop and HumanModCons.jpLoop:Disconnect() and false) or human:GetPropertyChangedSignal(signal):Connect(set_jump)
+    end)
 end)
 
-addcmd('unloopjumppower',{'unloopjp','unloopjpower'},function(args, speaker)
-	local Char = speaker.Character or get_char(LocalPlayer)
-	if not Char or not Char:IsDescendantOf(game or workspace) then return end
-	local Human = Char and Char:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer)
-	if not Human or not Human.Parent or not Human:IsDescendantOf(game) then return end
-	HumanModCons.jpLoop = (HumanModCons.jpLoop and HumanModCons.jpLoop:Disconnect() and false) or nil
-	HumanModCons.jpCA = (HumanModCons.jpCA and HumanModCons.jpCA:Disconnect() and false) or nil
-	if Char and Human and Human.Parent and Human:IsDescendantOf(game) then
-		if Human.UseJumpPower then
-			Human.JumpPower = 50
-		else
-			Human.JumpHeight  = 50
-		end
-	end
+addcmd('unloopjumppower', {'unloopjp', 'unloopjpower'}, function(args, speaker)
+    HumanModCons.jpLoop = (HumanModCons.jpLoop and HumanModCons.jpLoop:Disconnect() and false) or nil
+    HumanModCons.jpCA = (HumanModCons.jpCA and HumanModCons.jpCA:Disconnect() and false) or nil
+    local char = speaker.Character or get_char(LocalPlayer)
+    if not char or not char:IsDescendantOf(workspace) then return end
+    local human = char:FindFirstChildWhichIsA("Humanoid") or get_human(LocalPlayer)
+    if not human or not human:IsDescendantOf(game) then return end
+    if StarterPlayer.CharacterUseJumpPower then
+        human.JumpPower = StarterPlayer.CharacterJumpPower or 50
+    else
+        human.JumpHeight = StarterPlayer.CharacterJumpHeight or 7.2
+    end
 end)
 
 addcmd('tools',{'gears'},function(args, speaker)
@@ -14030,10 +14025,8 @@ task.spawn(function()
 			ExitImage.Size = UDim2.new(0, 10, 0, 10)
 			ExitImage.Image = getcustomasset("infiniteyield/assets/close.png")
 			ExitImage.ZIndex = 10
-
 			wait(1)
 			AnnGUI:TweenPosition(UDim2.new(0.5, -180, 0, 150), "InOut", "Quart", 0.5, true, nil)
-
 			Exit.MouseButton1Click:Connect(function()
 				AnnGUI:TweenPosition(UDim2.new(0.5, -180, 0, -500), "InOut", "Quart", 0.5, true, nil)
 				wait(0.6)
