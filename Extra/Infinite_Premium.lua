@@ -13944,7 +13944,7 @@ end)
 
 task.spawn(function()
 	local success, latestVersionInfo = pcall(function() 
-		local versionJson = game:HttpGet("https://pastefy.app/dpZuRCQq/raw")
+		local versionJson = game:HttpGet("https://gitlab.com/flames2431233/Starter/-/raw/main/Extra/InfPremium_Version.json?ref_type=heads")
 		return HttpService:JSONDecode(versionJson)
 	end)
 
