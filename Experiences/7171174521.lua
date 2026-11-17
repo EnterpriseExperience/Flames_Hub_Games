@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.2.1"
+local Raw_Version = "V1.2.2"
 g.Script_Version = tostring(Raw_Version).."-APM"
 g.fullbright_enabled = g.fullbright_enabled or false
 g.FLY_SPEED = g.FLY_SPEED or 75
@@ -1140,15 +1140,20 @@ g.start_vehicle_fly = function()
         if not g.vehicle_fly then
             pcall(function() bv.Velocity = Vector3.zero end)
             g.vehiclefly_control = {f=0,b=0,l=0,r=0,q=0,e=0}
+            if g.Vehicle_Fly_Toggle_UI then pcall(function() g.Vehicle_Fly_Toggle_UI:Set(false, false) end) end
             return
         end
-        if not anchor.Parent or not g.get_lp_vehicle() or not g.Get_Current_Sitting_In_Vehicle() then
+        local still_in = (g.get_lp_vehicle and g.get_lp_vehicle()) or (g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle())
+        local char = g.Character or (g.get_char and g.get_char(speaker))
+        local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+        if not anchor.Parent or not still_in or not still_in:IsDescendantOf(workspace) or not humanoid or not humanoid.SeatPart then
             g.vehiclefly_control = {f=0,b=0,l=0,r=0,q=0,e=0}
+            if g.Vehicle_Fly_Toggle_UI then pcall(function() g.Vehicle_Fly_Toggle_UI:Set(false, false) end) end
             silent_stop()
             return
         end
         pcall(function() anchor.AssemblyAngularVelocity = Vector3.zero end)
-        local cam = workspace.CurrentCamera or workspace:FindFirstChildOfClass("Camera")
+        local cam = Workspace.CurrentCamera or Workspace:FindFirstChildOfClass("Camera")
         local speed = 45 * (g.vehicle_fly_speed or 3)
         if UserInputService.TouchEnabled and control_module then
             local ok, mv = pcall(function() return control_module:GetMoveVector() end)
