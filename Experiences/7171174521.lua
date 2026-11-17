@@ -73,7 +73,7 @@ if not In_Studio then
     end
 end
 wait(0.15)
-local Announcement_Message = "Welcome to Flames Hub | American Plains Mudding!"
+local Announcement_Message = "Fixed Open All Tailgate Doors (FE) not correctly teleporting to Tailgate Model + fixed Despawn Current Vehicle not working."
 g.displayTimeMax = 15
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.1.8"
+local Raw_Version = "V1.2.0"
 g.Script_Version = tostring(Raw_Version).."-APM"
 g.fullbright_enabled = g.fullbright_enabled or false
 g.FLY_SPEED = g.FLY_SPEED or 75
@@ -164,6 +164,18 @@ end
 wait(0.1)
 if not g.Notification_Template_NotifModule_Found_RS then pcall(function() Find_Notification_Template_NotifModule() end) end
 
+local function Find_TailGate_For_Car(car)
+    if not car or not car:IsA("Model") then return nil end
+    local body = car and car:FindFirstChild("Body")
+    if not body or not body:IsA("Model") then return end
+    for _, v in ipairs(body:GetDescendants()) do
+        if v:IsA("Model") and v.Name:lower():find("tailgate") then
+            return v
+        end
+    end
+    return nil
+end
+
 local function Find_Proximity_Prompt_TailGate_For_Car(car)
     if not car or not car:IsA("Model") then return nil end
     local body = car and car:FindFirstChild("Body")
@@ -209,9 +221,9 @@ g.Fire_All_Doors = function()
         if not car:IsA("Model") then continue end
         local is_own = lp_vehicle ~= nil and car == lp_vehicle
         if is_own then continue end
-        local anchor = car.PrimaryPart or car:FindFirstChildWhichIsA("BasePart")
-        if anchor then
-            hrp.CFrame = anchor.CFrame * CFrame.new(0, 4, 0)
+        local anchor = Find_TailGate_For_Car(car)
+        if anchor and anchor.Parent then
+            pcall(function() char:PivotTo(anchor:GetPivot() + Vector3.new(0, 3, 0)) end)
             task.wait(0.1)
         end
         local deadline = os.clock() + 2
@@ -361,6 +373,13 @@ local function Find_Delete_Remote_Event()
 end
 wait(0.1)
 if not g.Despawn_Vehicle_Delete_Remote_Event then pcall(function() Find_Delete_Remote_Event() end) end
+
+g.despawn_current_vehicle = function()
+    local e = g.Despawn_Vehicle_Delete_Remote_Event or Find_Delete_Remote_Event()
+    if not e or not e:IsA("RemoteEvent") then return end
+    e:FireServer("Slot1", "Vehicle")
+    e:FireServer("Slot2", "Vehicle")
+end
 
 g.get_lp_vehicle = function()
     local vehicles_folder = g.Main_Vehicles_Folder_Found_WS or get_vehicles_folder()
@@ -3241,12 +3260,6 @@ end}, "Vehicle_Boost_Speed_Slider_UI")
 wait(0.1)
 if g.vehicle_boost_speed and g.Vehicle_Boost_Speed_Slider_UI then g.Vehicle_Boost_Speed_Slider_UI:Set(g.vehicle_boost_speed) end
 
-g.create_ui_element("Button", Vehicles_Section, {
-Name = "Fully Upgrade Vehicle",
-Callback = function()
-    g.fully_upgrade_current_vehicle()
-end,})
-
 g.create_ui_element("Slider", Vehicles_Section, {
 Name = "Vehicle Lights Brightness",
 Min = 1,
@@ -3266,6 +3279,7 @@ end})
 g.create_ui_element("Button", Vehicles_Section, {
 Name = "Despawn Current Vehicle (FE)",
 Callback = function()
+    if not g.despawn_current_vehicle and typeof(g.despawn_current_vehicle) ~= "function" then return end
     g.despawn_current_vehicle()
 end,})
 
