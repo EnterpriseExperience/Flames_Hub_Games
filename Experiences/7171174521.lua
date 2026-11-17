@@ -432,6 +432,16 @@ g.Get_Current_Sitting_In_Vehicle = function()
     return nil
 end
 
+g.toggle_horn = function(state)
+    if typeof(state) ~= "boolean" then return end
+    local horn_remote_event = g.Vehicle_Configuration_Remote_Event_Found_RS or Find_Vehicle_Configuration_Remote_Event()
+    if not horn_remote_event or not horn_remote_event:IsA("RemoteEvent") then return end
+    local action = state and "startHorn" or "stopHorn"
+    local car = (g.get_lp_vehicle and g.get_lp_vehicle()) or (g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle())
+    if not car or not car:IsDescendantOf(game) then return end
+    horn_remote_event:FireServer(action, car)
+end
+
 g.toggle_car_alarm = function(state)
     if typeof(state) ~= "boolean" then return end
     g.car_alarm_enabled = state
@@ -2905,14 +2915,6 @@ Callback = function(val)
     g.Set_Max_Zoom_Distance(val)
 end}, "Max_Zoom_Distance_Slider_UI")
 
-g.create_ui_element("Toggle", Vehicles_Section, {
-Name = "Car Alarm (FE)",
-Default = g.car_alarm_enabled or false,
-Flag = "Car_Alarm_Toggle_UI",
-Callback = function(state)
-    g.toggle_car_alarm(state)
-end}, "Car_Alarm_Toggle_UI")
-
 g.Noclip_Toggle_UI_Main = g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "NoClip (FE)",
 Default = g.Noclip_Enabled or false,
@@ -3144,6 +3146,14 @@ Callback = function(state)
         g.vehicle_twerk(false)
     end
 end}, "Vehicle_Twerk_Toggle_UI")
+
+g.create_ui_element("Toggle", Vehicles_Section, {
+Name = "Car Alarm (FE)",
+Default = g.car_alarm_enabled or false,
+Flag = "Car_Alarm_Toggle_UI",
+Callback = function(state)
+    g.toggle_car_alarm(state)
+end}, "Car_Alarm_Toggle_UI")
 
 g.create_ui_element("Slider", Vehicles_Section, {
 Name = "Vehicle Side Glitch Speed",
