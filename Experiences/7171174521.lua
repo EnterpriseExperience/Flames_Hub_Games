@@ -73,7 +73,7 @@ if not In_Studio then
     end
 end
 wait(0.15)
-local Announcement_Message = "Fixed Open All Tailgate Doors (FE) not correctly teleporting to Tailgate Model + fixed Despawn Current Vehicle not working."
+local Announcement_Message = "Fixed Open All Tailgate Doors (FE) not correctly teleporting to Tailgate Model + fixed Despawn Current Vehicle not working + added Car Alarm (FE)."
 g.displayTimeMax = 15
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.2.0"
+local Raw_Version = "V1.2.1"
 g.Script_Version = tostring(Raw_Version).."-APM"
 g.fullbright_enabled = g.fullbright_enabled or false
 g.FLY_SPEED = g.FLY_SPEED or 75
@@ -357,6 +357,22 @@ end
 wait(0.1)
 if not g.Mod_Shop_Remote_Event_Found_RS then pcall(function() Mod_Shop_Remote_Event() end) end
 
+local function Find_Vehicle_Configuration_Remote_Event()
+    local cache = g.Vehicle_Configuration_Remote_Event_Found_RS
+    if cache and cache:IsA("RemoteEvent") then return cache end
+    local re_folder = g.Remotes_Folder_Found_RS or Find_Remotes_Folder_RS()
+    if not re_folder or not re_folder:IsA("Folder") then return nil end
+    for _, v in ipairs(re_folder:GetChildren()) do
+        if v:IsA("RemoteEvent") and v.Name:lower():find("vehicle") and v.Name:lower():find("config") then
+            g.Vehicle_Configuration_Remote_Event_Found_RS = v
+            return v
+        end
+    end
+    return nil
+end
+wait(0.1)
+if not g.Vehicle_Configuration_Remote_Event_Found_RS then pcall(function() Find_Vehicle_Configuration_Remote_Event() end) end
+
 local function Find_Delete_Remote_Event()
     local cache = g.Despawn_Vehicle_Delete_Remote_Event
     if cache and cache:IsA("RemoteEvent") then return cache end
@@ -414,6 +430,28 @@ g.Get_Current_Sitting_In_Vehicle = function()
     local fallback = seat:FindFirstAncestorWhichIsA("Model")
     if fallback and fallback:IsDescendantOf(vehicles_folder) then return fallback end
     return nil
+end
+
+g.toggle_car_alarm = function(state)
+    if typeof(state) ~= "boolean" then return end
+    g.car_alarm_enabled = state
+    local FL = g.FlamesLibrary or getgenv().FlamesLibrary
+    if not FL or typeof(FL) ~= "table" then return end
+    if not state then
+        FL.disconnect("car_alarm_loop")
+        g.toggle_horn(false)
+        return
+    end
+    FL.spawn("car_alarm_loop", "spawn", function()
+        while g.car_alarm_enabled == true do
+            local car = (g.get_lp_vehicle and g.get_lp_vehicle()) or (g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle())
+            if not car or not car:IsDescendantOf(game) then FL.wait(0); continue end
+            g.toggle_horn(true)
+            FL.wait(0.5)
+            g.toggle_horn(false)
+            FL.wait(0.5)
+        end
+    end)
 end
 
 g.Set_Walk_Speed = function(speed)
@@ -2866,6 +2904,14 @@ Flag = "Max_Zoom_Distance_Slider_UI",
 Callback = function(val)
     g.Set_Max_Zoom_Distance(val)
 end}, "Max_Zoom_Distance_Slider_UI")
+
+g.create_ui_element("Toggle", Vehicles_Section, {
+Name = "Car Alarm (FE)",
+Default = g.car_alarm_enabled or false,
+Flag = "Car_Alarm_Toggle_UI",
+Callback = function(state)
+    g.toggle_car_alarm(state)
+end}, "Car_Alarm_Toggle_UI")
 
 g.Noclip_Toggle_UI_Main = g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "NoClip (FE)",
