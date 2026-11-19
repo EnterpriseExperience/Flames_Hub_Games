@@ -206,7 +206,7 @@ function Lib:Window(title, width, height)
 
     close_btn.MouseButton1Click:Connect(function() main:Destroy() end)
     hover(close_btn, close_f, C.button, C.button_act)
-    tbar.InputBegan:Connect(function(inp)
+    collapse_btn.InputBegan:Connect(function(inp)
         if inp.UserInputType ~= Enum.UserInputType.MouseButton1 and inp.UserInputType ~= Enum.UserInputType.Touch then return end
         if UIS:GetFocusedTextBox() then return end
         local drag_start = inp.Position
