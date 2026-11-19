@@ -2,8 +2,6 @@ local g             = getgenv and getgenv() or _G
 local Players       = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
 local UIS           = g.UserInputService or cloneref and cloneref(game:GetService("UserInputService")) or game:GetService("UserInputService")
 local CoreGui       = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
-local RunService    = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
-local TweenService  = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
 local LP            = g.LocalPlayer or Players.LocalPlayer
 local PlayerGui     = g.PlayerGui or LP:FindFirstChildOfClass("PlayerGui") or LP:FindFirstChildWhichIsA("PlayerGui")
 local parent_gui    = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui or PlayerGui
@@ -11,163 +9,6 @@ local function rnd()
     local t = {}
     for i = 1, math.random(12,24) do t[i] = string.char(math.random(33,126)) end
     return table.concat(t)
-end
-
-getgenv().FlamesLibrary = getgenv().FlamesLibrary or {}
-getgenv().FlamesLibrary._connections = getgenv().FlamesLibrary._connections or {}
-getgenv().FlamesLibrary.modules = getgenv().FlamesLibrary.modules or {}
-getgenv().FlamesLibrary.module_utils = getgenv().FlamesLibrary.module_utils or {}
-getgenv().FlamesLibrary.table_lib = getgenv().FlamesLibrary.table_lib or {}
-getgenv().FlamesLibrary.connect = function(name, connection)
-    local FL = getgenv().FlamesLibrary
-    if type(name) ~= "string" then return end
-    if typeof(connection) ~= "RBXScriptConnection" then return end
-    if type(FL._connections) ~= "table" then FL._connections = {} end
-    FL.disconnect(name)
-    FL._connections[name] = {connection}
-    return connection
-end
-
-getgenv().FlamesLibrary.disconnect = function(name)
-    local FL = getgenv().FlamesLibrary
-    if type(name) ~= "string" then return end
-    if type(FL._connections) ~= "table" then return end
-    local list = FL._connections[name]
-    FL._connections[name] = nil
-    if type(list) ~= "table" then return end
-    local current = coroutine.running()
-    for _, item in ipairs(list) do
-        if typeof(item) == "RBXScriptConnection" then
-            if item.Connected then pcall(item.Disconnect, item) end
-        elseif type(item) == "thread" then
-            if item ~= current and coroutine.status(item) ~= "dead" then pcall(task.cancel, item) end
-        end
-    end
-end
-
-getgenv().FlamesLibrary.spawn = function(name, mode, ...)
-    local FL = getgenv().FlamesLibrary
-    if type(name) ~= "string" or type(mode) ~= "string" then return end
-    if type(FL._connections) ~= "table" then FL._connections = {} end
-    if FL._connections[name] ~= nil and type(FL.disconnect) == "function" then FL.disconnect(name) end
-    local args = table.pack(...)
-    local thread
-    if mode == "spawn" or mode == "defer" or mode == "wrap" then
-        local func = args[1]
-        if type(func) ~= "function" then warn(("[FL.spawn] mode '%s' expects function at arg 3, got %s"):format(mode, type(func)), 2) end
-        if mode == "spawn" then
-            thread = task.spawn(func, table.unpack(args, 2, args.n))
-        elseif mode == "defer" then
-            thread = task.defer(func, table.unpack(args, 2, args.n))
-        elseif mode == "wrap" then
-            thread = coroutine.create(func)
-            coroutine.resume(thread, table.unpack(args, 2, args.n))
-        end
-    elseif mode == "delay" then
-        local delay_time = args[1]
-        local func       = args[2]
-        if type(delay_time) ~= "number" then warn(("[FL.spawn] delay mode expects number at arg 3, got %s — args may be swapped"):format(type(delay_time)), 2) end
-        if type(func) ~= "function" then warn(("[FL.spawn] delay mode expects function at arg 4, got %s"):format(type(func)), 2) end
-        local rest_count = args.n - 2
-        if rest_count > 0 then
-            thread = task.delay(delay_time, func, table.unpack(args, 3, args.n))
-        else
-            thread = task.delay(delay_time, func)
-        end
-    else
-        warn(("[FL.spawn] unknown mode '%s'"):format(tostring(mode)), 2)
-    end
-
-    local bucket = FL._connections[name]
-    if type(bucket) ~= "table" then bucket = {}; FL._connections[name] = bucket end
-    table.insert(bucket, thread)
-    return thread
-end
-wait(0.1)
-do
-    local active_frame     = nil
-    local active_drag_start = nil
-    local active_start_pos  = nil
-    local last_input_pos    = nil
-    local active_tween      = nil
-    local GLOBAL_KEY = "dragify_global"
-    local TWEEN_INFO = TweenInfo.new(0.05, Enum.EasingStyle.Linear)
-    local MIN_DELTA  = 2
-    local function cancel_tween()
-        if active_tween then
-            pcall(function() active_tween:Cancel() end)
-            active_tween = nil
-        end
-    end
-
-    local function stop_drag()
-        active_frame      = nil
-        active_drag_start = nil
-        active_start_pos  = nil
-        last_input_pos    = nil
-        cancel_tween()
-    end
-
-    local function frame_valid(f)
-        local ok, res = pcall(function() return f and f.Parent and f:IsDescendantOf(game) end)
-        return ok and res
-    end
-
-    getgenv().FlamesLibrary.connect(GLOBAL_KEY .. "_heartbeat", RunService.Heartbeat:Connect(function()
-        if not active_frame or not last_input_pos then return end
-        if not frame_valid(active_frame) then
-            stop_drag()
-            return
-        end
-
-        local delta = last_input_pos - active_drag_start
-        if delta.Magnitude < MIN_DELTA then return end
-        local sp  = active_start_pos
-        local pos = UDim2.new(
-            sp.X.Scale,
-            sp.X.Offset + delta.X,
-            sp.Y.Scale,
-            sp.Y.Offset + delta.Y
-        )
-
-        cancel_tween()
-        active_tween = TweenService:Create(active_frame, TWEEN_INFO, { Position = pos })
-        active_tween:Play()
-    end))
-
-    getgenv().FlamesLibrary.connect(GLOBAL_KEY .. "_changed", UIS.InputChanged:Connect(function(input)
-        if not active_frame then return end
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then last_input_pos = input.Position end
-    end))
-
-    getgenv().FlamesLibrary.connect(GLOBAL_KEY .. "_ended", UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then stop_drag() end
-    end))
-
-    getgenv().dragify = function(frame)
-        if not frame then return end
-        while not frame_valid(frame) do task.wait() end
-        local frame_key = "dragify_" .. tostring(frame) .. "_" .. tostring(frame:GetDebugId())
-        getgenv().FlamesLibrary.connect(frame_key .. "_began", frame.InputBegan:Connect(function(input)
-            if not frame_valid(frame) then return end
-            if UIS:GetFocusedTextBox() then return end
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                if active_frame and active_frame ~= frame then stop_drag() end
-                active_frame      = frame
-                active_drag_start = input.Position
-                active_start_pos  = frame.Position
-                last_input_pos    = input.Position
-            end
-        end))
-
-        getgenv().FlamesLibrary.connect(frame_key .. "_ancestry", frame.AncestryChanged:Connect(function(_, parent)
-            if not parent then
-                if active_frame == frame then stop_drag() end
-                getgenv().FlamesLibrary.disconnect(frame_key .. "_began")
-                getgenv().FlamesLibrary.disconnect(frame_key .. "_ancestry")
-            end
-        end))
-    end
 end
 
 local C = {
@@ -315,7 +156,6 @@ function Lib:Window(title, width, height)
     main.ClipsDescendants = true
     main.Parent = self._sg
     stroke(main, C.border, 1)
-    if g.dragify and typeof(g.dragify) == "function" then g.dragify(main) end
 
     local tbar = frame(main, UDim2.new(1,0,0,19), C.title_bg_act, "TitleBar")
     local collapse_lbl = label(tbar, "▼ ", UDim2.new(0,14,1,0), C.text)
@@ -366,26 +206,23 @@ function Lib:Window(title, width, height)
 
     close_btn.MouseButton1Click:Connect(function() main:Destroy() end)
     hover(close_btn, close_f, C.button, C.button_act)
-
-    local drag_start, frame_start, dragging = nil, nil, false
     tbar.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-            dragging = true; drag_start = inp.Position; frame_start = main.Position
-        end
+        if inp.UserInputType ~= Enum.UserInputType.MouseButton1 and inp.UserInputType ~= Enum.UserInputType.Touch then return end
+        if UIS:GetFocusedTextBox() then return end
+        local drag_start = inp.Position
+        local frame_start = main.Position
+        local move_conn, end_conn
+        move_conn = UIS.InputChanged:Connect(function(i)
+            if i.UserInputType ~= Enum.UserInputType.MouseMovement and i.UserInputType ~= Enum.UserInputType.Touch then return end
+            local d = i.Position - drag_start
+            main.Position = UDim2.new(frame_start.X.Scale, frame_start.X.Offset + d.X, frame_start.Y.Scale, frame_start.Y.Offset + d.Y)
+        end)
+        end_conn = UIS.InputEnded:Connect(function(i)
+            if i.UserInputType ~= Enum.UserInputType.MouseButton1 and i.UserInputType ~= Enum.UserInputType.Touch then return end
+            move_conn:Disconnect()
+            end_conn:Disconnect()
+        end)
     end)
-    UIS.InputChanged:Connect(function(inp)
-        if not dragging then return end
-        if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
-            local d = inp.Position - drag_start
-            main.Position = UDim2.new(frame_start.X.Scale, frame_start.X.Offset+d.X, frame_start.Y.Scale, frame_start.Y.Offset+d.Y)
-        end
-    end)
-    UIS.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-
     win._main    = main
     win._content = scroll
 
