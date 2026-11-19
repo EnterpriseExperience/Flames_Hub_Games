@@ -4,7 +4,7 @@ local UserInputService = g.UserInputService or cloneref and cloneref(game:GetSer
 local TweenService = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
 local CoreGui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
 local LP = g.LocalPlayer or Players.LocalPlayer
-local PlayerGui = LP:WaitForChild("PlayerGui")
+local PlayerGui = g.PlayerGui or LP:FindFirstChildOfClass("PlayerGui")
 local function safe_keycode(name, fallback)
     local ok, kc = pcall(function() return Enum.KeyCode[name] end)
     if ok and kc then return kc end
@@ -46,7 +46,6 @@ local PAD        = 8
 local EL_H       = 32
 local CORNER     = 6
 local ANIM_T     = 0.12
-
 local function make_corner(parent, radius)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, radius or CORNER)
@@ -126,12 +125,10 @@ end
 
 local Lib = {}
 Lib.__index = Lib
-
 function Lib.new(title, width, height)
     local self = setmetatable({}, Lib)
     self._windows = self._windows or {}
-
-    local gui_name = random_string(16)
+    local gui_name = random_string()
     local sg = Instance.new("ScreenGui")
     sg.Name = gui_name
     sg.ResetOnSpawn = false
@@ -141,9 +138,31 @@ function Lib.new(title, width, height)
     local ok = pcall(function() sg.Parent = parent_gui end)
     if not ok then sg.Parent = PlayerGui end
     self._sg = sg
-
     return self
 end
+
+setmetatable(Lib, {
+    __call = function(self, ...)
+        return self:Window(...)
+    end
+})
+
+local _inst = setmetatable({}, Lib)
+_inst._windows = {}
+local function ensure_sg(self)
+    if self._sg and self._sg.Parent then return end
+    local sg = Instance.new("ScreenGui")
+    sg.Name = random_string(16)
+    sg.ResetOnSpawn = false
+    sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    sg.DisplayOrder = 999
+    sg.IgnoreGuiInset = true
+    local ok = pcall(function() sg.Parent = parent_gui end)
+    if not ok then sg.Parent = PlayerGui end
+    self._sg = sg
+end
+
+Lib.ensure_sg = ensure_sg
 
 function Lib:Window(title, width, height)
     if type(self) ~= "table" then
@@ -151,13 +170,11 @@ function Lib:Window(title, width, height)
         self = Lib
     end
     self._windows = self._windows or {}
-
+    ensure_sg(self)
     local win = {}
     win._sections = {}
-
     local w = width or 320
     local h = height or 480
-
     local main = Instance.new("Frame")
     main.Name = random_string(8)
     main.Size = UDim2.new(0, w, 0, h)
@@ -941,7 +958,7 @@ function Lib:Notify(options)
         options = self
         self = Lib
     end
-
+    ensure_sg(self)
     local title_str = options.Title or "Notification"
     local msg = options.Message or ""
     local duration = options.Duration or 3
@@ -995,4 +1012,4 @@ function Lib:Notify(options)
     end)
 end
 
-return Lib
+return _inst
