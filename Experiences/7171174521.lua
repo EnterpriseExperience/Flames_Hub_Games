@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.2.5"
+local Raw_Version = "V1.2.6"
 g.Script_Version = tostring(Raw_Version).."-APM"
 g.fullbright_enabled = g.fullbright_enabled or false
 g.FLY_SPEED = g.FLY_SPEED or 75
@@ -3068,6 +3068,7 @@ g.ac_boost_toggle = function(state)
         if not setupvalue or typeof(setupvalue) ~= "function" then
             g.ac_boost_active = false
             FL.disconnect("ac_chassis_boost")
+            if g.AC_Boost_Toggle_UI then g.AC_Boost_Toggle_UI:Set(false, false) end
             local tune = get_tune()
             if tune then revert_boost(tune) end
             g.ac_boosted = false
@@ -3080,6 +3081,7 @@ g.ac_boost_toggle = function(state)
             if not g.ac_boost_active then
                 g.ac_boosted = false
                 FL.disconnect("ac_chassis_boost")
+                if g.AC_Boost_Toggle_UI then g.AC_Boost_Toggle_UI:Set(false, false) end
                 local tune = get_tune()
                 if tune then revert_boost(tune) end
                 g.ac_boosted = false
@@ -3126,7 +3128,7 @@ local Atlas = loadstring(g.http_get("https://gitlab.com/flames2431233/Starter/-/
 local UI = Atlas.new({
     Name = "Flames Hub | American Plains Mudding | "..tostring(g.Script_Version),
     ConfigFolder = "FlamesHub_APM_Menu_Configuration",
-    Color = Color3.fromRGB(162, 2, 255),
+    Color = Color3.fromRGB(8, 73, 2),
     Credit = "Flames Hub",
     Bind = "RightShift",
 })
@@ -3622,7 +3624,7 @@ wait(0.1)
 if g.vehicle_boost_speed and g.Vehicle_Boost_Speed_Slider_UI then g.Vehicle_Boost_Speed_Slider_UI:Set(g.vehicle_boost_speed) end--]]
 
 g.AC_Boost_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
-Name = "Vehicle Speed Boost (A-Chassis)",
+Name = "Mod Car Speed (FE)",
 Default = g.ac_boost_active or false,
 Flag = "AC_Boost_Toggle_UI",
 Callback = function(state)
@@ -3630,7 +3632,7 @@ Callback = function(state)
 end}, "AC_Boost_Toggle_UI")
 
 g.AC_Boost_Speed_Slider_UI = g.create_ui_element("Slider", Vehicles_Section, {
-Name = "Vehicle Boost Speed",
+Name = "Set Car Speed (FE)",
 Min = 50,
 Max = 300,
 Default = g.ac_boost_speed or 100,
