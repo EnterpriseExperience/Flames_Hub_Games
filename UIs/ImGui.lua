@@ -132,7 +132,7 @@ Lib.__index = Lib
 
 function Lib.new(title, width, height)
     local self = setmetatable({}, Lib)
-    self._windows = {}
+    self._windows = self._windows or {}
 
     local gui_name = random_string(16)
     local sg = Instance.new("ScreenGui")
@@ -149,6 +149,12 @@ function Lib.new(title, width, height)
 end
 
 function Lib:Window(title, width, height)
+    if type(self) ~= "table" then
+        title, width, height = self, title, width
+        self = Lib
+    end
+    self._windows = self._windows or {}
+
     local win = {}
     win._sections = {}
 
@@ -269,6 +275,11 @@ function Lib:Window(title, width, height)
     win._content = content
 
     function win:Section(name)
+        if type(self) ~= "table" then
+            name = self
+            self = win
+        end
+
         local sec = {}
         sec._elements = {}
 
@@ -933,6 +944,11 @@ function Lib:Window(title, width, height)
 end
 
 function Lib:Notify(options)
+    if type(self) ~= "table" then
+        options = self
+        self = Lib
+    end
+
     local title_str = options.Title or "Notification"
     local msg = options.Message or ""
     local duration = options.Duration or 3
