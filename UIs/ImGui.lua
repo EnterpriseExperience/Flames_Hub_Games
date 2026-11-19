@@ -204,7 +204,7 @@ function Lib:Window(title, width, height)
         scroll.Visible = not collapsed
     end)
 
-    close_btn.MouseButton1Click:Connect(function() main:Destroy() end)
+    close_btn.MouseButton1Click:Connect(function() main:Destroy(); task.wait(); self._sg:Destroy() end)
     hover(close_btn, close_f, C.button, C.button_act)
     collapse_btn.InputBegan:Connect(function(inp)
         if inp.UserInputType ~= Enum.UserInputType.MouseButton1 and inp.UserInputType ~= Enum.UserInputType.Touch then return end
