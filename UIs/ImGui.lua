@@ -1,158 +1,128 @@
 local g = getgenv and getgenv() or _G
-local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
-local UserInputService = g.UserInputService or cloneref and cloneref(game:GetService("UserInputService")) or game:GetService("UserInputService")
-local TweenService = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
-local CoreGui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
-local LP = g.LocalPlayer or Players.LocalPlayer
-local PlayerGui = g.PlayerGui or LP:FindFirstChildOfClass("PlayerGui")
-local function safe_keycode(name, fallback)
-    local ok, kc = pcall(function() return Enum.KeyCode[name] end)
-    if ok and kc then return kc end
-    return Enum.KeyCode[fallback] or Enum.KeyCode.Q
+local Players       = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
+local UIS           = g.UserInputService or cloneref and cloneref(game:GetService("UserInputService")) or game:GetService("UserInputService")
+local CoreGui       = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
+local LP            = g.LocalPlayer or Players.LocalPlayer
+local PlayerGui     = g.PlayerGui or LP:FindFirstChildOfClass("PlayerGui")
+local parent_gui    = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui or PlayerGui
+local function rnd()
+    local t = {}
+    for i = 1, math.random(12,24) do t[i] = string.char(math.random(33,126)) end
+    return table.concat(t)
 end
 
-local function random_string(len)
-	local length = math.random(10,40)
-	local array = {}
-	for i = 1, length do array[i] = string.char(math.random(32, 126)) end
-	return table.concat(array)
-end
-
-local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui or PlayerGui
-local THEME = {
-    bg           = Color3.fromRGB(15, 15, 15),
-    title_bar    = Color3.fromRGB(25, 25, 25),
-    section_bg   = Color3.fromRGB(20, 20, 20),
-    element_bg   = Color3.fromRGB(30, 30, 30),
-    element_hover= Color3.fromRGB(40, 40, 40),
-    accent       = Color3.fromRGB(0, 122, 255),
-    accent_hover = Color3.fromRGB(30, 142, 255),
-    text         = Color3.fromRGB(240, 240, 240),
-    text_dim     = Color3.fromRGB(160, 160, 160),
-    border       = Color3.fromRGB(50, 50, 50),
-    toggle_on    = Color3.fromRGB(0, 122, 255),
-    toggle_off   = Color3.fromRGB(60, 60, 60),
-    slider_track = Color3.fromRGB(50, 50, 50),
-    danger       = Color3.fromRGB(220, 50, 50),
-    success      = Color3.fromRGB(50, 200, 100),
-    warning      = Color3.fromRGB(220, 160, 0),
-    info         = Color3.fromRGB(0, 122, 255),
+local C = {
+    win_bg          = Color3.fromRGB(15,  15,  15),
+    child_bg        = Color3.fromRGB(0,   0,   0),
+    popup_bg        = Color3.fromRGB(20,  20,  20),
+    border          = Color3.fromRGB(110, 110, 128),
+    border_shadow   = Color3.fromRGB(0,   0,   0),
+    frame_bg        = Color3.fromRGB(41,  74,  122),
+    frame_bg_hov    = Color3.fromRGB(66,  150, 250),
+    frame_bg_act    = Color3.fromRGB(66,  150, 250),
+    title_bg        = Color3.fromRGB(10,  10,  10),
+    title_bg_act    = Color3.fromRGB(41,  74,  122),
+    title_bg_col    = Color3.fromRGB(0,   0,   0),
+    scrollbar_bg    = Color3.fromRGB(5,   5,   5),
+    scrollbar_grab  = Color3.fromRGB(79,  79,  79),
+    scrollbar_hov   = Color3.fromRGB(105, 105, 105),
+    scrollbar_act   = Color3.fromRGB(130, 130, 130),
+    check_mark      = Color3.fromRGB(66,  150, 250),
+    slider_grab     = Color3.fromRGB(61,  133, 224),
+    slider_grab_act = Color3.fromRGB(66,  150, 250),
+    button          = Color3.fromRGB(66,  150, 250),
+    button_hov      = Color3.fromRGB(66,  150, 250),
+    button_act      = Color3.fromRGB(15,  135, 250),
+    header          = Color3.fromRGB(66,  150, 250),
+    header_hov      = Color3.fromRGB(66,  150, 250),
+    header_act      = Color3.fromRGB(66,  150, 250),
+    separator       = Color3.fromRGB(110, 110, 128),
+    separator_hov   = Color3.fromRGB(26,  102, 191),
+    separator_act   = Color3.fromRGB(66,  150, 250),
+    text            = Color3.fromRGB(255, 255, 255),
+    text_dis        = Color3.fromRGB(128, 128, 128),
+    plot_lines      = Color3.fromRGB(156, 156, 156),
+    success         = Color3.fromRGB(80,  200, 120),
+    warning         = Color3.fromRGB(220, 160, 0),
+    danger          = Color3.fromRGB(220, 60,  60),
+    info            = Color3.fromRGB(66,  150, 250),
 }
 
-local FONT       = Enum.Font.GothamMedium
-local FONT_BOLD  = Enum.Font.GothamBold
-local FONT_LIGHT = Enum.Font.Gotham
-local PAD        = 8
-local EL_H       = 32
-local CORNER     = 6
-local ANIM_T     = 0.12
-local function make_corner(parent, radius)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, radius or CORNER)
-    c.Parent = parent
-    return c
-end
-
-local function make_stroke(parent, color, thickness)
+local FONT          = Enum.Font.Code
+local FONT_SZ       = 13
+local PAD           = 8
+local ITEM_SPC      = 4
+local FRAME_PAD     = 4
+local EL_H          = 20
+local BORDER_W      = 1
+local function stroke(p, col, w)
     local s = Instance.new("UIStroke")
-    s.Color = color or THEME.border
-    s.Thickness = thickness or 1
+    s.Color = col or C.border
+    s.Thickness = w or BORDER_W
     s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    s.Parent = parent
+    s.Parent = p
     return s
 end
 
-local function make_padding(parent, all)
-    local p = Instance.new("UIPadding")
-    local u = UDim.new(0, all or PAD)
-    p.PaddingLeft   = u
-    p.PaddingRight  = u
-    p.PaddingTop    = u
-    p.PaddingBottom = u
-    p.Parent = parent
-    return p
+local function padding(p, px, py)
+    local u = Instance.new("UIPadding")
+    u.PaddingLeft   = UDim.new(0, px or PAD)
+    u.PaddingRight  = UDim.new(0, px or PAD)
+    u.PaddingTop    = UDim.new(0, py or FRAME_PAD)
+    u.PaddingBottom = UDim.new(0, py or FRAME_PAD)
+    u.Parent = p
+    return u
 end
 
-local function make_list(parent, padding)
+local function list_layout(p, sp)
     local l = Instance.new("UIListLayout")
     l.SortOrder = Enum.SortOrder.LayoutOrder
-    l.Padding = UDim.new(0, padding or 4)
-    l.Parent = parent
+    l.Padding = UDim.new(0, sp or ITEM_SPC)
+    l.Parent = p
     return l
 end
 
-local function make_frame(parent, size, pos, color, name)
+local function frame(p, sz, bg, name)
     local f = Instance.new("Frame")
-    f.Size = size or UDim2.new(1, 0, 0, EL_H)
-    f.Position = pos or UDim2.new(0, 0, 0, 0)
-    f.BackgroundColor3 = color or THEME.element_bg
+    f.Size = sz or UDim2.new(1,0,0,EL_H)
+    f.BackgroundColor3 = bg or C.win_bg
     f.BorderSizePixel = 0
-    f.Name = name or random_string(8)
-    f.Parent = parent
+    f.Name = name or rnd()
+    f.Parent = p
     return f
 end
 
-local function make_label(parent, text, size, color, font, xalign)
+local function label(p, txt, sz, col, xalign)
     local l = Instance.new("TextLabel")
-    l.Size = size or UDim2.new(1, 0, 1, 0)
-    l.Position = UDim2.new(0, 0, 0, 0)
+    l.Size = sz or UDim2.new(1,0,1,0)
+    l.Position = UDim2.new(0,0,0,0)
     l.BackgroundTransparency = 1
-    l.Text = text or ""
-    l.TextColor3 = color or THEME.text
-    l.TextSize = 13
-    l.Font = font or FONT
+    l.Text = txt or ""
+    l.TextColor3 = col or C.text
+    l.TextSize = FONT_SZ
+    l.Font = FONT
     l.TextXAlignment = xalign or Enum.TextXAlignment.Left
     l.TextTruncate = Enum.TextTruncate.AtEnd
-    l.Name = random_string(8)
-    l.Parent = parent
+    l.Name = rnd()
+    l.Parent = p
     return l
 end
 
-local function make_button_frame(parent, size, color)
-    local f = make_frame(parent, size, nil, color or THEME.element_bg)
-    make_corner(f)
-    return f
+local function set(obj, props)
+    for k,v in pairs(props) do obj[k] = v end
 end
 
-local function tween(obj, props, t)
-    TweenService:Create(obj, TweenInfo.new(t or ANIM_T, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
-end
-
-local function hover_highlight(frame, base, highlight)
-    frame.MouseEnter:Connect(function() tween(frame, { BackgroundColor3 = highlight or THEME.element_hover }) end)
-    frame.MouseLeave:Connect(function() tween(frame, { BackgroundColor3 = base or THEME.element_bg }) end)
+local function hover(btn, base_frame, base_col, hov_col)
+    btn.MouseEnter:Connect(function()  set(base_frame,{BackgroundColor3=hov_col}) end)
+    btn.MouseLeave:Connect(function()  set(base_frame,{BackgroundColor3=base_col}) end)
 end
 
 local Lib = {}
 Lib.__index = Lib
-function Lib.new(title, width, height)
-    local self = setmetatable({}, Lib)
-    self._windows = self._windows or {}
-    local gui_name = random_string()
-    local sg = Instance.new("ScreenGui")
-    sg.Name = gui_name
-    sg.ResetOnSpawn = false
-    sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    sg.DisplayOrder = 999
-    sg.IgnoreGuiInset = true
-    local ok = pcall(function() sg.Parent = parent_gui end)
-    if not ok then sg.Parent = PlayerGui end
-    self._sg = sg
-    return self
-end
-
-setmetatable(Lib, {
-    __call = function(self, ...)
-        return self:Window(...)
-    end
-})
-
-local _inst = setmetatable({}, Lib)
-_inst._windows = {}
 local function ensure_sg(self)
     if self._sg and self._sg.Parent then return end
     local sg = Instance.new("ScreenGui")
-    sg.Name = random_string(16)
+    sg.Name = rnd()
     sg.ResetOnSpawn = false
     sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     sg.DisplayOrder = 999
@@ -163,7 +133,9 @@ local function ensure_sg(self)
 end
 
 Lib.ensure_sg = ensure_sg
-
+setmetatable(Lib, { __call = function(s,...) return s:Window(...) end })
+local _inst = setmetatable({}, Lib)
+_inst._windows = {}
 function Lib:Window(title, width, height)
     if type(self) ~= "table" then
         title, width, height = self, title, width
@@ -171,190 +143,171 @@ function Lib:Window(title, width, height)
     end
     self._windows = self._windows or {}
     ensure_sg(self)
-    local win = {}
-    win._sections = {}
-    local w = width or 320
-    local h = height or 480
+
+    local W = width  or 400
+    local H = height or 500
+    local win = { _sections = {} }
     local main = Instance.new("Frame")
-    main.Name = random_string(8)
-    main.Size = UDim2.new(0, w, 0, h)
-    main.Position = UDim2.new(0.5, -w/2, 0.5, -h/2)
-    main.BackgroundColor3 = THEME.bg
+    main.Name = rnd()
+    main.Size = UDim2.new(0, W, 0, H)
+    main.Position = UDim2.new(0.5, -W/2, 0.5, -H/2)
+    main.BackgroundColor3 = C.win_bg
     main.BorderSizePixel = 0
     main.ClipsDescendants = true
     main.Parent = self._sg
-    make_corner(main, CORNER)
-    make_stroke(main, THEME.border, 1)
+    stroke(main, C.border, 1)
 
-    local title_bar = Instance.new("Frame")
-    title_bar.Name = "TitleBar"
-    title_bar.Size = UDim2.new(1, 0, 0, 36)
-    title_bar.BackgroundColor3 = THEME.title_bar
-    title_bar.BorderSizePixel = 0
-    title_bar.Parent = main
+    local tbar = frame(main, UDim2.new(1,0,0,19), C.title_bg_act, "TitleBar")
+    local collapse_lbl = label(tbar, "▼ ", UDim2.new(0,14,1,0), C.text)
+    collapse_lbl.Position = UDim2.new(0,4,0,0)
+    collapse_lbl.TextSize = 10
 
-    local accent_line = Instance.new("Frame")
-    accent_line.Size = UDim2.new(1, 0, 0, 2)
-    accent_line.Position = UDim2.new(0, 0, 1, -2)
-    accent_line.BackgroundColor3 = THEME.accent
-    accent_line.BorderSizePixel = 0
-    accent_line.Parent = title_bar
+    local title_lbl = label(tbar, (title or "Untitled"), UDim2.new(1,-60,1,0), C.text)
+    title_lbl.Position = UDim2.new(0,20,0,0)
+    title_lbl.TextSize = FONT_SZ
 
-    local title_lbl = make_label(title_bar, title or "Window", UDim2.new(1, -80, 1, 0), THEME.text, FONT_BOLD, Enum.TextXAlignment.Left)
-    title_lbl.TextSize = 14
-    make_padding(title_lbl, 10)
-
+    local close_f = frame(tbar, UDim2.new(0,17,0,17), C.button, "CloseF")
+    close_f.Position = UDim2.new(1,-19,0.5,-8)
+    local close_lbl = label(close_f, "×", UDim2.new(1,0,1,0), C.text, Enum.TextXAlignment.Center)
+    close_lbl.TextSize = 14
     local close_btn = Instance.new("TextButton")
-    close_btn.Size = UDim2.new(0, 28, 0, 28)
-    close_btn.Position = UDim2.new(1, -34, 0.5, -14)
-    close_btn.BackgroundColor3 = THEME.danger
-    close_btn.Text = "×"
-    close_btn.TextColor3 = THEME.text
-    close_btn.TextSize = 16
-    close_btn.Font = FONT_BOLD
-    close_btn.BorderSizePixel = 0
-    close_btn.Name = "CloseBtn"
-    close_btn.Parent = title_bar
-    make_corner(close_btn, 4)
+    close_btn.Size = UDim2.new(1,0,1,0)
+    close_btn.BackgroundTransparency = 1
+    close_btn.Text = ""
+    close_btn.Parent = close_f
 
-    local min_btn = Instance.new("TextButton")
-    min_btn.Size = UDim2.new(0, 28, 0, 28)
-    min_btn.Position = UDim2.new(1, -66, 0.5, -14)
-    min_btn.BackgroundColor3 = THEME.element_bg
-    min_btn.Text = "−"
-    min_btn.TextColor3 = THEME.text
-    min_btn.TextSize = 16
-    min_btn.Font = FONT_BOLD
-    min_btn.BorderSizePixel = 0
-    min_btn.Name = "MinBtn"
-    min_btn.Parent = title_bar
-    make_corner(min_btn, 4)
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Name = "Content"
+    scroll.Size = UDim2.new(1,0,1,-19)
+    scroll.Position = UDim2.new(0,0,0,19)
+    scroll.BackgroundColor3 = C.win_bg
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 12
+    scroll.ScrollBarImageColor3 = C.scrollbar_grab
+    scroll.CanvasSize = UDim2.new(0,0,0,0)
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    scroll.Parent = main
+    padding(scroll, PAD, FRAME_PAD)
+    list_layout(scroll, ITEM_SPC)
 
-    local content = Instance.new("ScrollingFrame")
-    content.Name = "Content"
-    content.Size = UDim2.new(1, 0, 1, -38)
-    content.Position = UDim2.new(0, 0, 0, 38)
-    content.BackgroundTransparency = 1
-    content.BorderSizePixel = 0
-    content.ScrollBarThickness = 3
-    content.ScrollBarImageColor3 = THEME.accent
-    content.CanvasSize = UDim2.new(0, 0, 0, 0)
-    content.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    content.Parent = main
-    make_padding(content, PAD)
-    make_list(content, 6)
+    local collapsed = false
+    local full_h = H
+    local collapse_btn = Instance.new("TextButton")
+    collapse_btn.Size = UDim2.new(1,-40,1,0)
+    collapse_btn.BackgroundTransparency = 1
+    collapse_btn.Text = ""
+    collapse_btn.Parent = tbar
+    collapse_btn.MouseButton1Click:Connect(function()
+        collapsed = not collapsed
+        collapse_lbl.Text = collapsed and "▶ " or "▼ "
+        main.Size = collapsed and UDim2.new(0,W,0,19) or UDim2.new(0,W,0,full_h)
+        scroll.Visible = not collapsed
+    end)
 
-    local minimized = false
-    local full_h = h
+    close_btn.MouseButton1Click:Connect(function() main:Destroy() end)
+    hover(close_btn, close_f, C.button, C.button_act)
 
-    min_btn.MouseButton1Click:Connect(function()
-        minimized = not minimized
-        if minimized then
-            tween(main, { Size = UDim2.new(0, w, 0, 36) })
-            content.Visible = false
-        else
-            tween(main, { Size = UDim2.new(0, w, 0, full_h) })
-            content.Visible = true
+    local drag_start, frame_start, dragging = nil, nil, false
+    tbar.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging = true; drag_start = inp.Position; frame_start = main.Position
         end
     end)
-
-    close_btn.MouseButton1Click:Connect(function()
-        tween(main, { BackgroundTransparency = 1 })
-        task.delay(ANIM_T, function() main:Destroy() end)
-    end)
-
-    local drag_start, frame_start
-    local dragging = false
-    title_bar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            drag_start = input.Position
-            frame_start = main.Position
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
+    UIS.InputChanged:Connect(function(inp)
         if not dragging then return end
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            local delta = input.Position - drag_start
-            main.Position = UDim2.new(frame_start.X.Scale, frame_start.X.Offset + delta.X, frame_start.Y.Scale, frame_start.Y.Offset + delta.Y)
+        if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
+            local d = inp.Position - drag_start
+            main.Position = UDim2.new(frame_start.X.Scale, frame_start.X.Offset+d.X, frame_start.Y.Scale, frame_start.Y.Offset+d.Y)
         end
     end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+    UIS.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
     end)
 
     win._main    = main
-    win._content = content
+    win._content = scroll
+
     function win:Section(name)
-        if type(self) ~= "table" then
-            name = self
-            self = win
-        end
-
-        local sec = {}
-        sec._elements = {}
+        if type(self) ~= "table" then name = self; self = win end
+        local sec = { _elements = {} }
         local sec_frame = Instance.new("Frame")
-        sec_frame.Name = random_string(8)
-        sec_frame.Size = UDim2.new(1, 0, 0, 0)
+        sec_frame.Name = rnd()
+        sec_frame.Size = UDim2.new(1,0,0,0)
         sec_frame.AutomaticSize = Enum.AutomaticSize.Y
-        sec_frame.BackgroundColor3 = THEME.section_bg
+        sec_frame.BackgroundColor3 = C.child_bg
+        sec_frame.BackgroundTransparency = 0.6
         sec_frame.BorderSizePixel = 0
-        sec_frame.Parent = content
-        make_corner(sec_frame, CORNER)
-        make_stroke(sec_frame, THEME.border, 1)
+        sec_frame.Parent = scroll
+        stroke(sec_frame, C.border, 1)
 
-        local sec_inner = Instance.new("Frame")
-        sec_inner.Name = "Inner"
-        sec_inner.Size = UDim2.new(1, 0, 0, 0)
-        sec_inner.AutomaticSize = Enum.AutomaticSize.Y
-        sec_inner.BackgroundTransparency = 1
-        sec_inner.Parent = sec_frame
-        make_padding(sec_inner, PAD)
-        make_list(sec_inner, 4)
+        local inner = Instance.new("Frame")
+        inner.Name = "Inner"
+        inner.Size = UDim2.new(1,0,0,0)
+        inner.AutomaticSize = Enum.AutomaticSize.Y
+        inner.BackgroundTransparency = 1
+        inner.Parent = sec_frame
+        padding(inner, PAD, FRAME_PAD)
+        list_layout(inner, ITEM_SPC)
+
+        local sec_collapsed = false
+        local items_frame
 
         if name and name ~= "" then
-            local hdr = Instance.new("Frame")
-            hdr.Size = UDim2.new(1, 0, 0, 24)
-            hdr.BackgroundTransparency = 1
-            hdr.Name = "Header"
-            hdr.LayoutOrder = 0
-            hdr.Parent = sec_inner
+            local hdr_row = frame(inner, UDim2.new(1,0,0,EL_H), C.header, "HdrRow")
+            hdr_row.BackgroundTransparency = 0.7
+            hdr_row.LayoutOrder = 0
+            padding(hdr_row, FRAME_PAD, 0)
 
-            local hdr_lbl = make_label(hdr, name:upper(), UDim2.new(1, 0, 1, 0), THEME.text_dim, FONT_BOLD)
-            hdr_lbl.TextSize = 11
+            local hdr_arrow = label(hdr_row, "▼", UDim2.new(0,12,1,0), C.text)
+            hdr_arrow.TextSize = 10
+            hdr_arrow.Position = UDim2.new(0,2,0,0)
 
-            local hdr_line = Instance.new("Frame")
-            hdr_line.Size = UDim2.new(1, 0, 0, 1)
-            hdr_line.Position = UDim2.new(0, 0, 1, -1)
-            hdr_line.BackgroundColor3 = THEME.border
-            hdr_line.BorderSizePixel = 0
-            hdr_line.Parent = hdr
+            local hdr_lbl = label(hdr_row, name, UDim2.new(1,-16,1,0), C.text)
+            hdr_lbl.Position = UDim2.new(0,16,0,0)
+            hdr_lbl.Font = FONT
+            hdr_lbl.TextSize = FONT_SZ
+
+            local hdr_btn = Instance.new("TextButton")
+            hdr_btn.Size = UDim2.new(1,0,1,0)
+            hdr_btn.BackgroundTransparency = 1
+            hdr_btn.Text = ""
+            hdr_btn.Parent = hdr_row
+            hdr_btn.MouseEnter:Connect(function() set(hdr_row,{BackgroundTransparency=0.4}) end)
+            hdr_btn.MouseLeave:Connect(function() set(hdr_row,{BackgroundTransparency=0.7}) end)
+
+            items_frame = Instance.new("Frame")
+            items_frame.Name = "Items"
+            items_frame.Size = UDim2.new(1,0,0,0)
+            items_frame.AutomaticSize = Enum.AutomaticSize.Y
+            items_frame.BackgroundTransparency = 1
+            items_frame.LayoutOrder = 1
+            items_frame.Parent = inner
+            list_layout(items_frame, ITEM_SPC)
+
+            hdr_btn.MouseButton1Click:Connect(function()
+                sec_collapsed = not sec_collapsed
+                hdr_arrow.Text = sec_collapsed and "▶" or "▼"
+                items_frame.Visible = not sec_collapsed
+            end)
+        else
+            items_frame = inner
         end
 
-        local layout_order = 1
-        local function next_order()
-            layout_order = layout_order + 1
-            return layout_order
-        end
-
+        local lo = 0
+        local function next_lo() lo = lo + 1; return lo end
         function sec:Separator()
-            local sep = Instance.new("Frame")
-            sep.Size = UDim2.new(1, 0, 0, 1)
-            sep.BackgroundColor3 = THEME.border
-            sep.BorderSizePixel = 0
-            sep.LayoutOrder = next_order()
-            sep.Parent = sec_inner
+            local s = frame(items_frame, UDim2.new(1,0,0,1), C.separator, rnd())
+            s.LayoutOrder = next_lo()
         end
 
         function sec:Label(text)
             local el = {}
-            local row = make_frame(sec_inner, UDim2.new(1, 0, 0, 24), nil, Color3.fromRGB(0,0,0))
+            local row = frame(items_frame, UDim2.new(1,0,0,EL_H), C.win_bg, rnd())
             row.BackgroundTransparency = 1
-            row.LayoutOrder = next_order()
-            local lbl = make_label(row, text or "", UDim2.new(1, 0, 1, 0), THEME.text_dim, FONT_LIGHT)
-            lbl.TextSize = 12
+            row.LayoutOrder = next_lo()
+            local lbl = label(row, text or "", UDim2.new(1,0,1,0), C.text)
             function el:Set(t) lbl.Text = t or "" end
             return el
         end
@@ -362,78 +315,67 @@ function Lib:Window(title, width, height)
         function sec:Paragraph(title_text, body_text)
             local el = {}
             local row = Instance.new("Frame")
-            row.Size = UDim2.new(1, 0, 0, 0)
+            row.Size = UDim2.new(1,0,0,0)
             row.AutomaticSize = Enum.AutomaticSize.Y
             row.BackgroundTransparency = 1
-            row.LayoutOrder = next_order()
-            row.Parent = sec_inner
-            make_list(row, 2)
+            row.LayoutOrder = next_lo()
+            row.Parent = items_frame
+            list_layout(row, 2)
 
-            local t_lbl = make_label(row, title_text or "", UDim2.new(1, 0, 0, 18), THEME.text, FONT_BOLD)
-            t_lbl.TextSize = 13
-
+            local t_lbl = label(row, title_text or "", UDim2.new(1,0,0,EL_H), C.text)
             local b_lbl = Instance.new("TextLabel")
-            b_lbl.Size = UDim2.new(1, 0, 0, 0)
+            b_lbl.Size = UDim2.new(1,0,0,0)
             b_lbl.AutomaticSize = Enum.AutomaticSize.Y
             b_lbl.BackgroundTransparency = 1
             b_lbl.Text = body_text or ""
-            b_lbl.TextColor3 = THEME.text_dim
-            b_lbl.TextSize = 12
-            b_lbl.Font = FONT_LIGHT
+            b_lbl.TextColor3 = C.text_dis
+            b_lbl.TextSize = FONT_SZ
+            b_lbl.Font = FONT
             b_lbl.TextXAlignment = Enum.TextXAlignment.Left
             b_lbl.TextWrapped = true
             b_lbl.Parent = row
 
-            function el:Set(t, b)
+            function el:Set(t,b)
                 if t then t_lbl.Text = t end
                 if b then b_lbl.Text = b end
             end
             return el
         end
 
-        function sec:Toggle(options)
+        function sec:Toggle(opts)
             local el = {}
-            local name_str = options.Name or "Toggle"
-            local state = options.Default or false
-            local cb = options.Callback or function() end
+            local name_s  = opts.Name     or "Toggle"
+            local state   = opts.Default  or false
+            local cb      = opts.Callback or function() end
+            local row = frame(items_frame, UDim2.new(1,0,0,EL_H), C.win_bg, rnd())
+            row.BackgroundTransparency = 1
+            row.LayoutOrder = next_lo()
 
-            local row = make_frame(sec_inner, UDim2.new(1, 0, 0, EL_H), nil, THEME.element_bg)
-            row.LayoutOrder = next_order()
-            make_corner(row)
-            hover_highlight(row, THEME.element_bg, THEME.element_hover)
+            local box = frame(row, UDim2.new(0,13,0,13), C.frame_bg, rnd())
+            box.Position = UDim2.new(0,0,0.5,-6)
+            stroke(box, C.border, 1)
 
-            local lbl = make_label(row, name_str, UDim2.new(1, -56, 1, 0), THEME.text, FONT)
-            make_padding(lbl, PAD)
+            local check = label(box, "✓", UDim2.new(1,0,1,0), C.check_mark, Enum.TextXAlignment.Center)
+            check.TextSize = 11
+            check.Visible = state
 
-            local track = Instance.new("Frame")
-            track.Size = UDim2.new(0, 40, 0, 20)
-            track.Position = UDim2.new(1, -48, 0.5, -10)
-            track.BackgroundColor3 = state and THEME.toggle_on or THEME.toggle_off
-            track.BorderSizePixel = 0
-            track.Parent = row
-            make_corner(track, 10)
-
-            local knob = Instance.new("Frame")
-            knob.Size = UDim2.new(0, 14, 0, 14)
-            knob.Position = state and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
-            knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            knob.BorderSizePixel = 0
-            knob.Parent = track
-            make_corner(knob, 7)
+            local name_lbl = label(row, "  " .. name_s, UDim2.new(1,-17,1,0), C.text)
+            name_lbl.Position = UDim2.new(0,17,0,0)
 
             local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, 0, 1, 0)
+            btn.Size = UDim2.new(1,0,1,0)
             btn.BackgroundTransparency = 1
             btn.Text = ""
             btn.Parent = row
 
+            btn.MouseEnter:Connect(function() set(box,{BackgroundColor3=C.frame_bg_hov}) end)
+            btn.MouseLeave:Connect(function() set(box,{BackgroundColor3=C.frame_bg}) end)
+
             local function set_state(s)
                 state = s
-                tween(track, { BackgroundColor3 = s and THEME.toggle_on or THEME.toggle_off })
-                tween(knob, { Position = s and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7) })
+                check.Visible = s
                 cb(s)
             end
-
             btn.MouseButton1Click:Connect(function() set_state(not state) end)
 
             function el:Set(s) set_state(s) end
@@ -441,173 +383,119 @@ function Lib:Window(title, width, height)
             return el
         end
 
-        function sec:Button(options)
+        function sec:Button(opts)
             local el = {}
-            local name_str = options.Name or "Button"
-            local cb = options.Callback or function() end
+            local name_s = opts.Name     or "Button"
+            local cb     = opts.Callback or function() end
+            local row = frame(items_frame, UDim2.new(1,0,0,EL_H), C.button, rnd())
+            row.BackgroundTransparency = 0.74
+            row.LayoutOrder = next_lo()
+            stroke(row, C.border, 1)
 
-            local row = make_button_frame(sec_inner, UDim2.new(1, 0, 0, EL_H), THEME.accent)
-            row.LayoutOrder = next_order()
-            hover_highlight(row, THEME.accent, THEME.accent_hover)
-
-            local lbl = make_label(row, name_str, UDim2.new(1, 0, 1, 0), THEME.text, FONT_BOLD, Enum.TextXAlignment.Center)
-            lbl.TextSize = 13
-
+            local lbl = label(row, name_s, UDim2.new(1,0,1,0), C.text, Enum.TextXAlignment.Center)
             local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, 0, 1, 0)
+            btn.Size = UDim2.new(1,0,1,0)
             btn.BackgroundTransparency = 1
             btn.Text = ""
             btn.Parent = row
 
-            btn.MouseButton1Click:Connect(function()
-                tween(row, { BackgroundColor3 = THEME.accent_hover })
-                task.delay(0.1, function() tween(row, { BackgroundColor3 = THEME.accent }) end)
-                cb()
-            end)
+            btn.MouseEnter:Connect(function() set(row,{BackgroundTransparency=0.2}) end)
+            btn.MouseLeave:Connect(function() set(row,{BackgroundTransparency=0.74}) end)
+            btn.MouseButton1Down:Connect(function() set(row,{BackgroundColor3=C.button_act, BackgroundTransparency=0}) end)
+            btn.MouseButton1Up:Connect(function()   set(row,{BackgroundColor3=C.button,     BackgroundTransparency=0.74}); cb() end)
 
             function el:SetName(t) lbl.Text = t or "" end
             return el
         end
 
-        function sec:Slider(options)
+        function sec:Slider(opts)
             local el = {}
-            local name_str = options.Name or "Slider"
-            local min_v = options.Min or 0
-            local max_v = options.Max or 100
-            local default = math.clamp(options.Default or min_v, min_v, max_v)
-            local cb = options.Callback or function() end
-            local suffix = options.Suffix or ""
-            local val = default
-
-            local row = Instance.new("Frame")
-            row.Size = UDim2.new(1, 0, 0, EL_H + 16)
-            row.BackgroundColor3 = THEME.element_bg
-            row.BorderSizePixel = 0
-            row.LayoutOrder = next_order()
-            row.Parent = sec_inner
-            make_corner(row)
-
-            local top = Instance.new("Frame")
-            top.Size = UDim2.new(1, 0, 0, EL_H)
-            top.BackgroundTransparency = 1
-            top.Parent = row
-
-            local name_lbl = make_label(top, name_str, UDim2.new(1, -60, 1, 0), THEME.text, FONT)
-            make_padding(name_lbl, PAD)
-
-            local val_lbl = make_label(top, tostring(default) .. suffix, UDim2.new(0, 54, 1, 0), THEME.text_dim, FONT, Enum.TextXAlignment.Right)
-            val_lbl.Position = UDim2.new(1, -58, 0, 0)
-
-            local track_bg = Instance.new("Frame")
-            track_bg.Size = UDim2.new(1, -PAD*2, 0, 4)
-            track_bg.Position = UDim2.new(0, PAD, 1, -10)
-            track_bg.BackgroundColor3 = THEME.slider_track
-            track_bg.BorderSizePixel = 0
-            track_bg.Parent = row
-            make_corner(track_bg, 2)
-
-            local fill = Instance.new("Frame")
-            fill.Size = UDim2.new((default - min_v) / (max_v - min_v), 0, 1, 0)
-            fill.BackgroundColor3 = THEME.accent
-            fill.BorderSizePixel = 0
-            fill.Parent = track_bg
-            make_corner(fill, 2)
-
-            local knob = Instance.new("Frame")
-            knob.Size = UDim2.new(0, 12, 0, 12)
-            knob.AnchorPoint = Vector2.new(0.5, 0.5)
-            knob.Position = UDim2.new((default - min_v) / (max_v - min_v), 0, 0.5, 0)
-            knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            knob.BorderSizePixel = 0
-            knob.Parent = track_bg
-            make_corner(knob, 6)
-
+            local name_s  = opts.Name     or "Slider"
+            local min_v   = opts.Min      or 0
+            local max_v   = opts.Max      or 100
+            local val     = math.clamp(opts.Default or min_v, min_v, max_v)
+            local suffix  = opts.Suffix   or ""
+            local cb      = opts.Callback or function() end
+            local row = frame(items_frame, UDim2.new(1,0,0,EL_H), C.frame_bg, rnd())
+            row.LayoutOrder = next_lo()
+            stroke(row, C.border, 1)
+            local fill = frame(row, UDim2.new((val-min_v)/(max_v-min_v),0,1,0), C.slider_grab, rnd())
+            fill.Position = UDim2.new(0,0,0,0)
+            local overlay = label(row, name_s .. ": " .. tostring(val) .. suffix, UDim2.new(1,0,1,0), C.text, Enum.TextXAlignment.Center)
+            overlay.ZIndex = 2
             local sliding = false
-
-            local function update_slider(input)
-                local track_abs = track_bg.AbsolutePosition
-                local track_w   = track_bg.AbsoluteSize.X
-                local rel = math.clamp((input.Position.X - track_abs.X) / track_w, 0, 1)
+            local function update(inp)
+                local abs = row.AbsolutePosition
+                local w   = row.AbsoluteSize.X
+                local rel = math.clamp((inp.Position.X - abs.X) / w, 0, 1)
                 val = math.floor(min_v + (max_v - min_v) * rel)
-                fill.Size  = UDim2.new(rel, 0, 1, 0)
-                knob.Position = UDim2.new(rel, 0, 0.5, 0)
-                val_lbl.Text = tostring(val) .. suffix
+                fill.Size = UDim2.new(rel, 0, 1, 0)
+                overlay.Text = name_s .. ": " .. tostring(val) .. suffix
                 cb(val)
             end
 
-            track_bg.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    sliding = true
-                    update_slider(input)
+            row.InputBegan:Connect(function(inp)
+                if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+                    sliding = true; update(inp)
                 end
             end)
-            UserInputService.InputChanged:Connect(function(input)
+            UIS.InputChanged:Connect(function(inp)
                 if not sliding then return end
-                if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                    update_slider(input)
+                if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
+                    update(inp)
                 end
             end)
-            UserInputService.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            UIS.InputEnded:Connect(function(inp)
+                if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
                     sliding = false
                 end
             end)
 
             function el:Set(v)
                 val = math.clamp(v, min_v, max_v)
-                local rel = (val - min_v) / (max_v - min_v)
-                fill.Size = UDim2.new(rel, 0, 1, 0)
-                knob.Position = UDim2.new(rel, 0, 0.5, 0)
-                val_lbl.Text = tostring(val) .. suffix
+                local rel = (val-min_v)/(max_v-min_v)
+                fill.Size = UDim2.new(rel,0,1,0)
+                overlay.Text = name_s .. ": " .. tostring(val) .. suffix
             end
             function el:Get() return val end
             return el
         end
 
-        function sec:TextBox(options)
+        function sec:TextBox(opts)
             local el = {}
-            local name_str = options.Name or "Input"
-            local placeholder = options.Placeholder or ""
-            local default = options.Default or ""
-            local cb = options.Callback or function() end
-            local numeric = options.Numeric or false
+            local name_s   = opts.Name        or "Input"
+            local ph       = opts.Placeholder or ""
+            local default  = opts.Default     or ""
+            local numeric  = opts.Numeric     or false
+            local cb       = opts.Callback    or function() end
+            local row = frame(items_frame, UDim2.new(1,0,0,EL_H*2+2), C.win_bg, rnd())
+            row.BackgroundTransparency = 1
+            row.LayoutOrder = next_lo()
 
-            local row = Instance.new("Frame")
-            row.Size = UDim2.new(1, 0, 0, EL_H + 20)
-            row.BackgroundColor3 = THEME.element_bg
-            row.BorderSizePixel = 0
-            row.LayoutOrder = next_order()
-            row.Parent = sec_inner
-            make_corner(row)
+            local name_lbl = label(row, name_s, UDim2.new(1,0,0,EL_H), C.text)
+            name_lbl.Position = UDim2.new(0,0,0,0)
 
-            local name_lbl = make_label(row, name_str, UDim2.new(1, 0, 0, 20), THEME.text, FONT)
-            name_lbl.Position = UDim2.new(0, PAD, 0, 4)
-            name_lbl.Size = UDim2.new(1, -PAD*2, 0, 20)
-
-            local input_frame = Instance.new("Frame")
-            input_frame.Size = UDim2.new(1, -PAD*2, 0, 24)
-            input_frame.Position = UDim2.new(0, PAD, 0, 26)
-            input_frame.BackgroundColor3 = THEME.bg
-            input_frame.BorderSizePixel = 0
-            input_frame.Parent = row
-            make_corner(input_frame, 4)
-            make_stroke(input_frame, THEME.border, 1)
+            local input_bg = frame(row, UDim2.new(1,0,0,EL_H), C.frame_bg, rnd())
+            input_bg.Position = UDim2.new(0,0,0,EL_H+2)
+            stroke(input_bg, C.border, 1)
 
             local tb = Instance.new("TextBox")
-            tb.Size = UDim2.new(1, -PAD, 1, 0)
-            tb.Position = UDim2.new(0, PAD/2, 0, 0)
+            tb.Size = UDim2.new(1,-FRAME_PAD*2,1,0)
+            tb.Position = UDim2.new(0,FRAME_PAD,0,0)
             tb.BackgroundTransparency = 1
             tb.Text = default
-            tb.PlaceholderText = placeholder
-            tb.TextColor3 = THEME.text
-            tb.PlaceholderColor3 = THEME.text_dim
-            tb.TextSize = 13
+            tb.PlaceholderText = ph
+            tb.TextColor3 = C.text
+            tb.PlaceholderColor3 = C.text_dis
+            tb.TextSize = FONT_SZ
             tb.Font = FONT
             tb.TextXAlignment = Enum.TextXAlignment.Left
             tb.ClearTextOnFocus = false
-            tb.Parent = input_frame
+            tb.Parent = input_bg
 
+            tb.Focused:Connect(function()   set(input_bg,{BackgroundColor3=C.frame_bg_hov}) end)
             tb.FocusLost:Connect(function(enter)
+                set(input_bg,{BackgroundColor3=C.frame_bg})
                 if numeric then
                     local n = tonumber(tb.Text)
                     if not n then tb.Text = default; return end
@@ -616,331 +504,276 @@ function Lib:Window(title, width, height)
                 cb(tb.Text, enter)
             end)
 
-            tb.Focused:Connect(function()
-                tween(input_frame, { BackgroundColor3 = THEME.element_hover })
-                make_stroke(input_frame, THEME.accent, 1)
-            end)
-            tb.FocusLost:Connect(function()
-                tween(input_frame, { BackgroundColor3 = THEME.bg })
-                make_stroke(input_frame, THEME.border, 1)
-            end)
-
             function el:Set(t) tb.Text = tostring(t or "") end
             function el:Get() return tb.Text end
             return el
         end
 
-        function sec:Dropdown(options)
+        function sec:Dropdown(opts)
             local el = {}
-            local name_str = options.Name or "Dropdown"
-            local items = options.Items or {}
-            local default = options.Default or items[1] or ""
-            local cb = options.Callback or function() end
-            local selected = default
-            local open = false
-
+            local name_s  = opts.Name     or "Combo"
+            local items   = opts.Items    or {}
+            local sel     = opts.Default  or items[1] or ""
+            local cb      = opts.Callback or function() end
+            local open    = false
             local wrapper = Instance.new("Frame")
-            wrapper.Size = UDim2.new(1, 0, 0, EL_H)
+            wrapper.Size = UDim2.new(1,0,0,EL_H)
             wrapper.BackgroundTransparency = 1
             wrapper.ClipsDescendants = false
-            wrapper.LayoutOrder = next_order()
-            wrapper.Parent = sec_inner
             wrapper.AutomaticSize = Enum.AutomaticSize.Y
+            wrapper.LayoutOrder = next_lo()
+            wrapper.Parent = items_frame
 
-            local row = make_frame(wrapper, UDim2.new(1, 0, 0, EL_H), nil, THEME.element_bg)
-            make_corner(row)
+            local row = frame(wrapper, UDim2.new(1,0,0,EL_H), C.frame_bg, rnd())
+            stroke(row, C.border, 1)
 
-            local name_lbl = make_label(row, name_str, UDim2.new(0.5, 0, 1, 0), THEME.text, FONT)
-            make_padding(name_lbl, PAD)
+            local name_lbl = label(row, name_s, UDim2.new(0.55,0,1,0), C.text)
+            name_lbl.Position = UDim2.new(0,FRAME_PAD,0,0)
 
-            local sel_lbl = make_label(row, selected, UDim2.new(0.4, 0, 1, 0), THEME.text_dim, FONT, Enum.TextXAlignment.Right)
-            sel_lbl.Position = UDim2.new(0.5, 0, 0, 0)
+            local sel_lbl = label(row, sel .. "  ▼", UDim2.new(0.4,0,1,0), C.text_dis, Enum.TextXAlignment.Right)
+            sel_lbl.Position = UDim2.new(0.57,0,0,0)
 
-            local arrow = make_label(row, "▾", UDim2.new(0, 20, 1, 0), THEME.text_dim, FONT_BOLD, Enum.TextXAlignment.Center)
-            arrow.Position = UDim2.new(1, -24, 0, 0)
+            local popup = Instance.new("Frame")
+            popup.Size = UDim2.new(1,0,0,0)
+            popup.Position = UDim2.new(0,0,1,1)
+            popup.BackgroundColor3 = C.popup_bg
+            popup.BorderSizePixel = 0
+            popup.ClipsDescendants = true
+            popup.ZIndex = 20
+            popup.Parent = row
+            stroke(popup, C.border, 1)
 
-            local dropdown_frame = Instance.new("Frame")
-            dropdown_frame.Size = UDim2.new(1, 0, 0, 0)
-            dropdown_frame.Position = UDim2.new(0, 0, 1, 2)
-            dropdown_frame.BackgroundColor3 = THEME.section_bg
-            dropdown_frame.BorderSizePixel = 0
-            dropdown_frame.ClipsDescendants = true
-            dropdown_frame.ZIndex = 10
-            dropdown_frame.Parent = row
-            make_corner(dropdown_frame)
-            make_stroke(dropdown_frame, THEME.border, 1)
+            local popup_list = Instance.new("Frame")
+            popup_list.Size = UDim2.new(1,0,0,0)
+            popup_list.AutomaticSize = Enum.AutomaticSize.Y
+            popup_list.BackgroundTransparency = 1
+            popup_list.ZIndex = 21
+            popup_list.Parent = popup
+            padding(popup_list, FRAME_PAD, 2)
+            list_layout(popup_list, 2)
 
-            local dd_list = Instance.new("Frame")
-            dd_list.Size = UDim2.new(1, 0, 0, 0)
-            dd_list.AutomaticSize = Enum.AutomaticSize.Y
-            dd_list.BackgroundTransparency = 1
-            dd_list.Parent = dropdown_frame
-            make_padding(dd_list, 4)
-            make_list(dd_list, 2)
-
-            local item_height = 26
-            local max_visible = 5
-
+            local item_h = EL_H
+            local max_vis = 6
             local function populate(list)
-                for _, c in ipairs(dd_list:GetChildren()) do
-                    if not c:IsA("UIListLayout") and not c:IsA("UIPadding") then c:Destroy() end
-                end
-                for _, item in ipairs(list) do
-                    local item_btn = Instance.new("TextButton")
-                    item_btn.Size = UDim2.new(1, 0, 0, item_height)
-                    item_btn.BackgroundColor3 = THEME.element_bg
-                    item_btn.Text = tostring(item)
-                    item_btn.TextColor3 = item == selected and THEME.accent or THEME.text
-                    item_btn.TextSize = 13
-                    item_btn.Font = FONT
-                    item_btn.TextXAlignment = Enum.TextXAlignment.Left
-                    item_btn.BorderSizePixel = 0
-                    item_btn.ZIndex = 11
-                    item_btn.Parent = dd_list
-                    make_corner(item_btn, 4)
-                    make_padding(item_btn, 6)
-                    hover_highlight(item_btn, THEME.element_bg, THEME.element_hover)
-                    item_btn.MouseButton1Click:Connect(function()
-                        selected = tostring(item)
-                        sel_lbl.Text = selected
+                for _,c in ipairs(popup_list:GetChildren()) do if not c:IsA("UIListLayout") and not c:IsA("UIPadding") then c:Destroy() end end
+                for _,item in ipairs(list) do
+                    local ib = Instance.new("TextButton")
+                    ib.Size = UDim2.new(1,0,0,item_h)
+                    ib.BackgroundColor3 = tostring(item)==sel and C.header or C.popup_bg
+                    ib.BackgroundTransparency = tostring(item)==sel and 0.69 or 1
+                    ib.Text = tostring(item)
+                    ib.TextColor3 = C.text
+                    ib.TextSize = FONT_SZ
+                    ib.Font = FONT
+                    ib.TextXAlignment = Enum.TextXAlignment.Left
+                    ib.BorderSizePixel = 0
+                    ib.ZIndex = 22
+                    ib.Parent = popup_list
+                    padding(ib, FRAME_PAD, 0)
+                    ib.MouseEnter:Connect(function() set(ib,{BackgroundColor3=C.header, BackgroundTransparency=0.4}) end)
+                    ib.MouseLeave:Connect(function() set(ib,{BackgroundColor3= tostring(item)==sel and C.header or C.popup_bg, BackgroundTransparency= tostring(item)==sel and 0.69 or 1}) end)
+                    ib.MouseButton1Click:Connect(function()
+                        sel = tostring(item)
+                        sel_lbl.Text = sel .. "  ▼"
                         populate(list)
                         open = false
-                        tween(dropdown_frame, { Size = UDim2.new(1, 0, 0, 0) })
-                        arrow.Text = "▾"
-                        cb(selected)
+                        popup.Size = UDim2.new(1,0,0,0)
+                        cb(sel)
                     end)
                 end
             end
-
             populate(items)
 
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, 0, 1, 0)
-            btn.BackgroundTransparency = 1
-            btn.Text = ""
-            btn.ZIndex = 5
-            btn.Parent = row
-
-            btn.MouseButton1Click:Connect(function()
-                open = not open
-                local target_h = math.min(#items, max_visible) * (item_height + 2) + 8
-                tween(dropdown_frame, { Size = UDim2.new(1, 0, 0, open and target_h or 0) })
-                arrow.Text = open and "▴" or "▾"
-            end)
-
-            function el:Set(v)
-                selected = tostring(v)
-                sel_lbl.Text = selected
-                populate(items)
-            end
-            function el:SetItems(list)
-                items = list
-                populate(list)
-            end
-            function el:Get() return selected end
-            return el
-        end
-
-        function sec:ColorPicker(options)
-            local el = {}
-            local name_str = options.Name or "Color"
-            local default = options.Default or Color3.fromRGB(255, 0, 0)
-            local cb = options.Callback or function() end
-            local color = default
-            local open = false
-
-            local row = make_frame(sec_inner, UDim2.new(1, 0, 0, EL_H), nil, THEME.element_bg)
-            row.LayoutOrder = next_order()
-            make_corner(row)
-            hover_highlight(row, THEME.element_bg, THEME.element_hover)
-
-            local name_lbl = make_label(row, name_str, UDim2.new(1, -48, 1, 0), THEME.text, FONT)
-            make_padding(name_lbl, PAD)
-
-            local preview = Instance.new("Frame")
-            preview.Size = UDim2.new(0, 24, 0, 24)
-            preview.Position = UDim2.new(1, -32, 0.5, -12)
-            preview.BackgroundColor3 = color
-            preview.BorderSizePixel = 0
-            preview.Parent = row
-            make_corner(preview, 4)
-            make_stroke(preview, THEME.border, 1)
-
-            local picker_frame = Instance.new("Frame")
-            picker_frame.Size = UDim2.new(1, 0, 0, 0)
-            picker_frame.Position = UDim2.new(0, 0, 1, 2)
-            picker_frame.BackgroundColor3 = THEME.section_bg
-            picker_frame.BorderSizePixel = 0
-            picker_frame.ClipsDescendants = true
-            picker_frame.ZIndex = 10
-            picker_frame.Parent = row
-            make_corner(picker_frame)
-            make_stroke(picker_frame, THEME.border, 1)
-
-            local h_val, s_val, v_val = Color3.toHSV(default)
-            local picker_h = 160
-
-            local sv_frame = Instance.new("ImageLabel")
-            sv_frame.Size = UDim2.new(1, -PAD*2, 0, 100)
-            sv_frame.Position = UDim2.new(0, PAD, 0, PAD)
-            sv_frame.Image = "rbxassetid://6523286724"
-            sv_frame.BackgroundColor3 = Color3.fromHSV(h_val, 1, 1)
-            sv_frame.BorderSizePixel = 0
-            sv_frame.ZIndex = 11
-            sv_frame.Parent = picker_frame
-            make_corner(sv_frame, 4)
-
-            local sv_knob = Instance.new("Frame")
-            sv_knob.Size = UDim2.new(0, 10, 0, 10)
-            sv_knob.AnchorPoint = Vector2.new(0.5, 0.5)
-            sv_knob.Position = UDim2.new(s_val, 0, 1 - v_val, 0)
-            sv_knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            sv_knob.BorderSizePixel = 0
-            sv_knob.ZIndex = 12
-            sv_knob.Parent = sv_frame
-            make_corner(sv_knob, 5)
-            make_stroke(sv_knob, Color3.fromRGB(0,0,0), 1)
-
-            local hue_bar = Instance.new("ImageLabel")
-            hue_bar.Size = UDim2.new(1, -PAD*2, 0, 16)
-            hue_bar.Position = UDim2.new(0, PAD, 0, 110)
-            hue_bar.Image = "rbxassetid://6523291696"
-            hue_bar.BackgroundColor3 = Color3.fromRGB(255,255,255)
-            hue_bar.BorderSizePixel = 0
-            hue_bar.ZIndex = 11
-            hue_bar.Parent = picker_frame
-            make_corner(hue_bar, 4)
-
-            local hue_knob = Instance.new("Frame")
-            hue_knob.Size = UDim2.new(0, 8, 1, 0)
-            hue_knob.AnchorPoint = Vector2.new(0.5, 0)
-            hue_knob.Position = UDim2.new(h_val, 0, 0, 0)
-            hue_knob.BackgroundColor3 = Color3.fromRGB(255,255,255)
-            hue_knob.BorderSizePixel = 0
-            hue_knob.ZIndex = 12
-            hue_knob.Parent = hue_bar
-            make_corner(hue_knob, 2)
-            make_stroke(hue_knob, Color3.fromRGB(0,0,0), 1)
-
-            local hex_label = make_label(picker_frame, "#" .. color:ToHex():upper(), UDim2.new(1, -PAD*2, 0, 20), THEME.text_dim, FONT_LIGHT, Enum.TextXAlignment.Center)
-            hex_label.Position = UDim2.new(0, PAD, 0, 134)
-            hex_label.ZIndex = 11
-
-            local function update_color()
-                color = Color3.fromHSV(h_val, s_val, v_val)
-                preview.BackgroundColor3 = color
-                sv_frame.BackgroundColor3 = Color3.fromHSV(h_val, 1, 1)
-                sv_knob.Position = UDim2.new(s_val, 0, 1 - v_val, 0)
-                hue_knob.Position = UDim2.new(h_val, 0, 0, 0)
-                hex_label.Text = "#" .. color:ToHex():upper()
-                cb(color)
-            end
-
-            local sv_drag, hue_drag = false, false
-
-            sv_frame.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    sv_drag = true
-                    local rel_x = math.clamp((input.Position.X - sv_frame.AbsolutePosition.X) / sv_frame.AbsoluteSize.X, 0, 1)
-                    local rel_y = math.clamp((input.Position.Y - sv_frame.AbsolutePosition.Y) / sv_frame.AbsoluteSize.Y, 0, 1)
-                    s_val = rel_x
-                    v_val = 1 - rel_y
-                    update_color()
-                end
-            end)
-            hue_bar.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    hue_drag = true
-                    h_val = math.clamp((input.Position.X - hue_bar.AbsolutePosition.X) / hue_bar.AbsoluteSize.X, 0, 1)
-                    update_color()
-                end
-            end)
-            UserInputService.InputChanged:Connect(function(input)
-                if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
-                if sv_drag then
-                    local rel_x = math.clamp((input.Position.X - sv_frame.AbsolutePosition.X) / sv_frame.AbsoluteSize.X, 0, 1)
-                    local rel_y = math.clamp((input.Position.Y - sv_frame.AbsolutePosition.Y) / sv_frame.AbsoluteSize.Y, 0, 1)
-                    s_val = rel_x
-                    v_val = 1 - rel_y
-                    update_color()
-                end
-                if hue_drag then
-                    h_val = math.clamp((input.Position.X - hue_bar.AbsolutePosition.X) / hue_bar.AbsoluteSize.X, 0, 1)
-                    update_color()
-                end
-            end)
-            UserInputService.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    sv_drag = false
-                    hue_drag = false
-                end
-            end)
-
             local open_btn = Instance.new("TextButton")
-            open_btn.Size = UDim2.new(1, 0, 1, 0)
+            open_btn.Size = UDim2.new(1,0,1,0)
             open_btn.BackgroundTransparency = 1
             open_btn.Text = ""
+            open_btn.ZIndex = 5
             open_btn.Parent = row
 
             open_btn.MouseButton1Click:Connect(function()
                 open = not open
-                tween(picker_frame, { Size = UDim2.new(1, 0, 0, open and picker_h or 0) })
+                local th = math.min(#items, max_vis) * (item_h+2) + 4
+                popup.Size = UDim2.new(1,0,0, open and th or 0)
+                sel_lbl.Text = sel .. (open and "  ▲" or "  ▼")
+            end)
+            open_btn.MouseEnter:Connect(function() set(row,{BackgroundColor3=C.frame_bg_hov}) end)
+            open_btn.MouseLeave:Connect(function() set(row,{BackgroundColor3=C.frame_bg}) end)
+
+            function el:Set(v)
+                sel = tostring(v)
+                sel_lbl.Text = sel .. "  ▼"
+                populate(items)
+            end
+            function el:SetItems(list) items = list; populate(list) end
+            function el:Get() return sel end
+            return el
+        end
+
+        function sec:ColorPicker(opts)
+            local el = {}
+            local color  = opts.Default  or Color3.fromRGB(255,0,0)
+            local cb     = opts.Callback or function() end
+            local open   = false
+            local h_v, s_v, v_v = Color3.toHSV(color)
+            local row = frame(items_frame, UDim2.new(1,0,0,EL_H), C.frame_bg, rnd())
+            row.LayoutOrder = next_lo()
+            stroke(row, C.border, 1)
+
+            local swatch = frame(row, UDim2.new(0,13,0,13), color, rnd())
+            swatch.Position = UDim2.new(0,FRAME_PAD,0.5,-6)
+            stroke(swatch, C.border, 1)
+
+            local hex_lbl = label(row, "#"..color:ToHex():upper().."  ▼", UDim2.new(1,-20,1,0), C.text)
+            hex_lbl.Position = UDim2.new(0,20,0,0)
+
+            local picker = Instance.new("Frame")
+            picker.Size = UDim2.new(1,0,0,0)
+            picker.Position = UDim2.new(0,0,1,1)
+            picker.BackgroundColor3 = C.popup_bg
+            picker.BorderSizePixel = 0
+            picker.ClipsDescendants = true
+            picker.ZIndex = 20
+            picker.Parent = row
+            stroke(picker, C.border, 1)
+
+            local PH = 170
+            local sv = Instance.new("ImageLabel")
+            sv.Size = UDim2.new(1,-PAD*2,0,120)
+            sv.Position = UDim2.new(0,PAD,0,PAD)
+            sv.Image = "rbxassetid://6523286724"
+            sv.BackgroundColor3 = Color3.fromHSV(h_v,1,1)
+            sv.BorderSizePixel = 0
+            sv.ZIndex = 21
+            sv.Parent = picker
+            stroke(sv, C.border, 1)
+
+            local sv_knob = frame(sv, UDim2.new(0,7,0,7), Color3.fromRGB(255,255,255), rnd())
+            sv_knob.AnchorPoint = Vector2.new(0.5,0.5)
+            sv_knob.Position = UDim2.new(s_v,0,1-v_v,0)
+            sv_knob.ZIndex = 22
+            stroke(sv_knob, Color3.fromRGB(0,0,0), 1)
+
+            local hbar = Instance.new("ImageLabel")
+            hbar.Size = UDim2.new(1,-PAD*2,0,12)
+            hbar.Position = UDim2.new(0,PAD,0,130)
+            hbar.Image = "rbxassetid://6523291696"
+            hbar.BackgroundColor3 = Color3.fromRGB(255,255,255)
+            hbar.BorderSizePixel = 0
+            hbar.ZIndex = 21
+            hbar.Parent = picker
+            stroke(hbar, C.border, 1)
+
+            local h_knob = frame(hbar, UDim2.new(0,4,1,0), Color3.fromRGB(255,255,255), rnd())
+            h_knob.AnchorPoint = Vector2.new(0.5,0)
+            h_knob.Position = UDim2.new(h_v,0,0,0)
+            h_knob.ZIndex = 22
+            stroke(h_knob, Color3.fromRGB(0,0,0), 1)
+
+            local hex_full = label(picker, "#"..color:ToHex():upper(), UDim2.new(1,-PAD*2,0,16), C.text_dis, Enum.TextXAlignment.Center)
+            hex_full.Position = UDim2.new(0,PAD,0,148)
+            hex_full.ZIndex = 21
+            local function update()
+                color = Color3.fromHSV(h_v,s_v,v_v)
+                swatch.BackgroundColor3 = color
+                sv.BackgroundColor3 = Color3.fromHSV(h_v,1,1)
+                sv_knob.Position = UDim2.new(s_v,0,1-v_v,0)
+                h_knob.Position  = UDim2.new(h_v,0,0,0)
+                local hex = color:ToHex():upper()
+                hex_lbl.Text  = "#"..hex.."  ▼"
+                hex_full.Text = "#"..hex
+                cb(color)
+            end
+
+            local sv_drag, h_drag = false, false
+            sv.InputBegan:Connect(function(inp)
+                if inp.UserInputType~=Enum.UserInputType.MouseButton1 and inp.UserInputType~=Enum.UserInputType.Touch then return end
+                sv_drag=true
+                s_v=math.clamp((inp.Position.X-sv.AbsolutePosition.X)/sv.AbsoluteSize.X,0,1)
+                v_v=1-math.clamp((inp.Position.Y-sv.AbsolutePosition.Y)/sv.AbsoluteSize.Y,0,1)
+                update()
+            end)
+            hbar.InputBegan:Connect(function(inp)
+                if inp.UserInputType~=Enum.UserInputType.MouseButton1 and inp.UserInputType~=Enum.UserInputType.Touch then return end
+                h_drag=true
+                h_v=math.clamp((inp.Position.X-hbar.AbsolutePosition.X)/hbar.AbsoluteSize.X,0,1)
+                update()
+            end)
+            UIS.InputChanged:Connect(function(inp)
+                if inp.UserInputType~=Enum.UserInputType.MouseMovement and inp.UserInputType~=Enum.UserInputType.Touch then return end
+                if sv_drag then
+                    s_v=math.clamp((inp.Position.X-sv.AbsolutePosition.X)/sv.AbsoluteSize.X,0,1)
+                    v_v=1-math.clamp((inp.Position.Y-sv.AbsolutePosition.Y)/sv.AbsoluteSize.Y,0,1)
+                    update()
+                end
+                if h_drag then
+                    h_v=math.clamp((inp.Position.X-hbar.AbsolutePosition.X)/hbar.AbsoluteSize.X,0,1)
+                    update()
+                end
+            end)
+            UIS.InputEnded:Connect(function(inp)
+                if inp.UserInputType==Enum.UserInputType.MouseButton1 or inp.UserInputType==Enum.UserInputType.Touch then
+                    sv_drag=false; h_drag=false
+                end
             end)
 
-            function el:Set(c)
-                color = c
-                h_val, s_val, v_val = Color3.toHSV(c)
-                update_color()
-            end
+            local open_btn = Instance.new("TextButton")
+            open_btn.Size = UDim2.new(1,0,1,0)
+            open_btn.BackgroundTransparency = 1
+            open_btn.Text = ""
+            open_btn.Parent = row
+            open_btn.MouseButton1Click:Connect(function()
+                open = not open
+                picker.Size = UDim2.new(1,0,0, open and PH or 0)
+                hex_lbl.Text = "#"..color:ToHex():upper()..(open and "  ▲" or "  ▼")
+            end)
+            open_btn.MouseEnter:Connect(function() set(row,{BackgroundColor3=C.frame_bg_hov}) end)
+            open_btn.MouseLeave:Connect(function() set(row,{BackgroundColor3=C.frame_bg}) end)
+
+            function el:Set(c) color=c; h_v,s_v,v_v=Color3.toHSV(c); update() end
             function el:Get() return color end
             return el
         end
 
-        function sec:Keybind(options)
+        function sec:Keybind(opts)
             local el = {}
-            local name_str = options.Name or "Keybind"
-            local default = options.Default or safe_keycode("Unknown", "Q")
-            local cb = options.Callback or function() end
-            local bound = default
+            local bound    = opts.Default  or Enum.KeyCode.F
+            local cb       = opts.Callback or function() end
             local listening = false
-            local row = make_frame(sec_inner, UDim2.new(1, 0, 0, EL_H), nil, THEME.element_bg)
-            row.LayoutOrder = next_order()
-            make_corner(row)
-            local name_lbl = make_label(row, name_str, UDim2.new(1, -80, 1, 0), THEME.text, FONT)
-            make_padding(name_lbl, PAD)
+            local row = frame(items_frame, UDim2.new(1,0,0,EL_H), C.win_bg, rnd())
+            row.BackgroundTransparency = 1
+            row.LayoutOrder = next_lo()
+
+            local key_f = frame(row, UDim2.new(0,80,0,EL_H-2), C.frame_bg, rnd())
+            key_f.Position = UDim2.new(1,-82,0.5,-(EL_H-2)/2)
+            stroke(key_f, C.border, 1)
+
+            local key_lbl = label(key_f, "["..bound.Name.."]", UDim2.new(1,0,1,0), C.text, Enum.TextXAlignment.Center)
             local key_btn = Instance.new("TextButton")
-            key_btn.Size = UDim2.new(0, 72, 0, 22)
-            key_btn.Position = UDim2.new(1, -76, 0.5, -11)
-            key_btn.BackgroundColor3 = THEME.bg
-            key_btn.Text = bound.Name
-            key_btn.TextColor3 = THEME.text_dim
-            key_btn.TextSize = 12
-            key_btn.Font = FONT
-            key_btn.BorderSizePixel = 0
-            key_btn.Parent = row
-            make_corner(key_btn, 4)
-            make_stroke(key_btn, THEME.border, 1)
+            key_btn.Size = UDim2.new(1,0,1,0)
+            key_btn.BackgroundTransparency = 1
+            key_btn.Text = ""
+            key_btn.Parent = key_f
 
             key_btn.MouseButton1Click:Connect(function()
                 listening = true
-                key_btn.Text = "..."
-                key_btn.TextColor3 = THEME.accent
+                key_lbl.Text = "[...]"
+                set(key_f,{BackgroundColor3=C.frame_bg_hov})
             end)
+            key_btn.MouseEnter:Connect(function() if not listening then set(key_f,{BackgroundColor3=C.frame_bg_hov}) end end)
+            key_btn.MouseLeave:Connect(function() if not listening then set(key_f,{BackgroundColor3=C.frame_bg}) end end)
 
-            UserInputService.InputBegan:Connect(function(input, gpe)
+            UIS.InputBegan:Connect(function(inp, gpe)
                 if not listening then return end
-                if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+                if inp.UserInputType ~= Enum.UserInputType.Keyboard then return end
                 listening = false
-                bound = input.KeyCode
-                key_btn.Text = bound.Name
-                key_btn.TextColor3 = THEME.text_dim
+                bound = inp.KeyCode
+                key_lbl.Text = "["..bound.Name.."]"
+                set(key_f,{BackgroundColor3=C.frame_bg})
                 cb(bound)
             end)
 
-            function el:Set(kc)
-                bound = kc
-                key_btn.Text = kc.Name
-            end
+            function el:Set(kc) bound=kc; key_lbl.Text="["..kc.Name.."]" end
             function el:Get() return bound end
             return el
         end
@@ -953,62 +786,51 @@ function Lib:Window(title, width, height)
     return win
 end
 
-function Lib:Notify(options)
-    if type(self) ~= "table" then
-        options = self
-        self = Lib
-    end
+function Lib:Notify(opts)
+    if type(self) ~= "table" then opts = self; self = Lib end
     ensure_sg(self)
-    local title_str = options.Title or "Notification"
-    local msg = options.Message or ""
-    local duration = options.Duration or 3
-    local ntype = options.Type or "Info"
-    local color_map = {
-        Info    = THEME.info,
-        Success = THEME.success,
-        Warning = THEME.warning,
-        Error   = THEME.danger,
-    }
-    local accent_color = color_map[ntype] or THEME.info
-    local notif_w = 280
-    local notif_h = 64
+    local title_s  = opts.Title    or "Notice"
+    local msg_s    = opts.Message  or ""
+    local dur      = opts.Duration or 3
+    local ntype    = opts.Type     or "Info"
+    local accent_map = { Info=C.info, Success=C.success, Warning=C.warning, Error=C.danger }
+    local accent = accent_map[ntype] or C.info
+    local NW = 300
     local notif = Instance.new("Frame")
-    notif.Size = UDim2.new(0, notif_w, 0, notif_h)
-    notif.Position = UDim2.new(1, notif_w + 10, 1, -80)
-    notif.BackgroundColor3 = THEME.section_bg
+    notif.Size = UDim2.new(0,NW,0,0)
+    notif.AutomaticSize = Enum.AutomaticSize.Y
+    notif.Position = UDim2.new(1,NW+8,1,-8)
+    notif.AnchorPoint = Vector2.new(1,1)
+    notif.BackgroundColor3 = C.popup_bg
     notif.BorderSizePixel = 0
     notif.Parent = self._sg
-    make_corner(notif, CORNER)
-    make_stroke(notif, THEME.border, 1)
+    stroke(notif, C.border, 1)
 
-    local side = Instance.new("Frame")
-    side.Size = UDim2.new(0, 3, 1, 0)
-    side.BackgroundColor3 = accent_color
-    side.BorderSizePixel = 0
-    side.Parent = notif
-    make_corner(side, 2)
+    local bar = frame(notif, UDim2.new(0,3,1,0), accent, rnd())
+    bar.Position = UDim2.new(0,0,0,0)
 
-    local title_lbl = make_label(notif, title_str, UDim2.new(1, -16, 0, 22), THEME.text, FONT_BOLD)
-    title_lbl.Position = UDim2.new(0, 12, 0, 6)
-    title_lbl.TextSize = 13
+    local t_lbl = label(notif, "[" .. ntype .. "] " .. title_s, UDim2.new(1,-12,0,EL_H), C.text)
+    t_lbl.Position = UDim2.new(0,8,0,2)
+    t_lbl.TextColor3 = accent
 
-    local msg_lbl = make_label(notif, msg, UDim2.new(1, -16, 0, 32), THEME.text_dim, FONT_LIGHT)
-    msg_lbl.Position = UDim2.new(0, 12, 0, 26)
-    msg_lbl.TextSize = 12
-    msg_lbl.TextWrapped = true
+    local m_lbl = Instance.new("TextLabel")
+    m_lbl.Size = UDim2.new(1,-12,0,0)
+    m_lbl.AutomaticSize = Enum.AutomaticSize.Y
+    m_lbl.Position = UDim2.new(0,8,0,EL_H+2)
+    m_lbl.BackgroundTransparency = 1
+    m_lbl.Text = msg_s
+    m_lbl.TextColor3 = C.text_dis
+    m_lbl.TextSize = FONT_SZ
+    m_lbl.Font = FONT
+    m_lbl.TextXAlignment = Enum.TextXAlignment.Left
+    m_lbl.TextWrapped = true
+    m_lbl.Parent = notif
 
-    local progress = Instance.new("Frame")
-    progress.Size = UDim2.new(1, 0, 0, 2)
-    progress.Position = UDim2.new(0, 0, 1, -2)
-    progress.BackgroundColor3 = accent_color
-    progress.BorderSizePixel = 0
-    progress.Parent = notif
-
-    tween(notif, { Position = UDim2.new(1, -(notif_w + 10), 1, -80) }, 0.3)
-    tween(progress, { Size = UDim2.new(0, 0, 0, 2) }, duration)
-    task.delay(duration, function()
-        tween(notif, { Position = UDim2.new(1, notif_w + 10, 1, -80) }, 0.3)
-        task.delay(0.35, function() notif:Destroy() end)
+    notif.Position = UDim2.new(1,NW+8,1,-8)
+    task.defer(function() set(notif,{Position=UDim2.new(1,-8,1,-8)}) end)
+    task.delay(dur, function()
+        set(notif,{Position=UDim2.new(1,NW+8,1,-8)})
+        task.delay(0.05, function() notif:Destroy() end)
     end)
 end
 
