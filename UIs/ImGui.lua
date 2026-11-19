@@ -12,13 +12,10 @@ local function safe_keycode(name, fallback)
 end
 
 local function random_string(len)
-    local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    local out = {}
-    for i = 1, len do
-        local idx = math.random(1, #chars)
-        out[i] = chars:sub(idx, idx)
-    end
-    return table.concat(out)
+	local length = math.random(10,40)
+	local array = {}
+	for i = 1, length do array[i] = string.char(math.random(32, 126)) end
+	return table.concat(array)
 end
 
 local parent_gui = (get_hidden_gui and get_hidden_gui()) or (gethui and gethui()) or CoreGui or PlayerGui
@@ -273,7 +270,6 @@ function Lib:Window(title, width, height)
 
     win._main    = main
     win._content = content
-
     function win:Section(name)
         if type(self) ~= "table" then
             name = self
@@ -282,7 +278,6 @@ function Lib:Window(title, width, height)
 
         local sec = {}
         sec._elements = {}
-
         local sec_frame = Instance.new("Frame")
         sec_frame.Name = random_string(8)
         sec_frame.Size = UDim2.new(1, 0, 0, 0)
@@ -312,7 +307,6 @@ function Lib:Window(title, width, height)
 
             local hdr_lbl = make_label(hdr, name:upper(), UDim2.new(1, 0, 1, 0), THEME.text_dim, FONT_BOLD)
             hdr_lbl.TextSize = 11
-            hdr_lbl.LetterSpacing = 2
 
             local hdr_line = Instance.new("Frame")
             hdr_line.Size = UDim2.new(1, 0, 0, 1)
@@ -323,7 +317,6 @@ function Lib:Window(title, width, height)
         end
 
         local layout_order = 1
-
         local function next_order()
             layout_order = layout_order + 1
             return layout_order
