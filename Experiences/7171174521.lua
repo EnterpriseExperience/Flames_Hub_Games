@@ -73,8 +73,8 @@ if not In_Studio then
     end
 end
 wait(0.15)
-local Announcement_Message = "Fixed Open All Tailgate Doors (FE) not correctly teleporting to Tailgate Model + fixed Despawn Current Vehicle not working + added Car Alarm (FE)."
-g.displayTimeMax = 15
+local Announcement_Message = "Added actual in-game speed changer (actually changes your vehicle's internal speed) + added a slider for dynamic modifications + fixed Car11 not changing color with Rainbow Vehicle."
+g.displayTimeMax = 30
 local Workspace = g.Workspace or cloneref and cloneref(game:GetService("Workspace")) or game:GetService("Workspace")
 local Players = g.Players or cloneref and cloneref(game:GetService("Players")) or game:GetService("Players")
 local ReplicatedStorage = g.ReplicatedStorage or cloneref and cloneref(game:GetService("ReplicatedStorage")) or game:GetService("ReplicatedStorage")
@@ -92,7 +92,7 @@ local FL = lib
 local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
-local Raw_Version = "V1.2.2"
+local Raw_Version = "V1.2.5"
 g.Script_Version = tostring(Raw_Version).."-APM"
 g.fullbright_enabled = g.fullbright_enabled or false
 g.FLY_SPEED = g.FLY_SPEED or 75
@@ -229,7 +229,7 @@ g.Fire_All_Doors = function()
         local deadline = os.clock() + 2
         repeat task.wait(0.1) until Find_Proximity_Prompt_TailGate_For_Car(car) ~= nil or os.clock() >= deadline
         local prompt = Find_Proximity_Prompt_TailGate_For_Car(car)
-        if not prompt then continue end
+        if not prompt or not prompt:IsA("ProximityPrompt") then continue end
         pcall(function() fireproximityprompt(prompt) end)
         task.wait(0.05)
     end
@@ -645,128 +645,222 @@ g.Change_Paint_Colr_Vehicle = function(...)
 end
 
 g.Flash_Vehicle_Toggle = function(state)
-    if state == g.Flash_Paint_Active then return end
-    g.Flash_Paint_Active = state
-    if not state then
-        FL.disconnect("flash_paint")
-        return
-    end
-    local index = 1
-    local timer = 0
-    local interval = 0.08
-    FL.connect("flash_paint", RunService.Heartbeat:Connect(function(dt)
-        local Event = g.Mod_Shop_Remote_Event_Found_RS or g.Find_Mod_Shop_Remote_Event()
-        if not Event or not Event:IsA("RemoteEvent") then
-            g.Flash_Paint_Active = false
-            FL.disconnect("flash_paint")
-            return
-        end
-        timer = timer + dt
-        if timer < interval then return end
-        timer = 0
-        index = (index % #g.colors) + 1
-        local color = g.colors[index]
-        local vehicle = g.get_lp_vehicle and g.get_lp_vehicle() or g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle()
-        if not vehicle or not vehicle:IsDescendantOf(game or workspace) then return end
-        Event:FireServer("applyChanges", {
-            {
-                index = 1,
-                vehicleModel = vehicle,
-                PaintData = {
-                    Windows = { Primary = { Color = Color3.new(0, 0, 0), Transparency = 0.5 } },
-                    Exterior = {
-                        Primary = { Color = color, Reflectance = 0.029999999329447746, Texture = "rbxassetid://129370726755662" },
-                        Secondary = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.029999999329447746, Texture = "rbxassetid://129370726755662" }
-                    },
-                    Rims = { Primary = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" } }
-                },
-                WheelInfo = {
-                    Tires = {
-                        ["Front Diameter"] = 1, ["Front Width"] = 1,
-                        ["Front Sidewall Bulge"] = 0.5, SidewallHeight = 0.5,
-                        ["Rear Sidewall Height"] = 0.5, ["Rear Width"] = 1,
-                        ["Front Sidewall Height"] = 0.5, ["Rear Sidewall Bulge"] = 0.5,
-                        Width = 1, Diameter = 1, Selected = {},
-                        ["Rear Diameter"] = 1, SidewallBulge = 0.5
-                    },
-                    Rims = { IsDually = false }
-                },
-                turbochargers = 1,
-                attachments = { Sub = {}, Main = {}, Positions = { Main = {}, Sub = {} } },
-                suspensionInfo = {
-                    Rear = { Min = 4.5, ["Ride Max"] = 5.55, Default = 5.5, Max = 5.5, ["Ride Height"] = 5.5, ["Ride Min"] = 4.55 },
-                    Camber = 0, ["Rear Spring Force"] = 5000, Spacer = 0,
-                    ["Front Spring Force"] = 5000, ["Front Spacer"] = 0,
-                    Front = { Min = 4.5, ["Ride Max"] = 5.55, Default = 5.5, Max = 5.5, ["Ride Height"] = 5.5, ["Ride Min"] = 4.55 },
-                    ["Rear Camber"] = 0, ["Rear Spacer"] = 0
-                },
-                attachmentData = {}, superchargers = 1,
-                exhaustInfo = {}, attachmentCount = {},
-                ChangedSections = { Paint = true },
-                engineLevel = 5, FrameInfo = {}
-            }
-        })
-    end))
+	if state == g.Flash_Paint_Active then return end
+	g.Flash_Paint_Active = state
+	if not state then
+		FL.disconnect("flash_paint")
+		return
+	end
+	local index = 1
+	local timer = 0
+	local interval = 0.08
+	FL.connect("flash_paint", RunService.Heartbeat:Connect(function(dt)
+		local Event = g.Mod_Shop_Remote_Event_Found_RS or g.Find_Mod_Shop_Remote_Event()
+		if not Event or not Event:IsA("RemoteEvent") then
+			g.Flash_Paint_Active = false
+			FL.disconnect("flash_paint")
+			return
+		end
+		timer = timer + dt
+		if timer < interval then return end
+		timer = 0
+		index = (index % #g.colors) + 1
+		local color = g.colors[index]
+		local vehicle = g.get_lp_vehicle and g.get_lp_vehicle() or g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle()
+		if not vehicle or not vehicle:IsDescendantOf(game or workspace) then return end
+		local is_car11 = vehicle.Name == "Car11"
+		local paint_data
+		if is_car11 then
+			paint_data = {
+				Tires = { Primary = { Color = Color3.new(0.706, 0.706, 0.706) } },
+				Exterior = {
+					["Primary 1"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 2"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 3"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 4"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 5"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 6"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 7"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 8"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Trim Primary"] = { Color = Color3.new(0.282, 0.282, 0.282), Reflectance = 0, Texture = "Metal1" }
+				},
+				Rims = {
+					Primary = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" },
+					Secondary = { Color = Color3.new(0.282, 0.282, 0.282), Reflectance = 0, Texture = "Metal2" },
+					Text = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" },
+					["Bolts Primary"] = { Color = Color3.new(0.282, 0.282, 0.282), Reflectance = 0, Texture = "Metal1" },
+					["Bolts Secondary"] = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" }
+				}
+			}
+		else
+			paint_data = {
+				Windows = { Primary = { Color = Color3.new(0, 0, 0), Transparency = 0.5 } },
+				Exterior = {
+					Primary = { Color = color, Reflectance = 0.029999999329447746, Texture = "rbxassetid://129370726755662" },
+					Secondary = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.029999999329447746, Texture = "rbxassetid://129370726755662" }
+				},
+				Rims = { Primary = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" } }
+			}
+		end
+
+		local wheel_info
+		if is_car11 then
+			wheel_info = {
+				Tires = {
+					["Front Diameter"] = 1, ["Front Width"] = 1,
+					["Front Sidewall Bulge"] = 0.5, ["Front Sidewall Height"] = 0.5,
+					["Rear Diameter"] = 1, ["Rear Width"] = 1,
+					["Rear Sidewall Bulge"] = 0.5, ["Rear Sidewall Height"] = 0.5,
+					SidewallHeight = 0.5, SidewallBulge = 0.5,
+					Width = 1, Diameter = 1,
+					SelectedGraph = "SATireGraphic1",
+					Selected = { FL = "TireTrailer2", FR = "TireTrailer2", RL = "TireTrailer2", RR = "TireTrailer2" }
+				},
+				Rims = { Selected = "RimSWCar111", IsDually = false }
+			}
+		else
+			wheel_info = {
+				Tires = {
+					["Front Diameter"] = 1, ["Front Width"] = 1,
+					["Front Sidewall Bulge"] = 0.5, SidewallHeight = 0.5,
+					["Rear Sidewall Height"] = 0.5, ["Rear Width"] = 1,
+					["Front Sidewall Height"] = 0.5, ["Rear Sidewall Bulge"] = 0.5,
+					Width = 1, Diameter = 1, Selected = {},
+					["Rear Diameter"] = 1, SidewallBulge = 0.5
+				},
+				Rims = { IsDually = false }
+			}
+		end
+
+		Event:FireServer("applyChanges", {
+			{
+				index = 1,
+				vehicleModel = vehicle,
+				PaintData = paint_data,
+				WheelInfo = wheel_info,
+				turbochargers = 1,
+				attachments = { Sub = {}, Main = {}, Positions = { Main = {}, Sub = {} } },
+				suspensionInfo = {
+					Rear = { Min = 4.5, ["Ride Max"] = 5.55, Default = 5.5, Max = 5.5, ["Ride Height"] = 5.5, ["Ride Min"] = 4.55 },
+					Camber = 0, ["Rear Spring Force"] = 5000, Spacer = 0,
+					["Front Spring Force"] = 5000, ["Front Spacer"] = 0,
+					Front = { Min = 4.5, ["Ride Max"] = 5.55, Default = 5.5, Max = 5.5, ["Ride Height"] = 5.5, ["Ride Min"] = 4.55 },
+					["Rear Camber"] = 0, ["Rear Spacer"] = 0
+				},
+				attachmentData = {}, superchargers = 1,
+				exhaustInfo = {}, attachmentCount = {},
+				ChangedSections = { Paint = true },
+				engineLevel = 5, FrameInfo = {}
+			}
+		})
+	end))
 end
 
 g.Rainbow_Vehicle_Toggle = function(state)
-    if state == g.RGB_Paint_Active then return end
-    g.RGB_Paint_Active = state
-    if not state then
-        FL.disconnect("rgb_paint")
-        return
-    end
-    local hue = 0
-    FL.connect("rgb_paint", RunService.Heartbeat:Connect(function(dt)
-        local Event = g.Mod_Shop_Remote_Event_Found_RS or Mod_Shop_Remote_Event()
-        if not Event or not Event:IsA("RemoteEvent") then
-            g.RGB_Paint_Active = false
-            FL.disconnect("rgb_paint")
-            return
-        end
-        hue = (hue + dt * 0.1) % 1
-        local color = Color3.fromHSV(hue, 1, 1)
-        local vehicle = g.get_lp_vehicle and g.get_lp_vehicle() or g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle()
-        if not vehicle or not vehicle:IsDescendantOf(game or workspace) then return end
-        Event:FireServer("applyChanges", {
-            {
-                index = 1,
-                vehicleModel = vehicle,
-                PaintData = {
-                    Windows = { Primary = { Color = Color3.new(0, 0, 0), Transparency = 0.5 } },
-                    Exterior = {
-                        Primary = { Color = color, Reflectance = 0.029999999329447746, Texture = "rbxassetid://129370726755662" },
-                        Secondary = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.029999999329447746, Texture = "rbxassetid://129370726755662" }
-                    },
-                    Rims = { Primary = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" } }
-                },
-                WheelInfo = {
-                    Tires = {
-                        ["Front Diameter"] = 1, ["Front Width"] = 1,
-                        ["Front Sidewall Bulge"] = 0.5, SidewallHeight = 0.5,
-                        ["Rear Sidewall Height"] = 0.5, ["Rear Width"] = 1,
-                        ["Front Sidewall Height"] = 0.5, ["Rear Sidewall Bulge"] = 0.5,
-                        Width = 1, Diameter = 1, Selected = {},
-                        ["Rear Diameter"] = 1, SidewallBulge = 0.5
-                    },
-                    Rims = { IsDually = false }
-                },
-                turbochargers = 1,
-                attachments = { Sub = {}, Main = {}, Positions = { Main = {}, Sub = {} } },
-                suspensionInfo = {
-                    Rear = { Min = 4.5, ["Ride Max"] = 5.55, Default = 5.5, Max = 5.5, ["Ride Height"] = 5.5, ["Ride Min"] = 4.55 },
-                    Camber = 0, ["Rear Spring Force"] = 5000, Spacer = 0,
-                    ["Front Spring Force"] = 5000, ["Front Spacer"] = 0,
-                    Front = { Min = 4.5, ["Ride Max"] = 5.55, Default = 5.5, Max = 5.5, ["Ride Height"] = 5.5, ["Ride Min"] = 4.55 },
-                    ["Rear Camber"] = 0, ["Rear Spacer"] = 0
-                },
-                attachmentData = {}, superchargers = 1,
-                exhaustInfo = {}, attachmentCount = {},
-                ChangedSections = { Paint = true },
-                engineLevel = 5, FrameInfo = {}
-            }
-        })
-    end))
+	if state == g.RGB_Paint_Active then return end
+	g.RGB_Paint_Active = state
+	if not state then
+		FL.disconnect("rgb_paint")
+		return
+	end
+	local hue = 0
+	FL.connect("rgb_paint", RunService.Heartbeat:Connect(function(dt)
+		local Event = g.Mod_Shop_Remote_Event_Found_RS or Mod_Shop_Remote_Event()
+		if not Event or not Event:IsA("RemoteEvent") then
+			g.RGB_Paint_Active = false
+			FL.disconnect("rgb_paint")
+			return
+		end
+		hue = (hue + dt * 0.1) % 1
+		local color = Color3.fromHSV(hue, 1, 1)
+		local vehicle = g.get_lp_vehicle and g.get_lp_vehicle() or g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle()
+		if not vehicle or not vehicle:IsDescendantOf(game or workspace) then return end
+		local is_car11 = vehicle.Name == "Car11"
+		local paint_data
+		if is_car11 then
+			paint_data = {
+				Tires = { Primary = { Color = Color3.new(0.706, 0.706, 0.706) } },
+				Exterior = {
+					["Primary 1"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 2"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 3"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 4"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 5"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 6"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 7"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 8"] = { Color = color, Reflectance = 0.03, Texture = "SACar11L1" },
+					["Trim Primary"] = { Color = Color3.new(0.282, 0.282, 0.282), Reflectance = 0, Texture = "Metal1" }
+				},
+				Rims = {
+					Primary = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" },
+					Secondary = { Color = Color3.new(0.282, 0.282, 0.282), Reflectance = 0, Texture = "Metal2" },
+					Text = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" },
+					["Bolts Primary"] = { Color = Color3.new(0.282, 0.282, 0.282), Reflectance = 0, Texture = "Metal1" },
+					["Bolts Secondary"] = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" }
+				}
+			}
+		else
+			paint_data = {
+				Windows = { Primary = { Color = Color3.new(0, 0, 0), Transparency = 0.5 } },
+				Exterior = {
+					Primary = { Color = color, Reflectance = 0.029999999329447746, Texture = "rbxassetid://129370726755662" },
+					Secondary = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.029999999329447746, Texture = "rbxassetid://129370726755662" }
+				},
+				Rims = { Primary = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" } }
+			}
+		end
+
+		local wheel_info
+		if is_car11 then
+			wheel_info = {
+				Tires = {
+					["Front Diameter"] = 1, ["Front Width"] = 1,
+					["Front Sidewall Bulge"] = 0.5, ["Front Sidewall Height"] = 0.5,
+					["Rear Diameter"] = 1, ["Rear Width"] = 1,
+					["Rear Sidewall Bulge"] = 0.5, ["Rear Sidewall Height"] = 0.5,
+					SidewallHeight = 0.5, SidewallBulge = 0.5,
+					Width = 1, Diameter = 1,
+					SelectedGraph = "SATireGraphic1",
+					Selected = { FL = "TireTrailer2", FR = "TireTrailer2", RL = "TireTrailer2", RR = "TireTrailer2" }
+				},
+				Rims = { Selected = "RimSWCar111", IsDually = false }
+			}
+		else
+			wheel_info = {
+				Tires = {
+					["Front Diameter"] = 1, ["Front Width"] = 1,
+					["Front Sidewall Bulge"] = 0.5, SidewallHeight = 0.5,
+					["Rear Sidewall Height"] = 0.5, ["Rear Width"] = 1,
+					["Front Sidewall Height"] = 0.5, ["Rear Sidewall Bulge"] = 0.5,
+					Width = 1, Diameter = 1, Selected = {},
+					["Rear Diameter"] = 1, SidewallBulge = 0.5
+				},
+				Rims = { IsDually = false }
+			}
+		end
+
+		Event:FireServer("applyChanges", {
+			{
+				index = 1,
+				vehicleModel = vehicle,
+				PaintData = paint_data,
+				WheelInfo = wheel_info,
+				turbochargers = 1,
+				attachments = { Sub = {}, Main = {}, Positions = { Main = {}, Sub = {} } },
+				suspensionInfo = {
+					Rear = { Min = 4.5, ["Ride Max"] = 5.55, Default = 5.5, Max = 5.5, ["Ride Height"] = 5.5, ["Ride Min"] = 4.55 },
+					Camber = 0, ["Rear Spring Force"] = 5000, Spacer = 0,
+					["Front Spring Force"] = 5000, ["Front Spacer"] = 0,
+					Front = { Min = 4.5, ["Ride Max"] = 5.55, Default = 5.5, Max = 5.5, ["Ride Height"] = 5.5, ["Ride Min"] = 4.55 },
+					["Rear Camber"] = 0, ["Rear Spacer"] = 0
+				},
+				attachmentData = {}, superchargers = 1,
+				exhaustInfo = {}, attachmentCount = {},
+				ChangedSections = { Paint = true },
+				engineLevel = 5, FrameInfo = {}
+			}
+		})
+	end))
 end
 
 g.Rainbow_Rims_Toggle = function(state)
@@ -830,63 +924,110 @@ g.Rainbow_Rims_Toggle = function(state)
 end
 
 g.Rainbow_Windows_Toggle = function(state)
-    if state == g.RGB_Windows_Active then return end
-    g.RGB_Windows_Active = state
-    if not state then
-        FL.disconnect("rgb_windows")
-        return
-    end
-    local hue = 0
-    FL.connect("rgb_windows", RunService.Heartbeat:Connect(function(dt)
-        local Event = g.Mod_Shop_Remote_Event_Found_RS or g.Find_Mod_Shop_Remote_Event()
-        if not Event or not Event:IsA("RemoteEvent") then
-            g.RGB_Windows_Active = false
-            FL.disconnect("rgb_windows")
-            return
-        end
-        hue = (hue + dt * 0.1) % 1
-        local color = Color3.fromHSV(hue, 1, 1)
-        local vehicle = g.get_lp_vehicle and g.get_lp_vehicle() or g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle()
-        if not vehicle or not vehicle:IsDescendantOf(game or workspace) then return end
-        Event:FireServer("applyChanges", {
-            {
-                index = 1,
-                vehicleModel = vehicle,
-                PaintData = {
-                    Windows = { Primary = { Color = color, Transparency = 0.5 } },
-                    Exterior = {
-                        Primary   = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.029999999329447746, Texture = "rbxassetid://129370726755662" },
-                        Secondary = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.029999999329447746, Texture = "rbxassetid://129370726755662" }
-                    },
-                    Rims = { Primary = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" } }
-                },
-                WheelInfo = {
-                    Tires = {
-                        ["Front Diameter"] = 1, ["Front Width"] = 1,
-                        ["Front Sidewall Bulge"] = 0.5, SidewallHeight = 0.5,
-                        ["Rear Sidewall Height"] = 0.5, ["Rear Width"] = 1,
-                        ["Front Sidewall Height"] = 0.5, ["Rear Sidewall Bulge"] = 0.5,
-                        Width = 1, Diameter = 1, Selected = {},
-                        ["Rear Diameter"] = 1, SidewallBulge = 0.5
-                    },
-                    Rims = { IsDually = false }
-                },
-                turbochargers = 1,
-                attachments = { Sub = {}, Main = {}, Positions = { Main = {}, Sub = {} } },
-                suspensionInfo = {
-                    Rear = { Min = 4.5, ["Ride Max"] = 5.55, Default = 5.5, Max = 5.5, ["Ride Height"] = 5.5, ["Ride Min"] = 4.55 },
-                    Camber = 0, ["Rear Spring Force"] = 5000, Spacer = 0,
-                    ["Front Spring Force"] = 5000, ["Front Spacer"] = 0,
-                    Front = { Min = 4.5, ["Ride Max"] = 5.55, Default = 5.5, Max = 5.5, ["Ride Height"] = 5.5, ["Ride Min"] = 4.55 },
-                    ["Rear Camber"] = 0, ["Rear Spacer"] = 0
-                },
-                attachmentData = {}, superchargers = 1,
-                exhaustInfo = {}, attachmentCount = {},
-                ChangedSections = { Paint = true },
-                engineLevel = 5, FrameInfo = {}
-            }
-        })
-    end))
+	if state == g.RGB_Windows_Active then return end
+	g.RGB_Windows_Active = state
+	if not state then
+		FL.disconnect("rgb_windows")
+		return
+	end
+	local hue = 0
+	FL.connect("rgb_windows", RunService.Heartbeat:Connect(function(dt)
+		local Event = g.Mod_Shop_Remote_Event_Found_RS or g.Find_Mod_Shop_Remote_Event()
+		if not Event or not Event:IsA("RemoteEvent") then
+			g.RGB_Windows_Active = false
+			FL.disconnect("rgb_windows")
+			return
+		end
+		hue = (hue + dt * 0.1) % 1
+		local color = Color3.fromHSV(hue, 1, 1)
+		local vehicle = g.get_lp_vehicle and g.get_lp_vehicle() or g.Get_Current_Sitting_In_Vehicle and g.Get_Current_Sitting_In_Vehicle()
+		if not vehicle or not vehicle:IsDescendantOf(game or workspace) then return end
+		local is_car11 = vehicle.Name == "Car11"
+		local paint_data
+		if is_car11 then
+			paint_data = {
+				Tires = { Primary = { Color = Color3.new(0.706, 0.706, 0.706) } },
+				Exterior = {
+					["Primary 1"] = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 2"] = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 3"] = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 4"] = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 5"] = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 6"] = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 7"] = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.03, Texture = "SACar11L1" },
+					["Primary 8"] = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.03, Texture = "SACar11L1" },
+					["Trim Primary"] = { Color = Color3.new(0.282, 0.282, 0.282), Reflectance = 0, Texture = "Metal1" }
+				},
+				Rims = {
+					Primary = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" },
+					Secondary = { Color = Color3.new(0.282, 0.282, 0.282), Reflectance = 0, Texture = "Metal2" },
+					Text = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" },
+					["Bolts Primary"] = { Color = Color3.new(0.282, 0.282, 0.282), Reflectance = 0, Texture = "Metal1" },
+					["Bolts Secondary"] = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" }
+				}
+			}
+		else
+			paint_data = {
+				Windows = { Primary = { Color = color, Transparency = 0.5 } },
+				Exterior = {
+					Primary = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.029999999329447746, Texture = "rbxassetid://129370726755662" },
+					Secondary = { Color = Color3.new(0.141, 0.141, 0.141), Reflectance = 0.029999999329447746, Texture = "rbxassetid://129370726755662" }
+				},
+				Rims = { Primary = { Color = Color3.new(0.588, 0.588, 0.588), Reflectance = 0, Texture = "Metal1" } }
+			}
+		end
+
+		local wheel_info
+		if is_car11 then
+			wheel_info = {
+				Tires = {
+					["Front Diameter"] = 1, ["Front Width"] = 1,
+					["Front Sidewall Bulge"] = 0.5, ["Front Sidewall Height"] = 0.5,
+					["Rear Diameter"] = 1, ["Rear Width"] = 1,
+					["Rear Sidewall Bulge"] = 0.5, ["Rear Sidewall Height"] = 0.5,
+					SidewallHeight = 0.5, SidewallBulge = 0.5,
+					Width = 1, Diameter = 1,
+					SelectedGraph = "SATireGraphic1",
+					Selected = { FL = "TireTrailer2", FR = "TireTrailer2", RL = "TireTrailer2", RR = "TireTrailer2" }
+				},
+				Rims = { Selected = "RimSWCar111", IsDually = false }
+			}
+		else
+			wheel_info = {
+				Tires = {
+					["Front Diameter"] = 1, ["Front Width"] = 1,
+					["Front Sidewall Bulge"] = 0.5, SidewallHeight = 0.5,
+					["Rear Sidewall Height"] = 0.5, ["Rear Width"] = 1,
+					["Front Sidewall Height"] = 0.5, ["Rear Sidewall Bulge"] = 0.5,
+					Width = 1, Diameter = 1, Selected = {},
+					["Rear Diameter"] = 1, SidewallBulge = 0.5
+				},
+				Rims = { IsDually = false }
+			}
+		end
+
+		Event:FireServer("applyChanges", {
+			{
+				index = 1,
+				vehicleModel = vehicle,
+				PaintData = paint_data,
+				WheelInfo = wheel_info,
+				turbochargers = 1,
+				attachments = { Sub = {}, Main = {}, Positions = { Main = {}, Sub = {} } },
+				suspensionInfo = {
+					Rear = { Min = 4.5, ["Ride Max"] = 5.55, Default = 5.5, Max = 5.5, ["Ride Height"] = 5.5, ["Ride Min"] = 4.55 },
+					Camber = 0, ["Rear Spring Force"] = 5000, Spacer = 0,
+					["Front Spring Force"] = 5000, ["Front Spacer"] = 0,
+					Front = { Min = 4.5, ["Ride Max"] = 5.55, Default = 5.5, Max = 5.5, ["Ride Height"] = 5.5, ["Ride Min"] = 4.55 },
+					["Rear Camber"] = 0, ["Rear Spacer"] = 0
+				},
+				attachmentData = {}, superchargers = 1,
+				exhaustInfo = {}, attachmentCount = {},
+				ChangedSections = { Paint = true },
+				engineLevel = 5, FrameInfo = {}
+			}
+		})
+	end))
 end
 
 g.Rainbow_Full_Toggle = function(state)
@@ -2823,6 +2964,164 @@ g.toggle_vehicle_state = function(state)
     return nil
 end
 
+local function get_drive_env()
+    local interface = PlayerGui:FindFirstChild("A-Chassis Interface")
+    if not interface or not interface:IsA("ScreenGui") then return nil end
+    local drive = interface:FindFirstChild("Drive")
+    if not drive or not drive:IsA("LocalScript") then return nil end
+    return getsenv(drive)
+end
+
+local function get_tune()
+    local env = get_drive_env()
+    if not env then return nil end
+    local engine_fn = env["Engine"]
+    if not engine_fn then return nil end
+    local ups = getupvalues(engine_fn)
+    local tune = ups[9]
+    if not tune or typeof(tune) ~= "table" then return nil end
+    return tune
+end
+
+local function save_originals(tune)
+    local ratios = rawget(tune, "Ratios")
+    local ratios_copy = {}
+    if ratios and typeof(ratios) == "table" then
+        for i = 1, #ratios do
+            ratios_copy[i] = ratios[i]
+        end
+    end
+    g.ac_original_values = {
+        FinalDrive = tune.FinalDrive,
+        Redline    = tune.Redline,
+        PeakRPM    = tune.PeakRPM,
+        Horsepower = tune.Horsepower,
+        TCSEnabled = tune.TCSEnabled,
+        ABSEnabled = tune.ABSEnabled,
+        Flywheel   = tune.Flywheel,
+        ThrotAccel = tune.ThrotAccel,
+        ThrotDecel = tune.ThrotDecel,
+        RevAccel   = tune.RevAccel,
+        RevDecay   = tune.RevDecay,
+        Ratios     = ratios_copy,
+    }
+end
+
+local function apply_boost(tune)
+    if not rawset or typeof(rawset) ~= "function" then return end
+    local final_drive = 50 / ((g.ac_boost_speed or 150) / 50)
+    rawset(tune, "FinalDrive", final_drive)
+    rawset(tune, "Redline",    99999)
+    rawset(tune, "PeakRPM",    99999)
+    rawset(tune, "Horsepower", 99999)
+    rawset(tune, "TCSEnabled", false)
+    rawset(tune, "ABSEnabled", false)
+    rawset(tune, "Flywheel",   1)
+    rawset(tune, "ThrotAccel", 1)
+    rawset(tune, "ThrotDecel", 0)
+    rawset(tune, "RevAccel",   999)
+    rawset(tune, "RevDecay",   0)
+    local ratios = rawget(tune, "Ratios")
+    if ratios and typeof(ratios) == "table" then
+        for i = 1, #ratios do
+            if ratios[i] ~= 0 then
+                rawset(ratios, i, 0.01)
+            end
+        end
+    end
+end
+
+local function revert_boost(tune)
+    if not rawset or typeof(rawset) ~= "function" then return end
+    if not g.ac_original_values then return end
+    for k, v in pairs(g.ac_original_values) do
+        if k ~= "Ratios" then
+            rawset(tune, k, v)
+        end
+    end
+    local ratios = rawget(tune, "Ratios")
+    if ratios and typeof(ratios) == "table" and g.ac_original_values.Ratios then
+        for i = 1, #g.ac_original_values.Ratios do
+            rawset(ratios, i, g.ac_original_values.Ratios[i])
+        end
+    end
+    g.ac_original_values = nil
+end
+
+local function get_input()
+    if is_mobile and control_module then
+        local ok, mv = pcall(function() return control_module:GetMoveVector() end)
+        if ok and typeof(mv) == "Vector3" then
+            local fwd = mv.Z < -0.1
+            local rev = mv.Z > 0.1
+            return fwd, rev
+        end
+    end
+    local fwd = UserInputService:IsKeyDown(Enum.KeyCode.W) or UserInputService:IsKeyDown(Enum.KeyCode.Up)
+    local rev = UserInputService:IsKeyDown(Enum.KeyCode.S) or UserInputService:IsKeyDown(Enum.KeyCode.Down)
+    return fwd, rev
+end
+
+g.ac_boost_toggle = function(state)
+    if state then
+        if g.ac_boost_active then return end
+        if not setupvalue or typeof(setupvalue) ~= "function" then
+            g.ac_boost_active = false
+            FL.disconnect("ac_chassis_boost")
+            local tune = get_tune()
+            if tune then revert_boost(tune) end
+            g.ac_boosted = false
+            return
+        end
+        g.ac_boost_active = true
+        g.ac_boosted = false
+        FL.disconnect("ac_chassis_boost")
+        FL.connect("ac_chassis_boost", RunService.Heartbeat:Connect(function()
+            if not g.ac_boost_active then
+                g.ac_boosted = false
+                FL.disconnect("ac_chassis_boost")
+                local tune = get_tune()
+                if tune then revert_boost(tune) end
+                g.ac_boosted = false
+                return
+            end
+            local env = get_drive_env()
+            if not env then return end
+            local inputs_fn = env["Inputs"]
+            local engine_fn = env["Engine"]
+            if not inputs_fn or not engine_fn then return end
+            if not g.ac_boosted then
+                local tune = get_tune()
+                if tune then
+                    save_originals(tune)
+                    wait(0.1)
+                    apply_boost(tune)
+                    g.ac_boosted = true
+                end
+            end
+            local fwd, rev = get_input()
+            if fwd then
+                setupvalue(engine_fn, 2,  1)
+                setupvalue(inputs_fn, 2,  1)
+                setupvalue(inputs_fn, 1,  1)
+            elseif rev then
+                setupvalue(engine_fn, 2, -1)
+                setupvalue(inputs_fn, 2, -1)
+                setupvalue(inputs_fn, 1, -1)
+            else
+                setupvalue(inputs_fn, 2, 0)
+                setupvalue(inputs_fn, 1, 0)
+            end
+        end))
+    else
+        g.ac_boost_active = false
+        FL.disconnect("ac_chassis_boost")
+        local tune = get_tune()
+        if tune then revert_boost(tune) end
+        g.ac_boosted = false
+    end
+end
+
 local Atlas = loadstring(g.http_get("https://gitlab.com/flames2431233/Starter/-/raw/main/UIs/Atlas.lua?ref_type=heads", true))()
 local UI = Atlas.new({
     Name = "Flames Hub | American Plains Mudding | "..tostring(g.Script_Version),
@@ -3084,7 +3383,8 @@ Callback = function(state)
         if not char or not char:IsDescendantOf(game) then g.notify("Error", "Character is not ready.", 3); return end
         local human = g.Humanoid or char and char:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
         if not human or not human.Parent or not human:IsDescendantOf(game) then g.notify("Error", "Character is not ready or Humanoid doesn't exist.", 3); return end
-        local veh = g.get_lp_vehicle and g.get_lp_vehicle()
+        -- [[ Fly & Vehicle Fly both work perfectly while in a Vehicle, we'll allow it. ]] --
+        --[[local veh = g.get_lp_vehicle and g.get_lp_vehicle()
         local in_vehicle = veh and veh.Parent and veh:IsDescendantOf(game) and human.Sit and human.SeatPart and human.SeatPart:IsDescendantOf(veh)
         if in_vehicle then
             g.notify("Error", "Cannot enable fly while in a vehicle.", 3)
@@ -3102,7 +3402,7 @@ Callback = function(state)
                 if g.Fly_Toggle_UI then g.Fly_Toggle_UI:Set(false, false) end
                 return
             end
-        end
+        end--]]
         local speed = g.Fly_Speed_Value or nil
         g.EnableFly(true, speed)
         if UserInputService.TouchEnabled then
@@ -3297,7 +3597,7 @@ Callback = function(val)
     g.vehicle_fly_speed = val
 end}, "Vehicle_Fly_Speed_Slider_UI")
 
-g.Vehicle_Boost_Speed_BV_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
+--[[g.Vehicle_Boost_Speed_BV_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
 Name = "Vehicle Speed Boost (FE)",
 Default = g.vehicle_boost_running or false,
 Flag = "Vehicle_Boost_Toggle_UI",
@@ -3319,7 +3619,32 @@ Callback = function(val)
     g.vehicle_boost_speed = val
 end}, "Vehicle_Boost_Speed_Slider_UI")
 wait(0.1)
-if g.vehicle_boost_speed and g.Vehicle_Boost_Speed_Slider_UI then g.Vehicle_Boost_Speed_Slider_UI:Set(g.vehicle_boost_speed) end
+if g.vehicle_boost_speed and g.Vehicle_Boost_Speed_Slider_UI then g.Vehicle_Boost_Speed_Slider_UI:Set(g.vehicle_boost_speed) end--]]
+
+g.AC_Boost_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
+Name = "Vehicle Speed Boost (A-Chassis)",
+Default = g.ac_boost_active or false,
+Flag = "AC_Boost_Toggle_UI",
+Callback = function(state)
+    g.ac_boost_toggle(state)
+end}, "AC_Boost_Toggle_UI")
+
+g.AC_Boost_Speed_Slider_UI = g.create_ui_element("Slider", Vehicles_Section, {
+Name = "Vehicle Boost Speed",
+Min = 50,
+Max = 300,
+Default = g.ac_boost_speed or 100,
+Flag = "AC_Boost_Speed_Slider_UI",
+Callback = function(val)
+    g.ac_boost_speed = val
+    if not rawset or typeof(rawset) ~= "function" then return end
+    if g.ac_boost_active and g.ac_boosted then
+        local tune = get_tune()
+        if tune then rawset(tune, "FinalDrive", 50 / (val / 50)) end
+    end
+end}, "AC_Boost_Speed_Slider_UI")
+wait(0.1)
+if g.ac_boost_speed and g.AC_Boost_Speed_Slider_UI then g.AC_Boost_Speed_Slider_UI:Set(g.ac_boost_speed) end
 
 g.create_ui_element("Slider", Vehicles_Section, {
 Name = "Vehicle Lights Brightness",
