@@ -1,4 +1,3 @@
-local ReplicatedFirst = game:GetService("ReplicatedFirst")
 if not game:IsLoaded() then
     local msg_instance = Instance.new("Message")
     local hint_instance = Instance.new("Hint")
@@ -86,6 +85,7 @@ local StarterPlayer = g.StarterPlayer or cloneref and cloneref(game:GetService("
 --local TweenService = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
 local Lighting = g.Lighting or cloneref and cloneref(game:GetService("Lighting")) or game:GetService("Lighting")
 local TeleportService = g.TeleportService or cloneref and cloneref(game:GetService("TeleportService")) or game:GetService("TeleportService")
+local ReplicatedFirst = g.ReplicatedFirst or cloneref and cloneref(game:GetService("ReplicatedFirst")) or game:GetService("ReplicatedFirst")
 local speaker = g.LocalPlayer or Players.LocalPlayer or Players:GetAttributeChangedSignal("LocalPlayer"):Wait()
 local PlayerGui = g.PlayerGui or speaker:FindFirstChildOfClass("PlayerGui") or speaker:FindFirstChildWhichIsA("PlayerGui")
 local Camera = Workspace.CurrentCamera or Workspace:FindFirstChildWhichIsA("Camera") or Workspace:FindFirstChildOfClass("Camera")
@@ -2014,17 +2014,17 @@ if rawset and rawget and typeof(rawset) == "function" and typeof(rawget) == "fun
     g.Bike_Boost_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
     Name = "Mod Bike Speed (FE)",
     Default = g.bike_boost_active or false,
-    Flag = "Bike_Boost_Toggle_UI",
+    Flag = "Bike_Boost_Toggle_UI_Flag",
     Callback = function(state)
         g.bike_boost_toggle(state)
-    end}, "Bike_Boost_Toggle_UI")
+    end}, "Bike_Boost_Toggle_UI_Flag")
 
     g.Bike_Boost_Speed_Slider_UI = g.create_ui_element("Slider", Vehicles_Section, {
     Name = "Set Bike Speed (FE)",
     Min = 10,
     Max = 300,
     Default = g.bike_boost_speed or 100,
-    Flag = "Bike_Boost_Speed_Slider_UI",
+    Flag = "Bike_Boost_Speed_Slider_UI_Flag",
     Callback = function(val)
         g.bike_boost_speed = val
         if not rawset or typeof(rawset) ~= "function" then return end
@@ -2032,7 +2032,7 @@ if rawset and rawget and typeof(rawset) == "function" and typeof(rawget) == "fun
             local tune = get_tune()
             if tune then rawset(tune, "FinalDrive", 50 / (val / 50)) end
         end
-    end}, "Bike_Boost_Speed_Slider_UI")
+    end}, "Bike_Boost_Speed_Slider_UI_Flag")
     wait(0.1)
     if g.bike_boost_speed and g.Bike_Boost_Speed_Slider_UI then g.Bike_Boost_Speed_Slider_UI:Set(g.bike_boost_speed) end
 end
