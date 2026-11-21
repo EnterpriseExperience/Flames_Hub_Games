@@ -30,6 +30,8 @@ if game:GetService("RunService"):IsServer() then
     return
 end
 
+g.Announcement_Message = "Added Auto Refuel Bike (FE), Refuel Bike (FE) + Fixed Vehicle Fly (FE), and fixed the timing on RGB Bike (FE)."
+g.DisplayTimeMax = 30
 if not place_ids[tostring(game.PlaceId)] then
     if g.notify and typeof(g.notify) == "function" then
         g.notify("Error", "This game is not supported. Run this on Bike Stars only.", 30)
@@ -81,11 +83,11 @@ local ReplicatedStorage = g.ReplicatedStorage or cloneref and cloneref(game:GetS
 local RunService = g.RunService or cloneref and cloneref(game:GetService("RunService")) or game:GetService("RunService")
 local UserInputService = g.UserInputService or cloneref and cloneref(game:GetService("UserInputService")) or game:GetService("UserInputService")
 local StarterPlayer = g.StarterPlayer or cloneref and cloneref(game:GetService("StarterPlayer")) or game:GetService("StarterPlayer")
--- [[ Will use later. ]] --
---local TweenService = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
+local TweenService = g.TweenService or cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
 local Lighting = g.Lighting or cloneref and cloneref(game:GetService("Lighting")) or game:GetService("Lighting")
 local TeleportService = g.TeleportService or cloneref and cloneref(game:GetService("TeleportService")) or game:GetService("TeleportService")
 local ReplicatedFirst = g.ReplicatedFirst or cloneref and cloneref(game:GetService("ReplicatedFirst")) or game:GetService("ReplicatedFirst")
+local CoreGui = g.CoreGui or cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
 local speaker = g.LocalPlayer or Players.LocalPlayer or Players:GetAttributeChangedSignal("LocalPlayer"):Wait()
 local PlayerGui = g.PlayerGui or speaker:FindFirstChildOfClass("PlayerGui") or speaker:FindFirstChildWhichIsA("PlayerGui")
 local Camera = Workspace.CurrentCamera or Workspace:FindFirstChildWhichIsA("Camera") or Workspace:FindFirstChildOfClass("Camera")
@@ -95,7 +97,7 @@ local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
 local control_module = is_mobile and require(speaker:FindFirstChildWhichIsA("PlayerScripts"):WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
-local Raw_Version = "V1.5.2"
+local Raw_Version = "V1.5.6"
 g.Script_Version = tostring(Raw_Version).."-BikeStars"
 g.all_bikes = {}
 g.fov_on = g.fov_on or false
@@ -515,11 +517,11 @@ end
 local function is_on_bike()
     local bike = g.get_bike and g.get_bike()
     if not bike or not bike:IsA("Model") or not bike:IsDescendantOf(game or workspace) then return false end
-    local seat = bike.PrimaryPart
-    if not seat or not seat:IsA("VehicleSeat") then return false end
+    local seat = bike:FindFirstChildWhichIsA("VehicleSeat", true)
+    if not seat then return false end
     local occupant = seat.Occupant
     if not occupant then return false end
-    local c = g.Character or speaker.Character or g.get_char(speaker)
+    local c = g.Character or speaker.Character or g.get_char and g.get_char(speaker)
     return occupant.Parent == c
 end
 
@@ -634,6 +636,7 @@ g.refuel_now = function()
         if g.notify then g.notify("Error", "Refuel: could not get pump pivot.", 3) end
         return
     end
+    local saved_cf = bike:GetPivot()
     pcall(function() bike:PivotTo(pivot * CFrame.new(0, 3, -4)) end)
     task.wait(0.3)
     FlamesLibrary.disconnect("refuel_now_pump")
@@ -646,6 +649,7 @@ g.refuel_now = function()
         local f = b:GetAttribute("CurrentFuel")
         if not f or f >= 99 then
             FlamesLibrary.disconnect("refuel_now_pump")
+            pcall(function() b:PivotTo(saved_cf) end)
             if g.notify then g.notify("Success", "Refuel: bike is full.", 3) end
             return
         end
@@ -675,6 +679,7 @@ g.auto_refuel_toggle = function(state)
         if current_fuel >= 99 then return end
         if current_fuel > (g.auto_refuel_threshold or 20) then return end
         FlamesLibrary.disconnect("auto_refuel")
+        local saved_cf = bike:GetPivot()
         local pump, prompt = get_nearest_pump_prompt(bike)
         if not pump or not prompt then
             FlamesLibrary.connect("auto_refuel", RunService.Heartbeat:Connect(function()
@@ -715,6 +720,7 @@ g.auto_refuel_toggle = function(state)
             end
             if f >= 99 then
                 FlamesLibrary.disconnect("auto_refuel_pump")
+                pcall(function() b:PivotTo(saved_cf) end)
                 FlamesLibrary.connect("auto_refuel", RunService.Heartbeat:Connect(function()
                     if not g.auto_refuel_on then FlamesLibrary.disconnect("auto_refuel"); return end
                     local b2 = g.get_bike and g.get_bike()
@@ -775,16 +781,9 @@ local function kill_lean_gyros(car)
 end
 
 local function restore_lean_gyros()
-    local anchor = g.vehiclefly_anchor
     for gyro, t in pairs(g.vehiclefly_lean_store) do
         if gyro and gyro.Parent then
-            pcall(function()
-                if anchor and anchor.Parent then
-                    local yaw = math.atan2(-anchor.CFrame.LookVector.X, -anchor.CFrame.LookVector.Z)
-                    gyro.CFrame = CFrame.new(anchor.Position) * CFrame.Angles(0, yaw, 0)
-                end
-                gyro.MaxTorque = t
-            end)
+            pcall(function() gyro.MaxTorque = t end)
         end
     end
     g.vehiclefly_lean_store = {}
@@ -1881,6 +1880,32 @@ Callback = function(val)
     g.vehicle_fly_speed = val
 end}, "Vehicle_Fly_Speed_Slider_UI")
 
+g.Refuel_Now_Button_UI = g.create_ui_element("Button", Vehicles_Section, {
+Name = "Refuel Bike (FE)",
+Callback = function()
+    g.refuel_now()
+end,})
+
+g.Auto_Refuel_Threshold_Slider_UI = g.create_ui_element("Slider", Vehicles_Section, {
+Name = "Auto Refuel Threshold (%)",
+Min = 1,
+Max = 99,
+Default = g.auto_refuel_threshold or 20,
+Flag = "Auto_Refuel_Threshold_Slider_UI_Flag",
+Callback = function(val)
+    g.auto_refuel_threshold = val
+end}, "Auto_Refuel_Threshold_Slider_UI_Flag")
+
+g.Auto_Refuel_Toggle_UI = g.create_ui_element("Toggle", Vehicles_Section, {
+Name = "Auto Refuel Bike (FE)",
+Default = g.auto_refuel_on or false,
+Flag = "Auto_Refuel_Toggle_UI_Flag",
+Callback = function(state)
+    g.auto_refuel_toggle(state)
+end}, "Auto_Refuel_Toggle_UI_Flag")
+wait(0.1)
+if g.auto_refuel_threshold and g.Auto_Refuel_Threshold_Slider_UI then g.Auto_Refuel_Threshold_Slider_UI:Set(g.auto_refuel_threshold or false) end
+
 g.Noclip_Toggle_UI_Main = g.create_ui_element("Toggle", LocalPlayer_Section, {
 Name = "NoClip (FE)",
 Default = g.Noclip_Enabled or false,
@@ -2047,3 +2072,121 @@ Callback = function()
     g.Bike_Stars_Script_Hub_Running = false
     pcall(function() UI:Destroy() end)
 end,})
+task.wait(0.15)
+g.make_round = g.make_round or function(obj, radius)
+    local uic = Instance.new("UICorner")
+    uic.CornerRadius = UDim.new(0, radius)
+    uic.Parent = obj
+end
+
+g.make_stroke = g.make_stroke or function(obj, thickness, transparency)
+    local uistroke = Instance.new("UIStroke")
+    uistroke.Thickness = thickness or 1
+    uistroke.Transparency = transparency or 0
+    uistroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    uistroke.Parent = obj
+end
+
+local ScreenGui
+wait(0.15)
+if CoreGui:FindFirstChild("TemporaryBanner_GUI") then
+    pcall(function()
+        if g.camConn then
+            g.camConn:Disconnect()
+            g.camConn = nil
+        end
+        if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end
+        g.UpdatePosition = nil
+        g.Clamp = nil
+    end)
+end
+wait(0.5)
+ScreenGui = CoreGui:FindFirstChild("TemporaryBanner_GUI") or Instance.new("ScreenGui")
+ScreenGui.Name = "TemporaryBanner_GUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = CoreGui
+
+local frame = Instance.new("Frame")
+frame.Name = "BannerFrame"
+frame.AnchorPoint = Vector2.new(0.5, 0)
+frame.Position = UDim2.new(0.5, 0, 0, 20)
+frame.Size = UDim2.new(0.6, 0, 0, 48)
+frame.BackgroundTransparency = 0
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+frame.Parent = ScreenGui
+
+if g.make_round and typeof(g.make_round) == "function" then g.make_round(frame, 12) end
+if g.flowrgb and typeof(g.flowrgb) == "function" then g.flowrgb("banner_announcement_frame_flowing_rgb_smooth_conn", 3.5, frame, true) end
+if g.make_stroke and typeof(g.make_stroke) == "function" then g.make_stroke(frame, 1.5, 0.25) end
+local label = Instance.new("TextLabel")
+label.Name = "BannerText"
+label.AnchorPoint = Vector2.new(0.5, 0.5)
+label.Position = UDim2.new(0.5, 0, 0.5, 0)
+label.Size = UDim2.new(0.95, 0, 0.9, 0)
+label.BackgroundTransparency = 1
+label.Text = tostring(g.Announcement_Message)
+label.Font = Enum.Font.GothamBold
+label.TextScaled = true
+label.RichText = false
+label.TextWrapped = true
+label.TextColor3 = Color3.fromRGB(255, 255, 255)
+label.Parent = frame
+
+local shadow = Instance.new("ImageLabel")
+shadow.Name = "Shadow"
+shadow.AnchorPoint = Vector2.new(0.5, 0)
+shadow.Position = UDim2.new(0.5, 0, 0, 24)
+shadow.Size = UDim2.new(0.62, 0, 0, 56)
+shadow.Image = "rbxassetid://5059716102"
+shadow.BackgroundTransparency = 1
+shadow.ImageTransparency = 0.8
+shadow.ZIndex = frame.ZIndex - 1
+shadow.Parent = ScreenGui
+shadow.Visible = false
+
+g.Clamp = g.Clamp or function(n, lo, hi)
+    if n < lo then return lo end
+    if n > hi then return hi end
+    return n
+end
+
+g.UpdatePosition = g.UpdatePosition or function()
+    local _, vh = Workspace.CurrentCamera.ViewportSize.X, Workspace.CurrentCamera.ViewportSize.Y
+    local WidthScale = g.Clamp(0.6, 0.4, 0.8)
+    local HeightPX = g.Clamp(math.floor(vh * 0.07), 36, 72)
+    frame.Size = UDim2.new(WidthScale, 0, 0, HeightPX)
+    local TopOffset = math.max(12, math.floor(vh * 0.03))
+    frame.Position = UDim2.new(0.5, 0, 0, TopOffset)
+    shadow.Position = UDim2.new(0.5, 0, 0, TopOffset + math.floor(HeightPX/2))
+    shadow.Size = UDim2.new(WidthScale + 0.02, 0, 0, HeightPX + 12)
+end
+
+g.UpdatePosition()
+g.CamConn = nil
+if Workspace.CurrentCamera then g.CamConn = Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(g.UpdatePosition) end
+frame.BackgroundTransparency = 1
+label.TextTransparency = 1
+shadow.ImageTransparency = 1
+appearInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+TweenService:Create(frame, appearInfo, {BackgroundTransparency = 0}):Play()
+TweenService:Create(label, appearInfo, {TextTransparency = 0}):Play()
+shadow.Visible = false
+TweenService:Create(shadow, appearInfo, {ImageTransparency = 0.8}):Play()
+DisplayTime = g.DisplayTimeMax
+task.delay(DisplayTime, function()
+    local FadeInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+    local t1 = TweenService:Create(frame, FadeInfo, {BackgroundTransparency = 1})
+    local t2 = TweenService:Create(label, FadeInfo, {TextTransparency = 1})
+    local t3 = TweenService:Create(shadow, FadeInfo, {ImageTransparency = 1})
+    t1:Play(); t2:Play(); t3:Play()
+    t1.Completed:Wait()
+    pcall(function()
+        if g.CamConn then
+            g.CamConn:Disconnect()
+            g.CamConn = nil
+        end
+        ScreenGui:Destroy()
+    end)
+end)
