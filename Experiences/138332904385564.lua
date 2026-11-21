@@ -15,6 +15,10 @@ local function valid_t(t) if t and typeof(t) == "table" then return t end; retur
 local place_ids = {
     ["138332904385564"] = true,
     ["107139329854666"] = true,
+    ["124323096278564"] = true,
+    ["107144293213980"] = true,
+    ["89059125144444"] = true,
+    ["114358782297954"] = true
 }
 local In_Studio = false
 local g
@@ -30,7 +34,7 @@ if game:GetService("RunService"):IsServer() then
     return
 end
 
-g.Announcement_Message = "Added Auto Refuel Bike (FE), Refuel Bike (FE) + Fixed Vehicle Fly (FE), and fixed the timing on RGB Bike (FE)."
+g.Announcement_Message = "Added Auto Refuel Bike (FE), Refuel Bike (FE) + Fixed Vehicle Fly (FE), and fixed the timing on RGB Bike (FE) + Added CFrame Speed."
 g.DisplayTimeMax = 30
 if not place_ids[tostring(game.PlaceId)] then
     if g.notify and typeof(g.notify) == "function" then
@@ -97,7 +101,7 @@ local FlamesLibrary = lib
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local is_mobile = IsMobile
 local control_module = is_mobile and require(speaker:FindFirstChildWhichIsA("PlayerScripts"):WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
-local Raw_Version = "V1.5.6"
+local Raw_Version = "V1.6.0"
 g.Script_Version = tostring(Raw_Version).."-BikeStars"
 g.all_bikes = {}
 g.fov_on = g.fov_on or false
@@ -112,6 +116,7 @@ g.auto_refuel_threshold = g.auto_refuel_threshold or 10
 g.auto_refuel_on = g.auto_refuel_on or false
 g.target_jump_power = g.target_jump_power or 50
 g.target_jump_height = g.target_jump_height or 7.2
+g.target_walkspeed = g.target_walkspeed or 16
 g.lib = g.FlamesLibrary -- necessary for some reason.
 local lib_attempts = 0
 local lib_max_attempts = 15
@@ -197,11 +202,12 @@ g.Rejoin_Server = function()
 	end
 end
 
-g.Wear_Asset_Id = function(id)
+g.Wear_Asset_Id = function(id, payload)
     if not id or typeof(id) ~= "number" then return end
+    if typeof(payload) ~= "number" or payload < 1 then payload = 5 end
     local r = g.Avatar_Shop_Action_Remote_Function or Find_Avatar_Shop_Action_RF()
     if not r or not r.Parent or not r:IsA("RemoteFunction") then return end
-    r:InvokeServer(id)
+    for i = 1, payload do r:InvokeServer(id) end
 end
 
 g.Reset_To_Normal_Roblox_Avatar = function()
@@ -741,6 +747,70 @@ g.auto_refuel_toggle = function(state)
         end))
     end))
 end
+
+g.set_walkspeed_char = function(speed)
+    if not Validate_Number(speed) then speed = 16 end
+    g.target_walkspeed = speed
+    local char = g.Character or speaker.Character or g.get_char(speaker)
+    if not char or not char:IsDescendantOf(game) then return end
+    local human = g.Humanoid or char:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
+    if not human or not human.Parent or not human:IsDescendantOf(game) then return end
+    human.WalkSpeed = speed
+end
+
+g.set_jump_power_height_char = function(value)
+    local Use_Jump_Power = StarterPlayer.CharacterUseJumpPower or true
+    if Use_Jump_Power then
+        if not Validate_Number(value) then value = g.target_jump_power end
+        g.target_jump_power = value
+    else
+        if not Validate_Number(value) then value = g.target_jump_height end
+        g.target_jump_height = value
+    end
+    local char = g.Character or speaker.Character or g.get_char(speaker)
+    if not char or not char:IsDescendantOf(game) then return end
+    local human = g.Humanoid or char:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
+    if not human or not human.Parent or not human:IsDescendantOf(game) then return end
+    if Use_Jump_Power then
+        human.JumpPower = value
+    else
+        human.JumpHeight = value
+    end
+end
+
+g.start_movement_lock = function()
+    local char = g.Character or speaker.Character or g.get_char(speaker)
+    if not char or not char:IsDescendantOf(game) then return end
+    local human = g.Humanoid or char:FindFirstChildWhichIsA("Humanoid") or g.get_human(speaker)
+    if not human or not human.Parent or not human:IsDescendantOf(game) then return end
+    FlamesLibrary.connect("movement_lock_walkspeed", human:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+        if human.WalkSpeed ~= g.target_walkspeed then
+            human.WalkSpeed = g.target_walkspeed
+        end
+    end))
+
+    local Use_Jump_Power = StarterPlayer.CharacterUseJumpPower or true
+    if Use_Jump_Power then
+        FlamesLibrary.connect("movement_lock_jump", human:GetPropertyChangedSignal("JumpPower"):Connect(function()
+            if human.JumpPower ~= g.target_jump_power then
+                human.JumpPower = g.target_jump_power
+            end
+        end))
+    else
+        FlamesLibrary.connect("movement_lock_jump", human:GetPropertyChangedSignal("JumpHeight"):Connect(function()
+            if human.JumpHeight ~= g.target_jump_height then
+                human.JumpHeight = g.target_jump_height
+            end
+        end))
+    end
+end
+
+g.stop_movement_lock = function()
+    FlamesLibrary.disconnect("movement_lock_walkspeed")
+    FlamesLibrary.disconnect("movement_lock_jump")
+end
+
+g.start_movement_lock()
 
 g.vehicle_fly               = g.vehicle_fly             or false
 g.vehicle_fly_speed         = g.vehicle_fly_speed       or 3
@@ -1828,6 +1898,48 @@ Flag = "Night_Enhancer_Toggle_UI",
 Callback = function(state)
     g.Toggle_Night_Enhancer(state)
 end}, "Night_Enhancer_Toggle_UI")
+
+g.CFrame_Speed_Slider_UI = g.create_ui_element("Slider", LocalPlayer_Section, {
+Name = "CFrame Speed",
+Min = 1,
+Max = 100,
+Default = g.cframe_speed or 10,
+Flag = "CFrame_Speed_Slider_UI_Flag",
+Callback = function(val)
+    g.cframe_speed = val
+end}, "CFrame_Speed_Slider_UI_Flag")
+
+g.CFrame_Speed_Toggle_UI = g.create_ui_element("Toggle", LocalPlayer_Section, {
+Name = "CFrame Speed (FE) (LeftShift)",
+Default = g.cframe_speed_on or false,
+Flag = "CFrame_Speed_Toggle_UI_Flag",
+Callback = function(state)
+    g.cframe_speed_toggle(state)
+end}, "CFrame_Speed_Toggle_UI_Flag")
+wait(0.1)
+if g.cframe_speed and g.CFrame_Speed_Slider_UI then g.CFrame_Speed_Slider_UI:Set(g.cframe_speed) end
+
+g.Wear_Asset_Id_Input_UI = g.create_ui_element("Input", LocalPlayer_Section, {
+Name = "Asset ID Input (FE)",
+Default = "",
+Flag = "Wear_Asset_Id_Input_UI_Flag",
+Callback = function(val)
+    local id = tonumber(val)
+    if id then g.wear_asset_id_input = id end
+end}, "Wear_Asset_Id_Input_UI_Flag")
+
+g.Wear_Asset_Id_Button_UI = g.create_ui_element("Button", LocalPlayer_Section, {
+Name = "Wear Asset ID (FE)",
+Callback = function()
+    if not g.wear_asset_id_input then return end
+    g.Wear_Asset_Id(g.wear_asset_id_input)
+end,})
+
+g.Reset_Avatar_Button_UI = g.create_ui_element("Button", LocalPlayer_Section, {
+Name = "Wear Your Normal Roblox Avatar (FE)",
+Callback = function()
+    g.Reset_To_Normal_Roblox_Avatar()
+end,})
 
 g.create_ui_element("Slider", LocalPlayer_Section, {
 Name = "WalkSpeed (FE)",
