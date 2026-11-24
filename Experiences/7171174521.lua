@@ -3124,6 +3124,12 @@ g.ac_boost_toggle = function(state)
     end
 end
 
+assert(typeof(g.Rainbow_Vehicle_Toggle) == "function", "Rainbow_Vehicle_Toggle is: " .. tostring(g.Rainbow_Vehicle_Toggle))
+assert(typeof(g.Rainbow_Rims_Toggle) == "function", "Rainbow_Rims_Toggle is: " .. tostring(g.Rainbow_Rims_Toggle))
+assert(typeof(g.Rainbow_Windows_Toggle) == "function", "Rainbow_Windows_Toggle is: " .. tostring(g.Rainbow_Windows_Toggle))
+assert(typeof(g.Rainbow_Full_Toggle) == "function", "Rainbow_Full_Toggle is: " .. tostring(g.Rainbow_Full_Toggle))
+assert(typeof(g.Flash_Vehicle_Toggle) == "function", "Flash_Vehicle_Toggle is: " .. tostring(g.Flash_Vehicle_Toggle))
+wait(0.1)
 local Atlas = loadstring(g.http_get("https://gitlab.com/flames2431233/Starter/-/raw/main/UIs/Atlas.lua?ref_type=heads", true))()
 local UI = Atlas.new({
     Name = "Flames Hub | American Plains Mudding | "..tostring(g.Script_Version),
@@ -3765,7 +3771,6 @@ Callback = function()
     g.American_Plains_Mudding_Script_Hub_Running = false
     pcall(function() UI:Destroy() end)
 end,})
-
 task.wait(0.15)
 g.make_round = g.make_round or function(obj, radius)
     local uic = Instance.new("UICorner")
