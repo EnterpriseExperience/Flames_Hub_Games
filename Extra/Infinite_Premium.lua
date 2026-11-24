@@ -6538,7 +6538,7 @@ function ESP(plr, logic)
 						espLoopFunc:Disconnect()
 						teamChange:Disconnect()
 						ESPholder:Destroy()
-						repeat task.wait(Players.RespawnTime + 0.75) until plr.Character and getRoot(plr.Character) and plr.Character:FindFirstChildWhichIsA("Humanoid")
+						repeat task.wait(Players.RespawnTime + 0.75) until plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChildWhichIsA("Humanoid")
 						ESP(plr, logic)
 						addedFunc:Disconnect()
 					else
@@ -6551,7 +6551,7 @@ function ESP(plr, logic)
 						espLoopFunc:Disconnect()
 						addedFunc:Disconnect()
 						ESPholder:Destroy()
-						repeat wait(1) until getRoot(plr.Character) and plr.Character:FindFirstChildOfClass("Humanoid")
+						repeat wait(1) until plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChildOfClass("Humanoid")
 						ESP(plr, logic)
 						teamChange:Disconnect()
 					else
@@ -6559,16 +6559,21 @@ function ESP(plr, logic)
 					end
 				end)
 				local function espLoop()
-					if COREGUI:FindFirstChild(plr.Name..'_ESP') then
-						if plr.Character and getRoot(plr.Character) and plr.Character:FindFirstChildOfClass("Humanoid") and Players.LocalPlayer.Character and getRoot(Players.LocalPlayer.Character) and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-							local pos = math.floor((getRoot(Players.LocalPlayer.Character).Position - getRoot(plr.Character).Position).magnitude)
-							TextLabel.Text = 'Name: '..plr.Name..' | Health: '..round(plr.Character:FindFirstChildOfClass('Humanoid').Health, 1)..' | Studs: '..pos
-						end
-					else
+					if not COREGUI:FindFirstChild(plr.Name .. "_ESP") then
 						teamChange:Disconnect()
 						addedFunc:Disconnect()
 						espLoopFunc:Disconnect()
+						return
 					end
+					local char = plr.Character or get_char(plr)
+					local human = char and char:FindFirstChildOfClass("Humanoid") or get_human(plr)
+					local lp_char = getgenv().Character or Players.LocalPlayer.Character or get_char(Players.LocalPlayer)
+					local lp_root = lp_char and getRoot(lp_char) or get_root(Players.LocalPlayer)
+					local lp_human = lp_char and lp_char:FindFirstChildOfClass("Humanoid") or get_human(Players.LocalPlayer)
+					local plr_root = char and getRoot(char) or get_root(plr)
+					if not (char and human and lp_char and lp_root and lp_human and plr_root) then return end
+					local pos = math.floor((lp_root.Position - plr_root.Position).Magnitude)
+					TextLabel.Text = "Name: " .. plr.Name .. " | Health: " .. round(human.Health, 1) .. " | Studs: " .. pos
 				end
 				espLoopFunc = RunService.RenderStepped:Connect(espLoop)
 			end
@@ -6576,10 +6581,7 @@ function ESP(plr, logic)
 	end)
 end
 
-if not getgenv().ESP then
-	getgenv().ESP = ESP
-end
-
+if not getgenv().ESP then getgenv().ESP = ESP end
 function CHMS(plr)
 	task.spawn(function()
 		for i,v in pairs(COREGUI:GetChildren()) do
